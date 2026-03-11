@@ -4,6 +4,7 @@ import { writeFileSync } from 'fs';
 
 type OrwellStatFixtures = {
   authenticatedRequest: APIRequestContext;
+  unauthenticatedRequest: APIRequestContext;
 };
 
 export const test = base.extend<OrwellStatFixtures>({
@@ -31,6 +32,12 @@ export const test = base.extend<OrwellStatFixtures>({
         contentType: 'text/html',
       });
     }
+  },
+
+  unauthenticatedRequest: async ({ playwright, baseURL }, use) => {
+    const ctx = await playwright.request.newContext({ baseURL });
+    await use(ctx);
+    await ctx.dispose();
   },
 
   authenticatedRequest: async ({ request }, use) => {
