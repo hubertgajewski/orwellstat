@@ -15,9 +15,11 @@ test('public pages without authentication', async ({
   }
 });
 
-test('public pages with authentication', async ({ request }) => {
+test('public pages with authentication', async ({ authenticatedRequest }) => {
   const responses = await Promise.all(
-    PUBLIC_PAGE_CLASSES.map((PageClass) => request.get(PageClass.url))
+    PUBLIC_PAGE_CLASSES.map((PageClass) =>
+      authenticatedRequest.get(PageClass.url)
+    )
   );
   for (const response of responses) {
     expect(response.status()).toBe(200);
