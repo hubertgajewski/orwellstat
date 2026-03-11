@@ -1,0 +1,68 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Run all Playwright tests",
+      "program": "${workspaceFolder}/playwright/typescript/node_modules/.bin/playwright",
+      "args": ["test"],
+      "cwd": "${workspaceFolder}/playwright/typescript",
+      "console": "integratedTerminal",
+      "autoAttachChildProcesses": true
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Run current test file",
+      "program": "${workspaceFolder}/playwright/typescript/node_modules/.bin/playwright",
+      "args": ["test", "${relativeFile}"],
+      "cwd": "${workspaceFolder}/playwright/typescript",
+      "console": "integratedTerminal",
+      "autoAttachChildProcesses": true
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug current test file in VS Code",
+      "program": "${workspaceFolder}/playwright/typescript/node_modules/.bin/playwright",
+      "args": [
+        "test",
+        "${relativeFile}",
+        "--project=chromium",
+        "--workers=1",
+        "--timeout=0",
+        "--headed"
+      ],
+      "cwd": "${workspaceFolder}/playwright/typescript",
+      "console": "integratedTerminal",
+      "autoAttachChildProcesses": true
+    },
+    {
+      "type": "node-terminal",
+      "request": "launch",
+      "name": "Debug current test file in browser",
+      "command": "PWDEBUG=1 node_modules/.bin/playwright test \"${relativeFile}\" --workers=1 --project=chromium --timeout=0",
+      "cwd": "${workspaceFolder}/playwright/typescript"
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Run Playwright tests (Chromium only)",
+      "program": "${workspaceFolder}/playwright/typescript/node_modules/.bin/playwright",
+      "args": ["test", "--project=chromium", "--workers=1"],
+      "cwd": "${workspaceFolder}/playwright/typescript",
+      "console": "integratedTerminal",
+      "autoAttachChildProcesses": true
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Open Playwright UI mode",
+      "program": "${workspaceFolder}/playwright/typescript/node_modules/.bin/playwright",
+      "args": ["test", "--ui"],
+      "cwd": "${workspaceFolder}/playwright/typescript",
+      "console": "integratedTerminal"
+    }
+  ]
+}
