@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "target": "esnext",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "outDir": "./dist",
+    "paths": {
+      "@fixtures/*": ["./fixtures/*"],
+      "@pages/*": ["./pages/*"],
+      "@test-data/*": ["./test-data/*"],
+      "@types-local/*": ["./types/*"],
+      "@utils/*": ["./utils/*"]
+    }
+  },
+  "include": [
+    "tests/**/*.ts",
+    "pages/**/*.ts",
+    "types/**/*.ts",
+    "test-data/**/*.ts",
+    "fixtures/**/*.ts",
+    "utils/**/*.ts"
+  ]
+}
