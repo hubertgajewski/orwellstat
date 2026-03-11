@@ -66,7 +66,10 @@ test.describe('navigation', () => {
       .getByRole('link', { name: 'Statystyki serwisu', exact: true })
       .click();
 
-    await expect(page).toHaveTitle(ServiceStatisticsPage.title);
+    await expectHeadings(page, [
+      ServiceStatisticsPage.signIn,
+      ServiceStatisticsPage.statistics,
+    ]);
   });
 
   test('contact', async ({ page }) => {
