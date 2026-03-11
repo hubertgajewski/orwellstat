@@ -42,7 +42,7 @@
       "type": "node-terminal",
       "request": "launch",
       "name": "Debug current test file in browser",
-      "command": "PWDEBUG=1 npx ${workspaceFolder}/playwright/typescript/node_modules/.bin/playwright test \"${relativeFile}\" --workers=1 --project=chromium --timeout=0",
+      "command": "PWDEBUG=1 node_modules/.bin/playwright test \"${relativeFile}\" --workers=1 --project=chromium --timeout=0",
       "cwd": "${workspaceFolder}/playwright/typescript"
     },
     {
