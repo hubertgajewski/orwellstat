@@ -1,0 +1,142 @@
+import { test, expect, pixelmatch, PNG } from '@fixtures/base.fixture';
+import { ServiceStatisticsPage } from '@pages/public/service-statistics.page';
+import { expectHeadings } from '@utils/string.util';
+
+test('SVG chart is rendered on stats page', async ({ page }) => {
+  const [svgResponse] = await Promise.all([
+    page.waitForResponse((response) =>
+      response.url().includes(ServiceStatisticsPage.svgChartUrl)
+    ),
+    page.goto(ServiceStatisticsPage.url),
+  ]);
+  expect(svgResponse.status()).toBe(200);
+  expect(svgResponse.headers()['content-type']).toContain('svg');
+
+  await expect(page.locator('object[type="image/svg+xml"]')).toBeVisible();
+
+  // Optional checking if SVG animation really works
+  const frame1 = await page.locator('object').screenshot();
+  await page.waitForTimeout(50);
+  const frame2 = await page.locator('object').screenshot();
+  expect(frame1).not.toEqual(frame2);
+
+  const img1 = PNG.sync.read(frame1);
+  const img2 = PNG.sync.read(frame2);
+  const { width, height } = img1;
+  const diff = new Uint8Array(width * height * 4);
+  const diffPixels = pixelmatch(img1.data, img2.data, diff, width, height, {
+    threshold: 0.1,
+  });
+
+  expect(diffPixels).toBeGreaterThan(100);
+
+  // Parse SVG DOM in-browser to verify animation structure
+  const svgContent = await svgResponse.text();
+
+  const svgDom = await page.evaluate((svg) => {
+    const doc = new DOMParser().parseFromString(svg, 'image/svg+xml');
+    return {
+      animateInRectCount: doc.querySelectorAll('rect > animate').length,
+      animateInTextCount: doc.querySelectorAll('text > animate').length,
+      hasWidthAnimation:
+        doc.querySelector('animate[attributeName="width"]') !== null,
+      hasVisibilityAnimation:
+        doc.querySelector('animate[attributeName="visibility"]') !== null,
+      rectAnimateTiming: (() => {
+        const el = doc.querySelector('rect > animate');
+        return el
+          ? { begin: el.getAttribute('begin'), dur: el.getAttribute('dur') }
+          : null;
+      })(),
+      textAnimateTiming: (() => {
+        const el = doc.querySelector('text > animate');
+        return el
+          ? { begin: el.getAttribute('begin'), dur: el.getAttribute('dur') }
+          : null;
+      })(),
+      browsers: Array.from(doc.querySelectorAll('text'))
+        .map((el) => el.textContent?.trim())
+        .filter((t) => t && !t.includes('%')),
+    };
+  }, svgContent);
+
+  expect(svgDom.animateInRectCount).toBe(10);
+  expect(svgDom.animateInTextCount).toBe(10);
+  expect(svgDom.hasWidthAnimation).toBe(true);
+  expect(svgDom.hasVisibilityAnimation).toBe(true);
+  expect(svgDom.rectAnimateTiming).toEqual({ begin: '0s', dur: '1s' });
+  expect(svgDom.textAnimateTiming).toEqual({ begin: '1s', dur: '1s' });
+  expect(svgDom.browsers).toEqual(
+    expect.arrayContaining([expect.stringMatching(/Chrome|Firefox|Safari/)])
+  );
+});
+
+test('system statistics', async ({ page }) => {
+  await page.goto(ServiceStatisticsPage.url);
+
+  await expectHeadings(page, [
+    ServiceStatisticsPage.statistics,
+    ServiceStatisticsPage.signIn,
+  ]);
+
+  await expect(
+    page.getByRole('columnheader', {
+      name: ServiceStatisticsPage.colLp,
+      exact: true,
+    })
+  ).toBeVisible();
+  await expect(
+    page.getByRole('columnheader', {
+      name: ServiceStatisticsPage.colBrowsers,
+      exact: true,
+    })
+  ).toBeVisible();
+  await expect(
+    page.getByRole('columnheader', {
+      name: ServiceStatisticsPage.colCount,
+      exact: true,
+    })
+  ).toBeVisible();
+  await expect(
+    page.getByRole('columnheader', {
+      name: ServiceStatisticsPage.colPercent,
+      exact: true,
+    })
+  ).toBeVisible();
+
+  const rows = page.getByRole('table').first().getByRole('row');
+  const rowCount = await rows.count();
+  expect(rowCount).toBeGreaterThan(0);
+
+  for (let i = 1; i <= rowCount - 4; i++) {
+    await expect(
+      page.getByRole('cell', { name: String(i) }).first()
+    ).toBeVisible();
+    await expect(rows.nth(i).getByRole('cell').nth(2)).toHaveText(/^\d+$/);
+    await expect(rows.nth(i).getByRole('cell').nth(3)).toHaveText(
+      /^\d+\.\d{2}%$/
+    );
+  }
+
+  // Footer rows – totals (last 3 rows: recognized, unrecognized, total)
+  const totalRecognized = rows.nth(rowCount - 3);
+  await expect(totalRecognized.getByRole('cell').nth(1)).toHaveText(
+    ServiceStatisticsPage.totalRecognized
+  );
+  await expect(totalRecognized.getByRole('cell').nth(2)).toHaveText(/^\d+$/);
+  await expect(totalRecognized.getByRole('cell').nth(3)).toHaveText('100%');
+
+  const unrecognized = rows.nth(rowCount - 2);
+  await expect(unrecognized.getByRole('cell').nth(1)).toHaveText(
+    ServiceStatisticsPage.unrecognized
+  );
+  await expect(unrecognized.getByRole('cell').nth(2)).toHaveText(/^\d+$/);
+  await expect(unrecognized.getByRole('cell').nth(3)).toHaveText('-');
+
+  const total = rows.nth(rowCount - 1);
+  await expect(total.getByRole('cell').nth(1)).toHaveText(
+    ServiceStatisticsPage.total
+  );
+  await expect(total.getByRole('cell').nth(2)).toHaveText(/^\d+$/);
+  await expect(total.getByRole('cell').nth(3)).toHaveText('-');
+});

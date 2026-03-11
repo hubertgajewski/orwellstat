@@ -1,0 +1,7 @@
+.env
+.auth/
+.idea/
+*.bak
+.DS_Store
+.claude/settings.local.json
+bruno/environments/.env
