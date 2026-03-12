@@ -51,14 +51,14 @@ test('about system page - headings and statsbar content', async ({ page }) => {
   // Sample browser names in the list
   for (const browser of AboutSystemPage.sampleBrowsers) {
     await expect(
-      statsbar.getByRole('listitem').filter({ hasText: browser }).first()
+      statsbar.getByRole('listitem').getByText(browser, { exact: true })
     ).toBeVisible();
   }
 
   // Sample OS names in the list
   for (const os of AboutSystemPage.sampleOSes) {
     await expect(
-      statsbar.getByRole('listitem').filter({ hasText: os }).first()
+      statsbar.getByRole('listitem').getByText(os, { exact: true })
     ).toBeVisible();
   }
 
