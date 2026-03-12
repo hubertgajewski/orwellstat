@@ -30,7 +30,7 @@ test.describe('navigation', () => {
 
   test('home page', async ({ page }) => {
     await page
-      .locator('.menu')
+      .locator('#menubar')
       .getByRole('link', { name: 'Strona główna', exact: true })
       .click();
 
@@ -44,7 +44,7 @@ test.describe('navigation', () => {
 
   test('about system', async ({ page }) => {
     await page
-      .locator('.menu')
+      .locator('#menubar')
       .getByRole('link', { name: 'O systemie', exact: true })
       .click();
 
@@ -62,7 +62,7 @@ test.describe('navigation', () => {
 
   test('statistics', async ({ page }) => {
     await page
-      .locator('.menu')
+      .locator('#menubar')
       .getByRole('link', { name: 'Statystyki serwisu', exact: true })
       .click();
 
@@ -74,7 +74,7 @@ test.describe('navigation', () => {
 
   test('contact', async ({ page }) => {
     await page
-      .locator('.menu')
+      .locator('#menubar')
       .getByRole('link', { name: 'Kontakt', exact: true })
       .click();
 
