@@ -1,6 +1,7 @@
 import { test, expect, pixelmatch, PNG } from '@fixtures/base.fixture';
 import { ServiceStatisticsPage } from '@pages/public/service-statistics.page';
 import { expectHeadings } from '@utils/string.util';
+import { SvgAnalysis } from '@types-local/svg-analysis';
 
 test('SVG chart is rendered on stats page', async ({ page }) => {
   const [svgResponse] = await Promise.all([
@@ -33,7 +34,7 @@ test('SVG chart is rendered on stats page', async ({ page }) => {
   // Parse SVG DOM in-browser to verify animation structure
   const svgContent = await svgResponse.text();
 
-  const svgDom = await page.evaluate((svg) => {
+  const svgDom = await page.evaluate<SvgAnalysis, string>((svg) => {
     const doc = new DOMParser().parseFromString(svg, 'image/svg+xml');
     return {
       animateInRectCount: doc.querySelectorAll('rect > animate').length,

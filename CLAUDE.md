@@ -64,7 +64,8 @@ All commands must be run from `playwright/typescript/`.
 - `utils/accessibility.util.ts` — `expectNoAccessibilityViolations()` using `@axe-core/playwright` (WCAG2AAA)
 - `utils/string.util.ts` — `expectHeadings()` helper: asserts visibility of multiple headings on a page
 - `utils/env.util.ts` — `loadEnv(importMetaUrl, levelsUp)` loads `.env` relative to the calling file; `requireCredentials()` validates and returns `ORWELLSTAT_USER`/`ORWELLSTAT_PASSWORD`, throwing a descriptive error if either is missing
-- `types/` — Reserved for shared TypeScript interfaces (currently empty)
+- `types/` — Shared TypeScript interfaces; exported via path alias `@types-local/*`
+  - `svg-analysis.ts` — `SvgAnalysis` interface: shape of the object returned by `page.evaluate()` in `statistics.spec.ts`
 - `test-data/` — Reserved for static test data (currently empty)
 
 **Page Object Model pattern:** Each page class extends `AbstractPage` and defines static `url`, `title` (and optionally `accessKey`) properties used in data-driven loops. The constructor calls `super(page, url, title, accessKey)`. Only the `heading` getter and page-specific static string constants need to be defined per class.
@@ -116,6 +117,20 @@ When creating GitHub issues for requirements, bugs, or code review findings, use
 5. **Definition of Done** — checklist of observable, verifiable outcomes
 
 **Labels:** apply semantic labels such as `test-quality`, `flakiness`, `type-safety`, `pom`.
+
+---
+
+## Issue fix workflow
+
+When fixing a GitHub issue, follow these steps in order:
+
+1. Make the code change
+2. Run `tsc --noEmit` — must pass with no errors
+3. Review against the [code review checklist](#code-review-checklist)
+4. Run the affected test(s) — must pass
+5. Create a branch from remote `main` named `feature/<issue-number>` or `bugfix/<issue-number>` (e.g. `feature/19`)
+6. Commit with a **short, single-line message** in the format `<issue-number> <short description>` (e.g. `19 Add explicit SvgAnalysis type to page.evaluate()`)
+7. Push and create a PR
 
 ---
 
