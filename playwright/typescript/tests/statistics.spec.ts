@@ -106,23 +106,25 @@ test('system statistics', async ({ page }) => {
     await expect(rows.nth(i).getByRole('cell').nth(3)).toHaveText(/^\d+\.\d{2}%$/);
   }
 
-  // Footer rows – totals (last 3 rows: recognized, unrecognized, total)
-  const totalRecognized = rows.nth(rowCount - 3);
-  await expect(totalRecognized.getByRole('cell').nth(1)).toHaveText(
-    ServiceStatisticsPage.totalRecognized
-  );
+  // Structural check: the table ends with exactly these 3 footer rows in order
+  await expect(rows.nth(rowCount - 3)).toContainText(ServiceStatisticsPage.totalRecognized);
+  await expect(rows.nth(rowCount - 2)).toContainText(ServiceStatisticsPage.unrecognized);
+  await expect(rows.last()).toContainText(ServiceStatisticsPage.total);
+
+  // Verify footer row values (count and percent) – located by content, not by index
+  const totalRecognized = rows.filter({ hasText: ServiceStatisticsPage.totalRecognized });
+  await expect(totalRecognized).toHaveCount(1);
   await expect(totalRecognized.getByRole('cell').nth(2)).toHaveText(/^\d+$/);
   await expect(totalRecognized.getByRole('cell').nth(3)).toHaveText('100%');
 
-  const unrecognized = rows.nth(rowCount - 2);
-  await expect(unrecognized.getByRole('cell').nth(1)).toHaveText(
-    ServiceStatisticsPage.unrecognized
-  );
+  const unrecognized = rows.filter({ hasText: ServiceStatisticsPage.unrecognized });
+  await expect(unrecognized).toHaveCount(1);
   await expect(unrecognized.getByRole('cell').nth(2)).toHaveText(/^\d+$/);
   await expect(unrecognized.getByRole('cell').nth(3)).toHaveText('-');
 
-  const total = rows.nth(rowCount - 1);
-  await expect(total.getByRole('cell').nth(1)).toHaveText(ServiceStatisticsPage.total);
+  // 'Łącznie' is a substring of 'Łącznie rozpoznane'; use exact cell name to avoid matching both
+  const total = rows.filter({ has: page.getByRole('cell', { name: ServiceStatisticsPage.total, exact: true }) });
+  await expect(total).toHaveCount(1);
   await expect(total.getByRole('cell').nth(2)).toHaveText(/^\d+$/);
   await expect(total.getByRole('cell').nth(3)).toHaveText('-');
 });
