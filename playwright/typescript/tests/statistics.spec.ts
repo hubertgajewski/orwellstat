@@ -4,9 +4,7 @@ import { expectHeadings } from '@utils/string.util';
 
 test('SVG chart is rendered on stats page', async ({ page }) => {
   const [svgResponse] = await Promise.all([
-    page.waitForResponse((response) =>
-      response.url().includes(ServiceStatisticsPage.svgChartUrl)
-    ),
+    page.waitForResponse((response) => response.url().includes(ServiceStatisticsPage.svgChartUrl)),
     page.goto(ServiceStatisticsPage.url),
   ]);
   expect(svgResponse.status()).toBe(200);
@@ -14,10 +12,12 @@ test('SVG chart is rendered on stats page', async ({ page }) => {
 
   await expect(page.locator('object[type="image/svg+xml"]')).toBeVisible();
 
-  // Optional checking if SVG animation really works
-  const frame1 = await page.locator('object').screenshot();
-  await page.waitForTimeout(50);
-  const frame2 = await page.locator('object').screenshot();
+  // Verify SVG animation is running by diffing two consecutive frames
+  const frame1 = await page.locator('object[type="image/svg+xml"]').screenshot();
+  await page.evaluate(
+    () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+  );
+  const frame2 = await page.locator('object[type="image/svg+xml"]').screenshot();
   expect(frame1).not.toEqual(frame2);
 
   const img1 = PNG.sync.read(frame1);
@@ -38,21 +38,15 @@ test('SVG chart is rendered on stats page', async ({ page }) => {
     return {
       animateInRectCount: doc.querySelectorAll('rect > animate').length,
       animateInTextCount: doc.querySelectorAll('text > animate').length,
-      hasWidthAnimation:
-        doc.querySelector('animate[attributeName="width"]') !== null,
-      hasVisibilityAnimation:
-        doc.querySelector('animate[attributeName="visibility"]') !== null,
+      hasWidthAnimation: doc.querySelector('animate[attributeName="width"]') !== null,
+      hasVisibilityAnimation: doc.querySelector('animate[attributeName="visibility"]') !== null,
       rectAnimateTiming: (() => {
         const el = doc.querySelector('rect > animate');
-        return el
-          ? { begin: el.getAttribute('begin'), dur: el.getAttribute('dur') }
-          : null;
+        return el ? { begin: el.getAttribute('begin'), dur: el.getAttribute('dur') } : null;
       })(),
       textAnimateTiming: (() => {
         const el = doc.querySelector('text > animate');
-        return el
-          ? { begin: el.getAttribute('begin'), dur: el.getAttribute('dur') }
-          : null;
+        return el ? { begin: el.getAttribute('begin'), dur: el.getAttribute('dur') } : null;
       })(),
       browsers: Array.from(doc.querySelectorAll('text'))
         .map((el) => el.textContent?.trim())
@@ -74,10 +68,7 @@ test('SVG chart is rendered on stats page', async ({ page }) => {
 test('system statistics', async ({ page }) => {
   await page.goto(ServiceStatisticsPage.url);
 
-  await expectHeadings(page, [
-    ServiceStatisticsPage.statistics,
-    ServiceStatisticsPage.signIn,
-  ]);
+  await expectHeadings(page, [ServiceStatisticsPage.statistics, ServiceStatisticsPage.signIn]);
 
   await expect(
     page.getByRole('columnheader', {
@@ -109,13 +100,9 @@ test('system statistics', async ({ page }) => {
   expect(rowCount).toBeGreaterThan(0);
 
   for (let i = 1; i <= rowCount - 4; i++) {
-    await expect(
-      page.getByRole('cell', { name: String(i) }).first()
-    ).toBeVisible();
+    await expect(page.getByRole('cell', { name: String(i) }).first()).toBeVisible();
     await expect(rows.nth(i).getByRole('cell').nth(2)).toHaveText(/^\d+$/);
-    await expect(rows.nth(i).getByRole('cell').nth(3)).toHaveText(
-      /^\d+\.\d{2}%$/
-    );
+    await expect(rows.nth(i).getByRole('cell').nth(3)).toHaveText(/^\d+\.\d{2}%$/);
   }
 
   // Footer rows – totals (last 3 rows: recognized, unrecognized, total)
@@ -134,9 +121,7 @@ test('system statistics', async ({ page }) => {
   await expect(unrecognized.getByRole('cell').nth(3)).toHaveText('-');
 
   const total = rows.nth(rowCount - 1);
-  await expect(total.getByRole('cell').nth(1)).toHaveText(
-    ServiceStatisticsPage.total
-  );
+  await expect(total.getByRole('cell').nth(1)).toHaveText(ServiceStatisticsPage.total);
   await expect(total.getByRole('cell').nth(2)).toHaveText(/^\d+$/);
   await expect(total.getByRole('cell').nth(3)).toHaveText('-');
 });
