@@ -32,15 +32,15 @@ test('home page', async ({ page }) => {
     HomePage.newOSes,
   ]);
 
-  await expect(
-    page.getByText(HomePage.recentBrowsersSection)
-  ).toBeVisible();
+  await expect(page.getByText(HomePage.recentBrowsersSection)).toBeVisible();
 
-  await expect(allBrowsersLink.first()).toBeVisible();
+  await expect(allBrowsersLink).toHaveCount(1);
+  await expect(allBrowsersLink).toBeVisible();
 
   await expect(page.getByText(HomePage.recentOsesSection)).toBeVisible();
 
-  await expect(allOsesLink.first()).toBeVisible();
+  await expect(allOsesLink).toHaveCount(1);
+  await expect(allOsesLink).toBeVisible();
 
   await expect(previouslyAddedLinks).toHaveCount(2);
   await expect(previouslyAddedLinks.first()).toBeVisible();
@@ -58,17 +58,15 @@ test('home page', async ({ page }) => {
     PreviouslyAddedPage.newOSes,
   ]);
 
-  await expect(
-    page.getByText(PreviouslyAddedPage.previousBrowsersSection)
-  ).toBeVisible();
+  await expect(page.getByText(PreviouslyAddedPage.previousBrowsersSection)).toBeVisible();
 
-  await expect(allBrowsersLink.first()).toBeVisible();
+  await expect(allBrowsersLink).toHaveCount(1);
+  await expect(allBrowsersLink).toBeVisible();
 
-  await expect(
-    page.getByText(PreviouslyAddedPage.previousOsesSection)
-  ).toBeVisible();
+  await expect(page.getByText(PreviouslyAddedPage.previousOsesSection)).toBeVisible();
 
-  await expect(allOsesLink.first()).toBeVisible();
+  await expect(allOsesLink).toHaveCount(1);
+  await expect(allOsesLink).toBeVisible();
 
   await expect(recentlyAddedLinks).toHaveCount(2);
   await expect(recentlyAddedLinks.first()).toBeVisible();
@@ -91,17 +89,15 @@ test('home page', async ({ page }) => {
     HomePage.newOSes,
   ]);
 
-  await expect(
-    page.getByText(PreviouslyAddedPage.previousBrowsersSection)
-  ).toBeVisible();
+  await expect(page.getByText(PreviouslyAddedPage.previousBrowsersSection)).toBeVisible();
 
-  await expect(allBrowsersLink.first()).toBeVisible();
+  await expect(allBrowsersLink).toHaveCount(1);
+  await expect(allBrowsersLink).toBeVisible();
 
-  await expect(
-    page.getByText(PreviouslyAddedPage.previousOsesSection)
-  ).toBeVisible();
+  await expect(page.getByText(PreviouslyAddedPage.previousOsesSection)).toBeVisible();
 
-  await expect(allOsesLink.first()).toBeVisible();
+  await expect(allOsesLink).toHaveCount(1);
+  await expect(allOsesLink).toBeVisible();
 
   await expect(recentlyAddedLinks).toHaveCount(2);
   await expect(recentlyAddedLinks.first()).toBeVisible();
