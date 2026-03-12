@@ -113,15 +113,18 @@ test('system statistics', async ({ page }) => {
 
   // Verify footer row values (count and percent) – located by content, not by index
   const totalRecognized = rows.filter({ hasText: ServiceStatisticsPage.totalRecognized });
+  await expect(totalRecognized).toHaveCount(1);
   await expect(totalRecognized.getByRole('cell').nth(2)).toHaveText(/^\d+$/);
   await expect(totalRecognized.getByRole('cell').nth(3)).toHaveText('100%');
 
   const unrecognized = rows.filter({ hasText: ServiceStatisticsPage.unrecognized });
+  await expect(unrecognized).toHaveCount(1);
   await expect(unrecognized.getByRole('cell').nth(2)).toHaveText(/^\d+$/);
   await expect(unrecognized.getByRole('cell').nth(3)).toHaveText('-');
 
   // 'Łącznie' is a substring of 'Łącznie rozpoznane'; use exact cell name to avoid matching both
   const total = rows.filter({ has: page.getByRole('cell', { name: ServiceStatisticsPage.total, exact: true }) });
+  await expect(total).toHaveCount(1);
   await expect(total.getByRole('cell').nth(2)).toHaveText(/^\d+$/);
   await expect(total.getByRole('cell').nth(3)).toHaveText('-');
 });
