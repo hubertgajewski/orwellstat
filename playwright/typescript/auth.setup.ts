@@ -1,14 +1,15 @@
 import { test as setup } from '@playwright/test';
-import dotenv from 'dotenv';
+import { loadEnv, requireCredentials } from '@utils/env.util';
 
-dotenv.config({ path: new URL('../../.env', import.meta.url).pathname });
+loadEnv(import.meta.url, 2);
+const { user, password } = requireCredentials();
 
 setup('authenticate', async ({ page }) => {
   await page.goto('/');
-  await page.locator('[name="username"]').fill(process.env.ORWELLSTAT_USER!);
+  await page.locator('[name="username"]').fill(user);
   await page
     .locator('[name="password"]')
-    .fill(process.env.ORWELLSTAT_PASSWORD!);
+    .fill(password);
   await page.locator('form[action="/zone/"]').getByRole('button').click();
   await page.waitForURL('**/zone/');
   await page.context().storageState({ path: new URL('.auth/user.json', import.meta.url).pathname });
