@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx playwright test*)",
+      "Bash(npx playwright show-report*)",
+      "Bash(npx playwright install*)",
+      "Read(**/password-reset.page.ts)",
+      "Read(**/login-valid-credentials.bru)",
+      "Read(**/login-invalid-credentials.bru)"
+    ],
+    "deny": [
+      "Read(.env)",
+      "Read(**/*.pem)",
+      "Read(**/*.key)",
+      "Read(**/*.p12)",
+      "Read(**/*.pfx)",
+      "Read(**/*secret*)",
+      "Read(**/*password*)",
+      "Read(**/*credentials*)"
+    ]
+  }
+}
