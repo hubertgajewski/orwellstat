@@ -42,6 +42,7 @@ test('home page', async ({ page }) => {
 
   await expect(allOsesLink.first()).toBeVisible();
 
+  await expect(previouslyAddedLinks).toHaveCount(2);
   await expect(previouslyAddedLinks.first()).toBeVisible();
   await expect(previouslyAddedLinks.nth(1)).toBeVisible();
 
@@ -69,6 +70,7 @@ test('home page', async ({ page }) => {
 
   await expect(allOsesLink.first()).toBeVisible();
 
+  await expect(recentlyAddedLinks).toHaveCount(2);
   await expect(recentlyAddedLinks.first()).toBeVisible();
   await expect(recentlyAddedLinks.nth(1)).toBeVisible();
 
@@ -77,6 +79,7 @@ test('home page', async ({ page }) => {
   await expect(page).toHaveTitle(HomePage.title);
 
   // Navigate to PreviouslyAdded via second link, verify page and sections
+  await expect(previouslyAddedLinks).toHaveCount(2);
   await previouslyAddedLinks.nth(1).click();
   await expect(page).toHaveTitle(PreviouslyAddedPage.title);
   await expect(previouslyAddedPage.heading).toBeVisible();
@@ -100,6 +103,7 @@ test('home page', async ({ page }) => {
 
   await expect(allOsesLink.first()).toBeVisible();
 
+  await expect(recentlyAddedLinks).toHaveCount(2);
   await expect(recentlyAddedLinks.first()).toBeVisible();
   await expect(recentlyAddedLinks.nth(1)).toBeVisible();
 
