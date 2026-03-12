@@ -41,10 +41,17 @@ export const test = base.extend<OrwellStatFixtures>({
   },
 
   authenticatedRequest: async ({ request }, use) => {
+    const { ORWELLSTAT_USER, ORWELLSTAT_PASSWORD } = process.env;
+    if (!ORWELLSTAT_USER || !ORWELLSTAT_PASSWORD) {
+      throw new Error(
+        'Missing ORWELLSTAT_USER or ORWELLSTAT_PASSWORD. ' +
+          'Set them in .env (local) or as repository secrets (CI).'
+      );
+    }
     const response = await request.post('/zone/', {
       form: {
-        username: process.env.ORWELLSTAT_USER!,
-        password: process.env.ORWELLSTAT_PASSWORD!,
+        username: ORWELLSTAT_USER,
+        password: ORWELLSTAT_PASSWORD,
       },
     });
     expect(response.ok()).toBeTruthy();
