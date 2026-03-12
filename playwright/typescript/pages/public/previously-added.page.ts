@@ -26,8 +26,6 @@ export class PreviouslyAddedPage extends AbstractPage {
   }
 
   get heading() {
-    return this.page.getByText(
-      'Poprzednio dodane przeglądarki i inne aplikacje WWW:'
-    );
+    return this.page.getByText(PreviouslyAddedPage.previousBrowsersSection);
   }
 }
