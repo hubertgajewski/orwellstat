@@ -12,12 +12,12 @@ test('SVG chart is rendered on stats page', async ({ page }) => {
 
   await expect(page.locator('object[type="image/svg+xml"]')).toBeVisible();
 
-  // Optional checking if SVG animation really works
-  const frame1 = await page.locator('object').screenshot();
+  // Verify SVG animation is running by diffing two consecutive frames
+  const frame1 = await page.locator('object[type="image/svg+xml"]').screenshot();
   await page.evaluate(
     () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
   );
-  const frame2 = await page.locator('object').screenshot();
+  const frame2 = await page.locator('object[type="image/svg+xml"]').screenshot();
   expect(frame1).not.toEqual(frame2);
 
   const img1 = PNG.sync.read(frame1);
