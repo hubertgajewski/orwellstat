@@ -32,16 +32,17 @@ test('home page', async ({ page }) => {
     HomePage.newOSes,
   ]);
 
-  await expect(
-    page.getByText(HomePage.recentBrowsersSection)
-  ).toBeVisible();
+  await expect(page.getByText(HomePage.recentBrowsersSection)).toBeVisible();
 
-  await expect(allBrowsersLink.first()).toBeVisible();
+  await expect(allBrowsersLink).toHaveCount(1);
+  await expect(allBrowsersLink).toBeVisible();
 
   await expect(page.getByText(HomePage.recentOsesSection)).toBeVisible();
 
-  await expect(allOsesLink.first()).toBeVisible();
+  await expect(allOsesLink).toHaveCount(1);
+  await expect(allOsesLink).toBeVisible();
 
+  await expect(previouslyAddedLinks).toHaveCount(2);
   await expect(previouslyAddedLinks.first()).toBeVisible();
   await expect(previouslyAddedLinks.nth(1)).toBeVisible();
 
@@ -57,18 +58,17 @@ test('home page', async ({ page }) => {
     PreviouslyAddedPage.newOSes,
   ]);
 
-  await expect(
-    page.getByText(PreviouslyAddedPage.previousBrowsersSection)
-  ).toBeVisible();
+  await expect(page.getByText(PreviouslyAddedPage.previousBrowsersSection)).toBeVisible();
 
-  await expect(allBrowsersLink.first()).toBeVisible();
+  await expect(allBrowsersLink).toHaveCount(1);
+  await expect(allBrowsersLink).toBeVisible();
 
-  await expect(
-    page.getByText(PreviouslyAddedPage.previousOsesSection)
-  ).toBeVisible();
+  await expect(page.getByText(PreviouslyAddedPage.previousOsesSection)).toBeVisible();
 
-  await expect(allOsesLink.first()).toBeVisible();
+  await expect(allOsesLink).toHaveCount(1);
+  await expect(allOsesLink).toBeVisible();
 
+  await expect(recentlyAddedLinks).toHaveCount(2);
   await expect(recentlyAddedLinks.first()).toBeVisible();
   await expect(recentlyAddedLinks.nth(1)).toBeVisible();
 
@@ -77,6 +77,7 @@ test('home page', async ({ page }) => {
   await expect(page).toHaveTitle(HomePage.title);
 
   // Navigate to PreviouslyAdded via second link, verify page and sections
+  await expect(previouslyAddedLinks).toHaveCount(2);
   await previouslyAddedLinks.nth(1).click();
   await expect(page).toHaveTitle(PreviouslyAddedPage.title);
   await expect(previouslyAddedPage.heading).toBeVisible();
@@ -88,18 +89,17 @@ test('home page', async ({ page }) => {
     HomePage.newOSes,
   ]);
 
-  await expect(
-    page.getByText(PreviouslyAddedPage.previousBrowsersSection)
-  ).toBeVisible();
+  await expect(page.getByText(PreviouslyAddedPage.previousBrowsersSection)).toBeVisible();
 
-  await expect(allBrowsersLink.first()).toBeVisible();
+  await expect(allBrowsersLink).toHaveCount(1);
+  await expect(allBrowsersLink).toBeVisible();
 
-  await expect(
-    page.getByText(PreviouslyAddedPage.previousOsesSection)
-  ).toBeVisible();
+  await expect(page.getByText(PreviouslyAddedPage.previousOsesSection)).toBeVisible();
 
-  await expect(allOsesLink.first()).toBeVisible();
+  await expect(allOsesLink).toHaveCount(1);
+  await expect(allOsesLink).toBeVisible();
 
+  await expect(recentlyAddedLinks).toHaveCount(2);
   await expect(recentlyAddedLinks.first()).toBeVisible();
   await expect(recentlyAddedLinks.nth(1)).toBeVisible();
 
