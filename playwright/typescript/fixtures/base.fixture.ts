@@ -1,6 +1,8 @@
 import { test as base, expect, type APIRequestContext } from '@playwright/test';
-
 import { writeFileSync } from 'fs';
+import { loadEnv, requireCredentials } from '@utils/env.util';
+
+loadEnv(import.meta.url, 3);
 
 type OrwellStatFixtures = {
   authenticatedRequest: APIRequestContext;
@@ -41,17 +43,11 @@ export const test = base.extend<OrwellStatFixtures>({
   },
 
   authenticatedRequest: async ({ request }, use) => {
-    const { ORWELLSTAT_USER, ORWELLSTAT_PASSWORD } = process.env;
-    if (!ORWELLSTAT_USER || !ORWELLSTAT_PASSWORD) {
-      throw new Error(
-        'Missing ORWELLSTAT_USER or ORWELLSTAT_PASSWORD. ' +
-          'Set them in .env (local) or as repository secrets (CI).'
-      );
-    }
+    const { user, password } = requireCredentials();
     const response = await request.post('/zone/', {
       form: {
-        username: ORWELLSTAT_USER,
-        password: ORWELLSTAT_PASSWORD,
+        username: user,
+        password: password,
       },
     });
     expect(response.ok()).toBeTruthy();

@@ -63,6 +63,7 @@ All commands must be run from `playwright/typescript/`.
   - Re-exports `pixelmatch` and `PNG` (used for pixel-diff screenshot comparison)
 - `utils/accessibility.util.ts` — `expectNoAccessibilityViolations()` using `@axe-core/playwright` (WCAG2AAA)
 - `utils/string.util.ts` — `expectHeadings()` helper: asserts visibility of multiple headings on a page
+- `utils/env.util.ts` — `loadEnv(importMetaUrl, levelsUp)` loads `.env` relative to the calling file; `requireCredentials()` validates and returns `ORWELLSTAT_USER`/`ORWELLSTAT_PASSWORD`, throwing a descriptive error if either is missing
 - `types/` — Reserved for shared TypeScript interfaces (currently empty)
 - `test-data/` — Reserved for static test data (currently empty)
 
@@ -85,6 +86,36 @@ All commands must be run from `playwright/typescript/`.
 - Commented-out staging `baseURL` (`http://stage.orwellstat.hubertgajewski.com`) can be enabled for staging
 
 **CI:** `.github/workflows/playwright-typescript.yml` — runs on push/PR to main/master with `working-directory: playwright/typescript`; uploads `playwright/typescript/playwright-report/` as an artifact (retained 30 days).
+
+---
+
+## Code review checklist
+
+Before committing changes to `playwright/typescript`, review against these criteria:
+
+- **Playwright test correctness** — selectors use `getByRole()` / `getByText()` with `exact: true`; no CSS class selectors; no `waitForTimeout()`; count asserted before `.nth()`; no `.first()` silencing missing elements
+- **Page Object Model conventions** — page classes extend `AbstractPage`; `heading` getter uses `getByRole('heading', { name: ..., exact: true })`; static `url`, `title`, `accessKey` defined
+- **TypeScript quality** — no `!` non-null assertions on env vars; `page.evaluate()` calls have explicit generic type; no implicit `any`; `tsc --noEmit` passes
+- **Flakiness** — no fixed timeouts; animation waits use `requestAnimationFrame`; auth setup asserts login actually succeeded
+- **Consistency** — new utils documented in `CLAUDE.md`; new page files exported via the appropriate `index.ts`; path aliases used (`@fixtures/*`, `@pages/*`, `@utils/*`)
+
+---
+
+## GitHub issue format
+
+When creating GitHub issues for requirements, bugs, or code review findings, use this structure:
+
+**Title:** `[label] Short imperative description`
+
+**Body sections (in order):**
+
+1. **User Story** — "As a tester, I want ... so that ..."
+2. **Context** — explanation of the current problem with exact file references
+3. **Acceptance Criteria** — Given/When/Then scenarios covering the happy path and the failure case
+4. **Implementation Hint** — concrete code snippet showing the fix
+5. **Definition of Done** — checklist of observable, verifiable outcomes
+
+**Labels:** apply semantic labels such as `test-quality`, `flakiness`, `type-safety`, `pom`.
 
 ---
 
