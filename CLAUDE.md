@@ -49,6 +49,7 @@ All commands must be run from `playwright/typescript/`.
   - `about-system.spec.ts` — About System page headings and statsbar content tests
   - `contact.spec.ts` — Contact page headings and statsbar content tests
   - `statistics.spec.ts` — Service statistics page: SVG chart rendering and statistics table tests
+  - `validation.spec.ts` — W3C XHTML and CSS validation tests across all pages (classic W3C Markup Validator + CSS validator APIs); Chromium-only
 - `auth.setup.ts` — Playwright auth setup: logs in via UI and saves storage state to `.auth/user.json`
 - `pages/` — Page Object Model classes
   - `base.page.ts` — `BasePage` interface (`url`, `title`, `goto()`, `heading`, optional `accessKey`)
@@ -64,6 +65,7 @@ All commands must be run from `playwright/typescript/`.
 - `utils/accessibility.util.ts` — `expectNoAccessibilityViolations()` using `@axe-core/playwright` (WCAG2AAA)
 - `utils/string.util.ts` — `expectHeadings()` helper: asserts visibility of multiple headings on a page
 - `utils/env.util.ts` — `loadEnv(importMetaUrl, levelsUp)` loads `.env` relative to the calling file; `requireCredentials()` validates and returns `ORWELLSTAT_USER`/`ORWELLSTAT_PASSWORD`, throwing a descriptive error if either is missing
+- `utils/validation.util.ts` — `expectValidXhtml(request, xhtml)` POSTs raw markup to the classic W3C Markup Validation Service (`validator.w3.org/check`) and asserts no errors (correct for XHTML 1.0 Strict; Nu is HTML5-only and gives false positives); `expectValidCss(request, cssUrl)` queries W3C CSS validator by URI and asserts zero errors
 - `types/` — Shared TypeScript interfaces; exported via path alias `@types-local/*`
   - `svg-analysis.ts` — `SvgAnalysis` interface: shape of the object returned by `page.evaluate()` in `statistics.spec.ts`
 - `test-data/` — Reserved for static test data (currently empty)
@@ -101,7 +103,7 @@ Before committing changes to `playwright/typescript`, review against these crite
 - **Potential bugs** — async/await not missing on Playwright calls; no unhandled promise rejections; locators not reused across navigations; any file reading `process.env` credentials calls `loadEnv(import.meta.url, N)` at module top level (missing this passes on CI but fails locally)
 - **Flakiness** — no fixed timeouts; animation waits use `requestAnimationFrame`; auth setup asserts login actually succeeded; no assumptions about element order without explicit count assertion
 - **Security** — no credentials hardcoded anywhere; `.env` and `bruno/environments/.env` remain gitignored; Bruno secrets use `vars:secret` (not plaintext in `.bru` files); no sensitive data in committed config files (`.actrc`, `playwright.config.ts`, etc.); `ORWELLSTAT_USER`/`ORWELLSTAT_PASSWORD` sourced only from `.env` (local) or GitHub Actions secrets (CI)
-- **Consistency with existing patterns** — new utils documented in `CLAUDE.md`; new page files exported via the appropriate `index.ts`; code style matches surrounding files; JSON/config files are valid (no stray braces, no syntax errors)
+- **Consistency with existing patterns** — new utils and test files documented in **both** `CLAUDE.md` and `README.md` (both files have mirrored architecture sections); new page files exported via the appropriate `index.ts`; code style matches surrounding files; JSON/config files are valid (no stray braces, no syntax errors)
 
 ---
 
