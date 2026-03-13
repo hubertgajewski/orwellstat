@@ -27,7 +27,7 @@ export const test = base.extend<OrwellStatFixtures>({
         });
       }
 
-      const styleLinks = await page.evaluate(() =>
+      const styleLinks = await page.evaluate<string[]>(() =>
         Array.from(document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]'))
           .map((l) => l.getAttribute('href'))
           .filter((href): href is string => href !== null)
