@@ -71,6 +71,7 @@ All commands must be run from `playwright/typescript/`.
 - `utils/validation.util.ts` — `expectValidXhtml(request, xhtml)` POSTs raw markup to the classic W3C Markup Validation Service (`validator.w3.org/check`) and asserts no errors (correct for XHTML 1.0 Strict; Nu is HTML5-only and gives false positives); `expectValidCss(request, cssUrl)` queries W3C CSS validator by URI and asserts zero errors
 - `types/` — Shared TypeScript interfaces; exported via path alias `@types-local/*`
   - `svg-analysis.ts` — `SvgAnalysis` interface: shape of the object returned by `page.evaluate()` in `statistics.spec.ts`
+  - `statistics-row.ts` — `StatisticsRow` interface: shape of each data row returned by the bulk `page.evaluate()` in `statistics.spec.ts`
 - `test-data/` — Reserved for static test data (currently empty)
 
 **Page Object Model pattern:** Each page class extends `AbstractPage` and defines static `url`, `title` (and optionally `accessKey`) properties used in data-driven loops. The constructor calls `super(page, url, title, accessKey)`. Only the `heading` getter and page-specific static string constants need to be defined per class.
@@ -106,6 +107,7 @@ Before committing changes to `playwright/typescript`, review against these crite
 - **Potential bugs** — async/await not missing on Playwright calls; no unhandled promise rejections; locators not reused across navigations; any file reading `process.env` credentials calls `loadEnv(import.meta.url, N)` at module top level (missing this passes on CI but fails locally)
 - **Flakiness** — no fixed timeouts; animation waits use `requestAnimationFrame`; auth setup asserts login actually succeeded; no assumptions about element order without explicit count assertion
 - **Security** — no credentials hardcoded anywhere; `.env` and `bruno/environments/.env` remain gitignored; Bruno secrets use `vars:secret` (not plaintext in `.bru` files); no sensitive data in committed config files (`.actrc`, `playwright.config.ts`, etc.); `ORWELLSTAT_USER`/`ORWELLSTAT_PASSWORD` sourced only from `.env` (local) or GitHub Actions secrets (CI)
+- **Formatting** — code is formatted with Prettier (`npm run format` from `playwright/typescript/`); never commit files that would fail `npm run format:check`
 - **Consistency with existing patterns** — new utils and test files documented in **both** `CLAUDE.md` and `README.md` (both files have mirrored architecture sections); new page files exported via the appropriate `index.ts`; code style matches surrounding files; JSON/config files are valid (no stray braces, no syntax errors)
 
 ---
@@ -134,11 +136,13 @@ When fixing a GitHub issue, follow these steps in order:
 
 1. Make the code change
 2. Run `tsc --noEmit` — must pass with no errors
-3. Review against the [code review checklist](#code-review-checklist)
-4. Run the affected test(s) — must pass
-5. Create a branch from remote `main` named `feature/<issue-number>` or `bugfix/<issue-number>` (e.g. `feature/19`)
-6. Commit with a **short, single-line message** in the format `<issue-number> <short description>` (e.g. `19 Add explicit SvgAnalysis type to page.evaluate()`). No body, no `Co-Authored-By` trailer — single line only.
-7. Push and create a PR
+3. Run `npm run format` — auto-formats all files; no manual style fixes needed
+4. Review against the [code review checklist](#code-review-checklist)
+5. Run the affected test(s) — must pass
+6. Create a branch from remote `main` named `feature/<issue-number>` or `bugfix/<issue-number>` (e.g. `feature/19`)
+7. Commit with a **short, single-line message** in the format `<issue-number> <short description>` (e.g. `19 Add explicit SvgAnalysis type to page.evaluate()`). No body, no `Co-Authored-By` trailer — single line only.
+8. **Review the diff as a fresh reviewer** — run `git diff HEAD~1` and read the diff as someone who was not part of the discussion and has no context beyond what is visible in the code. For every non-obvious change ask: *"Would I understand why this was done just from the diff?"* If the answer is no, either add a comment in the code or adjust the implementation before pushing.
+9. Push and create a PR
 
 ---
 
