@@ -94,11 +94,14 @@ All commands must be run from `playwright/typescript/`.
 
 Before committing changes to `playwright/typescript`, review against these criteria:
 
-- **Playwright test correctness** — selectors use `getByRole()` / `getByText()` with `exact: true`; no CSS class selectors; no `waitForTimeout()`; count asserted before `.nth()`; no `.first()` silencing missing elements
-- **Page Object Model conventions** — page classes extend `AbstractPage`; `heading` getter uses `getByRole('heading', { name: ..., exact: true })`; static `url`, `title`, `accessKey` defined
-- **TypeScript quality** — no `!` non-null assertions on env vars; `page.evaluate()` calls have explicit generic type; no implicit `any`; `tsc --noEmit` passes
-- **Flakiness** — no fixed timeouts; animation waits use `requestAnimationFrame`; auth setup asserts login actually succeeded
-- **Consistency** — new utils documented in `CLAUDE.md`; new page files exported via the appropriate `index.ts`; path aliases used (`@fixtures/*`, `@pages/*`, `@utils/*`)
+- **Playwright test correctness** — selectors use `getByRole()` / `getByText()` with `exact: true`; no CSS class selectors; no `waitForTimeout()`; count asserted before `.nth()`; no `.first()` silencing missing elements; assertions are specific and meaningful (not just `toBeTruthy()`)
+- **Fixture usage** — custom fixtures from `base.fixture.ts` used where appropriate; `authenticatedRequest` used for authenticated API tests; no manual login logic duplicated outside `auth.setup.ts`
+- **Page Object Model conventions** — page classes extend `AbstractPage`; `heading` getter uses `getByRole('heading', { name: ..., exact: true })`; static `url`, `title`, `accessKey` defined; no page-specific logic leaking into test files
+- **TypeScript quality** — no `!` non-null assertions on env vars; `page.evaluate()` calls have explicit generic type; no implicit `any`; no unused imports; path aliases used (`@fixtures/*`, `@pages/*`, `@utils/*`); `tsc --noEmit` passes
+- **Potential bugs** — async/await not missing on Playwright calls; no unhandled promise rejections; locators not reused across navigations; any file reading `process.env` credentials calls `loadEnv(import.meta.url, N)` at module top level (missing this passes on CI but fails locally)
+- **Flakiness** — no fixed timeouts; animation waits use `requestAnimationFrame`; auth setup asserts login actually succeeded; no assumptions about element order without explicit count assertion
+- **Security** — no credentials hardcoded anywhere; `.env` and `bruno/environments/.env` remain gitignored; Bruno secrets use `vars:secret` (not plaintext in `.bru` files); no sensitive data in committed config files (`.actrc`, `playwright.config.ts`, etc.); `ORWELLSTAT_USER`/`ORWELLSTAT_PASSWORD` sourced only from `.env` (local) or GitHub Actions secrets (CI)
+- **Consistency with existing patterns** — new utils documented in `CLAUDE.md`; new page files exported via the appropriate `index.ts`; code style matches surrounding files; JSON/config files are valid (no stray braces, no syntax errors)
 
 ---
 
