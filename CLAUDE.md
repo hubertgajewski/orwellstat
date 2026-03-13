@@ -58,7 +58,7 @@ All commands must be run from `playwright/typescript/`.
   - `authenticated/` — Authenticated page classes: `InformationPage`, `StatsPage`, `HitsPage`, `ScriptsPage`, `AdminPage`; exported via `index.ts` as `AUTHENTICATED_PAGE_CLASSES`
 - `fixtures/base.fixture.ts` — Custom Playwright fixture extending `test` with:
   - `authenticatedRequest` — logs in via POST `/zone/` before each test
-  - Captures browser console logs and DOM snapshot as attachments on test failure
+  - Captures browser console logs and XHTML DOM snapshot (`dom.xhtml` with XML declaration and `<?xml-stylesheet?>` PIs) as attachments on test failure
   - Re-exports `expect`, `request`, `Page`, `Locator`, `BrowserContext` from `@playwright/test`
   - Re-exports `pixelmatch` and `PNG` (used for pixel-diff screenshot comparison)
 - `utils/accessibility.util.ts` — `expectNoAccessibilityViolations()` using `@axe-core/playwright` (WCAG2AAA)

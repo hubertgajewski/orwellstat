@@ -27,8 +27,17 @@ export const test = base.extend<OrwellStatFixtures>({
         });
       }
 
-      const domPath = testInfo.outputPath('dom.html');
-      writeFileSync(domPath, await page.content());
+      const styleLinks = await page.evaluate(() =>
+        Array.from(document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]'))
+          .map((l) => l.getAttribute('href'))
+          .filter((href): href is string => href !== null)
+      );
+      const xmlProlog = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        ...styleLinks.map((href) => `<?xml-stylesheet type="text/css" href="${href}"?>`),
+      ].join('\n');
+      const domPath = testInfo.outputPath('dom.xhtml');
+      writeFileSync(domPath, xmlProlog + '\n' + (await page.content()));
       await testInfo.attach('DOM', {
         path: domPath,
         contentType: 'text/html',
