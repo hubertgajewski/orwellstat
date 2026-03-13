@@ -8,6 +8,7 @@ Multi-language, multi-framework end-to-end test suite for [Orwell Stat](https://
 .env                        # credentials (git-ignored); see .env.example
 .env.example                # template: ORWELLSTAT_USER, ORWELLSTAT_PASSWORD
 .github/workflows/          # CI workflows (one per sub-project)
+SECURITY.md                 # security policy and vulnerability reporting
 playwright/
   typescript/               # Playwright tests in TypeScript
 selenium/                   # Selenium tests (planned)
