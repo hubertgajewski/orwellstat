@@ -111,8 +111,6 @@ test('system statistics', async ({ page }) => {
             lp: row.cells[0]?.textContent?.trim() ?? '',
             count: row.cells[2]?.textContent?.trim() ?? '',
             percent: row.cells[3]?.textContent?.trim() ?? '',
-            count:   row.cells[2]?.textContent?.trim() ?? '',
-            percent: row.cells[3]?.textContent?.trim() ?? '',
           }))
       : [];
   });
