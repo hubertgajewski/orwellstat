@@ -129,7 +129,7 @@ When fixing a GitHub issue, follow these steps in order:
 3. Review against the [code review checklist](#code-review-checklist)
 4. Run the affected test(s) — must pass
 5. Create a branch from remote `main` named `feature/<issue-number>` or `bugfix/<issue-number>` (e.g. `feature/19`)
-6. Commit with a **short, single-line message** in the format `<issue-number> <short description>` (e.g. `19 Add explicit SvgAnalysis type to page.evaluate()`)
+6. Commit with a **short, single-line message** in the format `<issue-number> <short description>` (e.g. `19 Add explicit SvgAnalysis type to page.evaluate()`). No body, no `Co-Authored-By` trailer — single line only.
 7. Push and create a PR
 
 ---
