@@ -108,13 +108,15 @@ test('system statistics', async ({ page }) => {
       ? Array.from(table.rows)
           .slice(1, -3)
           .map((row) => ({
-            lp:      row.cells[0]?.textContent?.trim() ?? '',
+            lp: row.cells[0]?.textContent?.trim() ?? '',
+            count: row.cells[2]?.textContent?.trim() ?? '',
+            percent: row.cells[3]?.textContent?.trim() ?? '',
             count:   row.cells[2]?.textContent?.trim() ?? '',
             percent: row.cells[3]?.textContent?.trim() ?? '',
           }))
       : [];
   });
-  expect(dataRows).toHaveLength(rowCount - 4);
+  expect(dataRows).toHaveLength(rowCount - 4); // 1 header row + 3 footer rows
   for (let i = 0; i < dataRows.length; i++) {
     expect(dataRows[i].lp,      `row ${i + 1}: lp`).toBe(String(i + 1));
     expect(dataRows[i].count,   `row ${i + 1}: count`).toMatch(/^\d+$/);
