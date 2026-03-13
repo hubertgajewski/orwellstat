@@ -19,13 +19,21 @@ export default defineConfig({
 
   use: {
     baseURL: 'https://orwellstat.hubertgajewski.com',
-    // baseURL: 'http://stage.orwellstat.hubertgajewski.com',
+//     baseURL: 'https://stage.orwellstat.hubertgajewski.com',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
     extraHTTPHeaders: {
       Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
     },
+    ...(process.env.BASIC_AUTH_USER
+      ? {
+          httpCredentials: {
+            username: process.env.BASIC_AUTH_USER,
+            password: process.env.BASIC_AUTH_PASSWORD ?? '',
+          },
+        }
+      : {}),
   },
 
   projects: [
@@ -36,27 +44,42 @@ export default defineConfig({
     },
     {
       name: 'Chromium',
-      use: { ...devices['Desktop Chrome'], storageState: new URL('.auth/user.json', import.meta.url).pathname },
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: new URL('.auth/user.json', import.meta.url).pathname,
+      },
       dependencies: ['setup'],
     },
     {
       name: 'Firefox',
-      use: { ...devices['Desktop Firefox'], storageState: new URL('.auth/user.json', import.meta.url).pathname },
+      use: {
+        ...devices['Desktop Firefox'],
+        storageState: new URL('.auth/user.json', import.meta.url).pathname,
+      },
       dependencies: ['setup'],
     },
     {
       name: 'Webkit',
-      use: { ...devices['Desktop Safari'], storageState: new URL('.auth/user.json', import.meta.url).pathname },
+      use: {
+        ...devices['Desktop Safari'],
+        storageState: new URL('.auth/user.json', import.meta.url).pathname,
+      },
       dependencies: ['setup'],
     },
     {
       name: 'Mobile Chrome',
-      use: { ...devices['Galaxy S24'], storageState: new URL('.auth/user.json', import.meta.url).pathname },
+      use: {
+        ...devices['Galaxy S24'],
+        storageState: new URL('.auth/user.json', import.meta.url).pathname,
+      },
       dependencies: ['setup'],
     },
     {
       name: 'Mobile Safari',
-      use: { ...devices['iPhone 15'], storageState: new URL('.auth/user.json', import.meta.url).pathname },
+      use: {
+        ...devices['iPhone 15'],
+        storageState: new URL('.auth/user.json', import.meta.url).pathname,
+      },
       dependencies: ['setup'],
     },
 

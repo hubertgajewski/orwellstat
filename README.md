@@ -33,9 +33,11 @@ Copy `.env.example` to `.env` at the repo root and fill in your credentials:
 ```
 ORWELLSTAT_USER=<username>
 ORWELLSTAT_PASSWORD=<password>
+BASIC_AUTH_USER=<staging basic auth user>
+BASIC_AUTH_PASSWORD=<staging basic auth password>
 ```
 
-This file is shared across all sub-projects. In CI, credentials are injected as GitHub Actions secrets.
+`ORWELLSTAT_USER` and `ORWELLSTAT_PASSWORD` are required for all environments. `BASIC_AUTH_USER` and `BASIC_AUTH_PASSWORD` are only needed when running against staging — Playwright passes them automatically as HTTP Basic Auth credentials when set. In CI, all four are injected as GitHub Actions secrets.
 
 ---
 
@@ -133,7 +135,7 @@ npx playwright test --ui
 - All projects use `storageState: '.auth/user.json'` (written by `auth.setup.ts`)
 - On failure: screenshots, video, and console/DOM log attachments are saved
 - `trace: 'on-first-retry'`
-- Commented-out staging `baseURL` (`http://stage.orwellstat.hubertgajewski.com`) can be enabled for staging
+- Commented-out staging `baseURL` (`https://stage.orwellstat.hubertgajewski.com`) can be enabled for staging; when enabled, `httpCredentials` are injected automatically if `BASIC_AUTH_USER` is set
 
 **CI:** `.github/workflows/playwright-typescript.yml` — runs on push/PR to main/master with `working-directory: playwright/typescript`; uploads `playwright/typescript/playwright-report/` as an artifact (retained 30 days); upload is skipped when running locally with `act`.
 
@@ -152,7 +154,7 @@ Open the `bruno/` directory in the Bruno standalone app or use the Bruno VSCode 
 | Environment | Base URL |
 |---|---|
 | production | `https://orwellstat.hubertgajewski.com` |
-| staging | `http://stage.orwellstat.hubertgajewski.com` |
+| staging | `https://stage.orwellstat.hubertgajewski.com` |
 
 Environment secrets (passwords, Basic auth credentials) are stored in `bruno/environments/.env` (git-ignored). Create this file locally:
 
