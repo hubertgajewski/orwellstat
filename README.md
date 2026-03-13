@@ -84,6 +84,12 @@ npx playwright show-report
 
 # Interactive UI mode
 npx playwright test --ui
+
+# Format with Prettier
+npm run format
+
+# Check formatting without writing
+npm run format:check
 ```
 
 ### Architecture
