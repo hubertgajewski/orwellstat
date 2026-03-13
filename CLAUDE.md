@@ -86,7 +86,7 @@ All commands must be run from `playwright/typescript/`.
 - `trace: 'on-first-retry'`
 - Commented-out staging `baseURL` (`http://stage.orwellstat.hubertgajewski.com`) can be enabled for staging
 
-**CI:** `.github/workflows/playwright-typescript.yml` — runs on push/PR to main/master with `working-directory: playwright/typescript`; uploads `playwright/typescript/playwright-report/` as an artifact (retained 30 days).
+**CI:** `.github/workflows/playwright-typescript.yml` — runs on push/PR to main/master with `working-directory: playwright/typescript`; uploads `playwright/typescript/playwright-report/` as an artifact (retained 30 days); upload is skipped when running locally with `act`.
 
 ---
 
