@@ -64,6 +64,7 @@ npx playwright test tests/home.spec.ts
 npx playwright test tests/about-system.spec.ts
 npx playwright test tests/contact.spec.ts
 npx playwright test tests/statistics.spec.ts
+npx playwright test tests/validation.spec.ts
 
 # Specific browser
 npx playwright test --project=chromium
@@ -94,6 +95,7 @@ npx playwright test --ui
   - `about-system.spec.ts` — About System page headings and statsbar content tests
   - `contact.spec.ts` — Contact page headings and statsbar content tests
   - `statistics.spec.ts` — Service statistics page: SVG chart rendering and statistics table tests
+  - `validation.spec.ts` — W3C XHTML and CSS validation tests across all pages (classic W3C Markup Validator + CSS validator APIs); Chromium-only
 - `auth.setup.ts` — Playwright auth setup: logs in via UI and saves storage state to `.auth/user.json`
 - `pages/` — Page Object Model classes
   - `base.page.ts` — `BasePage` interface (`url`, `title`, `goto()`, `heading`, optional `accessKey`)
@@ -103,12 +105,15 @@ npx playwright test --ui
   - `authenticated/` — Authenticated page classes: `InformationPage`, `StatsPage`, `HitsPage`, `ScriptsPage`, `AdminPage`; exported via `index.ts` as `AUTHENTICATED_PAGE_CLASSES`
 - `fixtures/base.fixture.ts` — Custom Playwright fixture extending `test` with:
   - `authenticatedRequest` — logs in via POST `/zone/` before each test
-  - Captures browser console logs and DOM snapshot as attachments on test failure
+  - Captures browser console logs and XHTML DOM snapshot (`dom.xhtml` with XML declaration and `<?xml-stylesheet?>` PIs) as attachments on test failure
   - Re-exports `expect`, `request`, `Page`, `Locator`, `BrowserContext` from `@playwright/test`
   - Re-exports `pixelmatch` and `PNG` (used for pixel-diff screenshot comparison)
 - `utils/accessibility.util.ts` — `expectNoAccessibilityViolations()` using `@axe-core/playwright` (WCAG2AAA)
 - `utils/string.util.ts` — `expectHeadings()` helper: asserts visibility of multiple headings on a page
-- `types/` — Reserved for shared TypeScript interfaces (currently empty)
+- `utils/validation.util.ts` — `expectValidXhtml(request, xhtml)` POSTs raw markup to the classic W3C Markup Validation Service (`validator.w3.org/check`) and asserts no errors (correct for XHTML 1.0 Strict; Nu is HTML5-only and gives false positives); `expectValidCss(request, cssUrl)` queries W3C CSS validator by URI and asserts zero errors
+- `utils/env.util.ts` — `loadEnv(importMetaUrl, levelsUp)` loads `.env` relative to the calling file; `requireCredentials()` validates and returns `ORWELLSTAT_USER`/`ORWELLSTAT_PASSWORD`
+- `types/` — Shared TypeScript interfaces; exported via path alias `@types-local/*`
+  - `svg-analysis.ts` — `SvgAnalysis` interface: shape of the object returned by `page.evaluate()` in `statistics.spec.ts`
 - `test-data/` — Reserved for static test data (currently empty)
 
 **Page Object Model pattern:** Each page class extends `AbstractPage` and defines static `url`, `title` (and optionally `accessKey`) properties used in data-driven loops. The constructor calls `super(page, url, title, accessKey)`. Only the `heading` getter and page-specific static string constants need to be defined per class.
@@ -129,7 +134,7 @@ npx playwright test --ui
 - `trace: 'on-first-retry'`
 - Commented-out staging `baseURL` (`http://stage.orwellstat.hubertgajewski.com`) can be enabled for staging
 
-**CI:** `.github/workflows/playwright-typescript.yml` — runs on push/PR to main/master with `working-directory: playwright/typescript`; uploads `playwright/typescript/playwright-report/` as an artifact (retained 30 days).
+**CI:** `.github/workflows/playwright-typescript.yml` — runs on push/PR to main/master with `working-directory: playwright/typescript`; uploads `playwright/typescript/playwright-report/` as an artifact (retained 30 days); upload is skipped when running locally with `act`.
 
 ---
 
