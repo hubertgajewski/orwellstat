@@ -88,7 +88,7 @@ All commands must be run from `playwright/typescript/`.
 - All projects use `storageState: '.auth/user.json'` (written by `auth.setup.ts`)
 - On failure: screenshots, video, and console/DOM log attachments are saved
 - `trace: 'on-first-retry'`
-- Commented-out staging `baseURL` (`http://stage.orwellstat.hubertgajewski.com`) can be enabled for staging; when enabled, `httpCredentials` are injected automatically if `BASIC_AUTH_USER` is set
+- Commented-out staging `baseURL` (`https://stage.orwellstat.hubertgajewski.com`) can be enabled for staging; when enabled, `httpCredentials` are injected automatically if `BASIC_AUTH_USER` is set
 
 **CI:** `.github/workflows/playwright-typescript.yml` — runs on push/PR to main/master with `working-directory: playwright/typescript`; uploads `playwright/typescript/playwright-report/` as an artifact (retained 30 days); upload is skipped when running locally with `act`.
 
