@@ -2,6 +2,7 @@ import { test, expect, pixelmatch, PNG } from '@fixtures/base.fixture';
 import { ServiceStatisticsPage } from '@pages/public/service-statistics.page';
 import { expectHeadings } from '@utils/string.util';
 import { SvgAnalysis } from '@types-local/svg-analysis';
+import { StatisticsRow } from '@types-local/statistics-row';
 
 test('SVG chart is rendered on stats page', async ({ page }) => {
   const [svgResponse] = await Promise.all([
@@ -100,10 +101,24 @@ test('system statistics', async ({ page }) => {
   const rowCount = await rows.count();
   expect(rowCount).toBeGreaterThan(0);
 
-  for (let i = 1; i <= rowCount - 4; i++) {
-    await expect(page.getByRole('cell', { name: String(i) }).first()).toBeVisible();
-    await expect(rows.nth(i).getByRole('cell').nth(2)).toHaveText(/^\d+$/);
-    await expect(rows.nth(i).getByRole('cell').nth(3)).toHaveText(/^\d+\.\d{2}%$/);
+  // Read all data rows in one browser round-trip to avoid 246+ sequential awaits timing out
+  const dataRows = await page.evaluate<StatisticsRow[]>(() => {
+    const table = document.querySelector('table');
+    return table
+      ? Array.from(table.rows)
+          .slice(1, -3)
+          .map((row) => ({
+            lp: row.cells[0]?.textContent?.trim() ?? '',
+            count: row.cells[2]?.textContent?.trim() ?? '',
+            percent: row.cells[3]?.textContent?.trim() ?? '',
+          }))
+      : [];
+  });
+  expect(dataRows).toHaveLength(rowCount - 4); // 1 header row + 3 footer rows
+  for (let i = 0; i < dataRows.length; i++) {
+    expect(dataRows[i].lp,      `row ${i + 1}: lp`).toBe(String(i + 1));
+    expect(dataRows[i].count,   `row ${i + 1}: count`).toMatch(/^\d+$/);
+    expect(dataRows[i].percent, `row ${i + 1}: percent`).toMatch(/^\d+\.\d{2}%$/);
   }
 
   // Structural check: the table ends with exactly these 3 footer rows in order

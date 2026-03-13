@@ -84,6 +84,12 @@ npx playwright show-report
 
 # Interactive UI mode
 npx playwright test --ui
+
+# Format with Prettier
+npm run format
+
+# Check formatting without writing
+npm run format:check
 ```
 
 ### Architecture
@@ -117,6 +123,7 @@ npx playwright test --ui
 - `utils/env.util.ts` — `loadEnv(importMetaUrl, levelsUp)` loads `.env` relative to the calling file; `requireCredentials()` validates and returns `ORWELLSTAT_USER`/`ORWELLSTAT_PASSWORD`
 - `types/` — Shared TypeScript interfaces; exported via path alias `@types-local/*`
   - `svg-analysis.ts` — `SvgAnalysis` interface: shape of the object returned by `page.evaluate()` in `statistics.spec.ts`
+  - `statistics-row.ts` — `StatisticsRow` interface: shape of each data row returned by the bulk `page.evaluate()` in `statistics.spec.ts`
 - `test-data/` — Reserved for static test data (currently empty)
 
 **Page Object Model pattern:** Each page class extends `AbstractPage` and defines static `url`, `title` (and optionally `accessKey`) properties used in data-driven loops. The constructor calls `super(page, url, title, accessKey)`. Only the `heading` getter and page-specific static string constants need to be defined per class.
