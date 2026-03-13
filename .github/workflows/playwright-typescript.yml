@@ -28,7 +28,10 @@ jobs:
       - name: Detect local act runner
         id: detect-act
         if: ${{ !cancelled() }}
-        run: '[ "${ACT}" = "true" ] && echo "running=true" >> $GITHUB_OUTPUT || true'
+        run: |
+          if [ "${ACT}" = "true" ]; then
+            echo "running=true" >> "$GITHUB_OUTPUT"
+          fi
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() && steps.detect-act.outputs.running != 'true' }}
         with:
