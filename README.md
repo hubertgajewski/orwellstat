@@ -190,3 +190,5 @@ act push -W .github/workflows/playwright-typescript.yml --container-architecture
 On first run, `act` will ask for a Docker image size — choose **Medium** (~500MB). The workflow itself installs Playwright browsers via `npx playwright install --with-deps`.
 
 > **Note:** The `--container-architecture linux/amd64` flag is required on Apple Silicon (M-series) Macs to avoid compatibility issues.
+
+> **Credentials:** The repo root contains `.actrc` which automatically passes `--secret-file .env` to every `act` invocation. `ORWELLSTAT_USER` and `ORWELLSTAT_PASSWORD` from `.env` are loaded as secrets with no extra flags needed.
