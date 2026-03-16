@@ -4,15 +4,30 @@ on:
     branches: [main, master]
   pull_request:
     branches: [main, master]
+  workflow_dispatch:
+    inputs:
+      update_visual_baselines:
+        description: 'Regenerate Linux visual baselines (--update-snapshots) and commit them back'
+        type: boolean
+        default: false
+      ref:
+        description: 'Branch to run on (defaults to main)'
+        required: false
+        default: ''
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   test:
-    timeout-minutes: 60
+    timeout-minutes: 30
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.ref || github.ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/setup-node@v4
         with:
           node-version: lts/*
@@ -23,11 +38,28 @@ jobs:
         run: npx playwright install --with-deps
         working-directory: playwright/typescript
       - name: Run Playwright tests
-        run: npx playwright test
+        run: |
+          if [ "${{ github.event.inputs.update_visual_baselines }}" = "true" ]; then
+            npx playwright test tests/visual.spec.ts --update-snapshots
+          else
+            npx playwright test
+          fi
         working-directory: playwright/typescript
         env:
           ORWELLSTAT_USER: ${{ secrets.ORWELLSTAT_USER }}
           ORWELLSTAT_PASSWORD: ${{ secrets.ORWELLSTAT_PASSWORD }}
+      - name: Commit updated visual baselines
+        if: ${{ github.event.inputs.update_visual_baselines == 'true' }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add playwright/typescript/tests/visual.spec.ts-snapshots/
+          if git diff --cached --quiet; then
+            echo "No baseline changes to commit"
+          else
+            git commit -m "Update Linux visual baselines [skip ci]"
+            git push
+          fi
       - name: Detect local act runner
         id: detect-act
         if: ${{ !cancelled() }}

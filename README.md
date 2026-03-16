@@ -146,11 +146,9 @@ npm run format:check
 - `trace: 'on-first-retry'`
 - `baseURL` is driven by the `ENV` variable (`production` by default, `staging` when `ENV=staging`); `httpCredentials` are injected automatically when `BASIC_AUTH_USER` is set
 - `expect.toHaveScreenshot: { maxDiffPixelRatio: 0.01 }` — global threshold for visual regression tests
-- `snapshotPathTemplate` includes `{platform}` so macOS (`-darwin`) and Linux (`-linux`) each have their own baselines; macOS baselines are committed from local runs, Linux baselines are generated via the `Update visual baselines` workflow
+- `snapshotPathTemplate` includes `{platform}` so macOS (`-darwin`) and Linux (`-linux`) each have their own baselines; macOS baselines are committed from local runs, Linux baselines are generated via the CI workflow
 
-**CI:** `.github/workflows/playwright-typescript.yml` — runs on push/PR to main/master with `working-directory: playwright/typescript`; uploads `playwright/typescript/playwright-report/` as an artifact (retained 30 days); upload is skipped when running locally with `act`.
-
-**Visual baseline update workflow:** `.github/workflows/update-visual-baselines.yml` — triggered manually via `workflow_dispatch` (Actions → "Update visual baselines"); accepts a `branch` input (defaults to the triggering branch); runs `playwright test tests/visual.spec.ts --update-snapshots` on Ubuntu and commits the new `-linux` PNGs back to the branch. Run this whenever `visual.spec.ts` tests are added or baselines need refreshing on CI.
+**CI:** `.github/workflows/playwright-typescript.yml` — runs on push/PR to main/master with `working-directory: playwright/typescript`; uploads `playwright/typescript/playwright-report/` as an artifact (retained 30 days); upload is skipped when running locally with `act`. Also supports `workflow_dispatch` with two inputs: `update_visual_baselines` (boolean, regenerates Linux baselines and commits them back) and `ref` (branch to run on). To generate Linux baselines for a feature branch: Actions → "Playwright Typescript Tests" → "Run workflow" → enter the branch name in `ref`, check `update_visual_baselines`.
 
 ---
 
