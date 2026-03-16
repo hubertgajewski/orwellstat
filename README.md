@@ -193,8 +193,8 @@ Install the CLI if needed: `brew install bruno-cli`
 
 | File | Description |
 |---|---|
-| `login-valid-credentials.bru` | POST `/zone/` with valid credentials — expects 200 |
-| `login-invalid-credentials.bru` | POST `/zone/` with invalid credentials — expects 401 |
+| `login-valid.bru` | POST `/zone/` with valid credentials — expects 200 |
+| `login-invalid.bru` | POST `/zone/` with invalid credentials — expects 401 |
 
 ---
 

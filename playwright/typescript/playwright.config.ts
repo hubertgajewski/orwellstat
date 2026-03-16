@@ -8,7 +8,11 @@ const BASE_URLS: Record<string, string> = {
   staging: 'https://stage.orwellstat.hubertgajewski.com',
 };
 
-const baseURL = BASE_URLS[process.env.ENV ?? 'production'] ?? BASE_URLS['production'];
+const env = process.env.ENV ?? 'production';
+if (!(env in BASE_URLS)) {
+  throw new Error(`Unknown ENV "${env}". Accepted values: ${Object.keys(BASE_URLS).join(', ')}`);
+}
+const baseURL = BASE_URLS[env];
 
 /**
  * See https://playwright.dev/docs/test-configuration.

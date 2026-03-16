@@ -12,7 +12,7 @@ For a full project overview, setup instructions, and commands see [README.md](RE
 
 ```
 .env                        # credentials (git-ignored); see .env.example
-.env.example                # template: ORWELLSTAT_USER, ORWELLSTAT_PASSWORD, ENV, BASIC_AUTH_USER, BASIC_AUTH_PASSWORD, ANTHROPIC_API_KEY, CLAUDE_DIAGNOSIS
+.env.example                # template: ORWELLSTAT_USER, ORWELLSTAT_PASSWORD, ENV, BASIC_AUTH_USER, BASIC_AUTH_PASSWORD
 .github/workflows/          # CI workflows (one per sub-project)
 SECURITY.md                 # security policy and vulnerability reporting
 playwright/
