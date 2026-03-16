@@ -15,7 +15,7 @@
       "Bash(gh repo view*)",
       "Bash(gh run list*)",
       "Bash(gh run view*)",
-      "Bash(npx tsc:*)",
+      "Bash(npx tsc*)",
       "WebFetch(domain:orwellstat.hubertgajewski.com)",
       "WebFetch(domain:stage.orwellstat.hubertgajewski.com)",
       "WebFetch(domain:docs.usebruno.com)",

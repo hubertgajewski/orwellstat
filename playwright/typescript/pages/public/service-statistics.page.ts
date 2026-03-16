@@ -13,7 +13,7 @@ export class ServiceStatisticsPage extends AbstractPage {
   static readonly colPercent = '%';
 
   static readonly svgChartUrl = 'chart_all.php';
-  static readonly svgChartPreAuthUrl = '/libs/chart_all.php';
+  static readonly svgChartPreAuthUrl = `/libs/${ServiceStatisticsPage.svgChartUrl}`;
   static readonly totalRecognized = 'Łącznie rozpoznane';
   static readonly unrecognized = 'Nierozpoznane';
   static readonly total = 'Łącznie';
