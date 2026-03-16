@@ -196,6 +196,8 @@ Install the CLI if needed: `brew install bruno-cli`
 | `login-valid.bru` | POST `/zone/` with valid credentials — expects 200 |
 | `login-invalid.bru` | POST `/zone/` with invalid credentials — expects 401 |
 
+**CI:** `.github/workflows/bruno.yml` — runs on push/PR to main/master; writes secrets into `bruno/.env` and runs `bru run --env production`.
+
 ---
 
 ## Running GitHub Actions locally
@@ -215,6 +217,7 @@ act push --container-architecture linux/amd64
 
 # Run a specific workflow
 act push -W .github/workflows/playwright-typescript.yml --container-architecture linux/amd64
+act push -W .github/workflows/bruno.yml --container-architecture linux/amd64
 ```
 
 On first run, `act` will ask for a Docker image size — choose **Medium** (~500MB). The workflow itself installs Playwright browsers via `npx playwright install --with-deps`.

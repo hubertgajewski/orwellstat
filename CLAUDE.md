@@ -164,3 +164,5 @@ bru run --env staging
 - Pre-request scripts: `bru.getProcessEnv('VAR_NAME')` for dotenv secrets; `bru.getEnvVar('VAR_NAME')` for `vars`/`vars:secret` values
 
 Staging requires HTTP Basic authentication (`BASIC_AUTH_USER`, `BASIC_AUTH_PASSWORD`) in addition to the application login.
+
+**CI:** `.github/workflows/bruno.yml` — runs on push/PR to main/master; writes `ORWELLSTAT_USER` and `ORWELLSTAT_PASSWORD` from GitHub Actions secrets into `bruno/.env` and runs `bru run --env production`.

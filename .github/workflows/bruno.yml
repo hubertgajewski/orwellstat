@@ -1,0 +1,33 @@
+name: Bruno Tests
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: bruno
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      - name: Install Bruno CLI
+        run: npm install -g @usebruno/cli
+
+      - name: Create .env
+        run: |
+          echo "ORWELLSTAT_USER=${{ secrets.ORWELLSTAT_USER }}" >> .env
+          echo "ORWELLSTAT_PASSWORD=${{ secrets.ORWELLSTAT_PASSWORD }}" >> .env
+
+      - name: Run Bruno tests
+        run: bru run --env production
