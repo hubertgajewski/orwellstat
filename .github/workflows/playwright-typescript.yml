@@ -11,7 +11,7 @@ on:
         type: boolean
         default: false
       ref:
-        description: 'Branch to run on (defaults to main)'
+        description: 'Branch to run on (defaults to triggering branch)'
         required: false
         default: ''
 env:
@@ -90,5 +90,5 @@ jobs:
             echo "No baseline changes to commit"
           else
             git commit -m "Update Linux visual baselines [skip ci]"
-            git push origin HEAD:${{ github.event.inputs.ref }}
+            git push origin HEAD:${{ github.event.inputs.ref || github.ref_name }}
           fi
