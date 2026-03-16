@@ -6,11 +6,11 @@ import { ServiceStatisticsPage } from '@pages/public/service-statistics.page';
 
 test('home page visual regression', async ({ page }) => {
   await page.goto(HomePage.url);
-  // The two div.text > ul lists inside #statsbar contain newly added browsers and OSes
-  // which change over time; mask them to keep the baseline stable.
+  // The two lists inside #statsbar contain newly added browsers and OSes which change over
+  // time; mask both to keep the baseline stable. #statsbar contains no other lists.
   await expect(page).toHaveScreenshot({
     fullPage: true,
-    mask: [page.locator('#statsbar > .text > ul')],
+    mask: [page.locator('#statsbar').getByRole('list')],
   });
 });
 
@@ -24,7 +24,7 @@ test('home page visual regression - Purple Rain style', async ({ page }) => {
   try {
     await expect(page).toHaveScreenshot({
       fullPage: true,
-      mask: [page.locator('#statsbar > .text > ul')],
+      mask: [page.locator('#statsbar').getByRole('list')],
     });
   } finally {
     // Delete the SelectedStyle cookie — it is stored server-side in the session shared by
@@ -47,8 +47,8 @@ test('contact page visual regression', async ({ page }) => {
 test('statistics page visual regression', async ({ page }) => {
   // Wait for the SVG chart response before screenshotting to ensure it is fully loaded.
   // animations: 'disabled' freezes the SVG animation for a stable baseline.
-  // The statistics table contains live data that changes frequently, so it is masked
-  // to keep the baseline stable while still verifying page structure and the SVG chart.
+  // The statistics table contains live data that changes frequently; mask it to keep the
+  // baseline stable while still verifying page structure and the SVG chart.
   await Promise.all([
     page.waitForResponse((response) => response.url().includes(ServiceStatisticsPage.svgChartUrl)),
     page.goto(ServiceStatisticsPage.url),
@@ -56,6 +56,6 @@ test('statistics page visual regression', async ({ page }) => {
   await expect(page).toHaveScreenshot({
     fullPage: true,
     animations: 'disabled',
-    mask: [page.locator('table')],
+    mask: [page.getByRole('table')],
   });
 });
