@@ -62,7 +62,7 @@ test('statistics page visual regression', async ({ page }) => {
   // but Playwright's fullPage screenshot and mask both use the element's full bounding box,
   // so the only reliable fix is to physically remove rows from the DOM.
   // Table content is already masked below so removing rows does not affect correctness.
-  await page.evaluate(() => {
+  await page.evaluate<void>(() => {
     const table = document.querySelector<HTMLTableElement>('table');
     if (!table) return;
     Array.from(table.rows)
