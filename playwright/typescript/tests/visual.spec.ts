@@ -56,6 +56,19 @@ test('statistics page visual regression', async ({ page }) => {
   // Wait for the <object> to be visible (non-zero dimensions) so its height is stable
   // in the layout before screenshotting; without this the footer may shift after capture.
   await expect(page.locator('object[type="image/svg+xml"]')).toBeVisible();
+  // Remove all but the first 5 rows (1 header + 4 data rows) from the statistics table so the table height —
+  // and therefore the footer position — is stable regardless of how many browser/OS rows
+  // live data contains. CSS overflow tricks don't work here: overflow:hidden clips visually
+  // but Playwright's fullPage screenshot and mask both use the element's full bounding box,
+  // so the only reliable fix is to physically remove rows from the DOM.
+  // Table content is already masked below so removing rows does not affect correctness.
+  await page.evaluate<void>(() => {
+    const table = document.querySelector<HTMLTableElement>('table');
+    if (!table) return;
+    Array.from(table.rows)
+      .slice(5)
+      .forEach((row) => row.parentNode?.removeChild(row));
+  });
   await expect(page).toHaveScreenshot({
     fullPage: true,
     animations: 'disabled',
