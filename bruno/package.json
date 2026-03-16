@@ -5,5 +5,8 @@
   },
   "scripts": {
     "test": "bru run --env production"
+  },
+  "overrides": {
+    "fast-xml-parser": ">=4.5.4"
   }
 }
