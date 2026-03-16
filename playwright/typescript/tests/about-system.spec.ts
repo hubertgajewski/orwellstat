@@ -19,17 +19,13 @@ test('about system page - headings and statsbar content', async ({ page }) => {
   ]);
 
   // Login section – authenticated state shows logout button
-  await expect(
-    statsbar.getByText(AboutSystemPage.loggedInAs, { exact: false })
-  ).toBeVisible();
+  await expect(statsbar.getByText(AboutSystemPage.loggedInAs, { exact: false })).toBeVisible();
   await expect(
     statsbar.getByRole('button', { name: AboutSystemPage.logoutButton, exact: true })
   ).toBeVisible();
 
   // "Co to jest Orwell Stat?" – text and external links
-  await expect(
-    statsbar.getByText(AboutSystemPage.orwellStatIntro, { exact: false })
-  ).toBeVisible();
+  await expect(statsbar.getByText(AboutSystemPage.orwellStatIntro, { exact: false })).toBeVisible();
   await expect(
     statsbar.getByRole('link', { name: AboutSystemPage.wsbNlu.name, exact: true })
   ).toHaveAttribute('href', AboutSystemPage.wsbNlu.href);
@@ -41,32 +37,25 @@ test('about system page - headings and statsbar content', async ({ page }) => {
   ).toHaveAttribute('href', AboutSystemPage.tomaszGorazd.href);
 
   // "Jakie dane rejestruje system?" – browser/OS counts
-  await expect(
-    statsbar.getByText(AboutSystemPage.browserCount, { exact: false })
-  ).toBeVisible();
-  await expect(
-    statsbar.getByText(AboutSystemPage.osCount, { exact: false })
-  ).toBeVisible();
+  await expect(statsbar.getByText(AboutSystemPage.browserCount, { exact: false })).toBeVisible();
+  await expect(statsbar.getByText(AboutSystemPage.osCount, { exact: false })).toBeVisible();
 
   // Sample browser names in the list
   for (const browser of AboutSystemPage.sampleBrowsers) {
-    await expect(
-      statsbar.getByRole('listitem').getByText(browser, { exact: true })
-    ).toBeVisible();
+    await expect(statsbar.getByRole('listitem').getByText(browser, { exact: true })).toBeVisible();
   }
 
   // Sample OS names in the list
   for (const os of AboutSystemPage.sampleOSes) {
-    await expect(
-      statsbar.getByRole('listitem').getByText(os, { exact: true })
-    ).toBeVisible();
+    await expect(statsbar.getByRole('listitem').getByText(os, { exact: true })).toBeVisible();
   }
 
   // "Wymagania" – images with alt text
   for (const screenshot of Object.values(AboutSystemPage.screenshots)) {
-    await expect(
-      statsbar.locator(`img[src="${screenshot.src}"]`)
-    ).toHaveAttribute('alt', screenshot.alt);
+    await expect(statsbar.locator(`img[src="${screenshot.src}"]`)).toHaveAttribute(
+      'alt',
+      screenshot.alt
+    );
   }
 
   // "Zalecane" section – Adobe SVG Viewer link

@@ -24,7 +24,11 @@ export async function expectValidXhtml(request: APIRequestContext, xhtml: string
   const response = await request.fetch(W3C_MARKUP_VALIDATOR, {
     method: 'POST',
     multipart: {
-      uploaded_file: { name: 'page.xhtml', mimeType: 'application/xhtml+xml', buffer: Buffer.from(xhtml) },
+      uploaded_file: {
+        name: 'page.xhtml',
+        mimeType: 'application/xhtml+xml',
+        buffer: Buffer.from(xhtml),
+      },
       output: 'json',
     },
   });

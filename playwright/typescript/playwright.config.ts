@@ -26,6 +26,12 @@ export default defineConfig({
   workers: process.env.CI ? '100%' : undefined,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: 'html',
+  expect: {
+    toHaveScreenshot: { maxDiffPixelRatio: 0.01 },
+  },
+  // Include OS platform in snapshot filenames so macOS and Linux each have their own baselines.
+  // To generate Linux baselines, trigger the "Update visual baselines" workflow_dispatch job.
+  snapshotPathTemplate: '{testDir}/{testFilePath}-snapshots/{arg}-{projectName}-{platform}{ext}',
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
 
   use: {

@@ -39,10 +39,37 @@
       "autoAttachChildProcesses": true
     },
     {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug current test file in VS Code (staging)",
+      "program": "${workspaceFolder}/playwright/typescript/node_modules/.bin/playwright",
+      "args": [
+        "test",
+        "${relativeFile}",
+        "--project=firefox",
+        "--workers=1",
+        "--timeout=0",
+        "--headed"
+      ],
+      "cwd": "${workspaceFolder}/playwright/typescript",
+      "console": "integratedTerminal",
+      "autoAttachChildProcesses": true,
+      "env": {
+        "ENV": "staging"
+      }
+    },
+    {
       "type": "node-terminal",
       "request": "launch",
       "name": "Debug current test file in browser",
       "command": "PWDEBUG=1 node_modules/.bin/playwright test \"${relativeFile}\" --workers=1 --project=chromium --timeout=0",
+      "cwd": "${workspaceFolder}/playwright/typescript"
+    },
+    {
+      "type": "node-terminal",
+      "request": "launch",
+      "name": "Debug current test file in browser (staging)",
+      "command": "ENV=staging PWDEBUG=1 node_modules/.bin/playwright test \"${relativeFile}\" --workers=1 --project=firefox --timeout=0",
       "cwd": "${workspaceFolder}/playwright/typescript"
     },
     {
@@ -63,6 +90,32 @@
       "args": ["test", "--ui"],
       "cwd": "${workspaceFolder}/playwright/typescript",
       "console": "integratedTerminal"
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Run all Playwright tests (staging)",
+      "program": "${workspaceFolder}/playwright/typescript/node_modules/.bin/playwright",
+      "args": ["test"],
+      "cwd": "${workspaceFolder}/playwright/typescript",
+      "console": "integratedTerminal",
+      "autoAttachChildProcesses": true,
+      "env": {
+        "ENV": "staging"
+      }
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Run current test file (staging)",
+      "program": "${workspaceFolder}/playwright/typescript/node_modules/.bin/playwright",
+      "args": ["test", "${relativeFile}"],
+      "cwd": "${workspaceFolder}/playwright/typescript",
+      "console": "integratedTerminal",
+      "autoAttachChildProcesses": true,
+      "env": {
+        "ENV": "staging"
+      }
     }
   ]
 }

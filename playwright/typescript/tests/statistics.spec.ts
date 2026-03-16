@@ -116,8 +116,8 @@ test('system statistics', async ({ page }) => {
   });
   expect(dataRows).toHaveLength(rowCount - 4); // 1 header row + 3 footer rows
   for (let i = 0; i < dataRows.length; i++) {
-    expect(dataRows[i].lp,      `row ${i + 1}: lp`).toBe(String(i + 1));
-    expect(dataRows[i].count,   `row ${i + 1}: count`).toMatch(/^\d+$/);
+    expect(dataRows[i].lp, `row ${i + 1}: lp`).toBe(String(i + 1));
+    expect(dataRows[i].count, `row ${i + 1}: count`).toMatch(/^\d+$/);
     expect(dataRows[i].percent, `row ${i + 1}: percent`).toMatch(/^\d+\.\d{2}%$/);
   }
 
@@ -138,7 +138,9 @@ test('system statistics', async ({ page }) => {
   await expect(unrecognized.getByRole('cell').nth(3)).toHaveText('-');
 
   // 'Łącznie' is a substring of 'Łącznie rozpoznane'; use exact cell name to avoid matching both
-  const total = rows.filter({ has: page.getByRole('cell', { name: ServiceStatisticsPage.total, exact: true }) });
+  const total = rows.filter({
+    has: page.getByRole('cell', { name: ServiceStatisticsPage.total, exact: true }),
+  });
   await expect(total).toHaveCount(1);
   await expect(total.getByRole('cell').nth(2)).toHaveText(/^\d+$/);
   await expect(total.getByRole('cell').nth(3)).toHaveText('-');

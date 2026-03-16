@@ -11,12 +11,10 @@ export class AboutSystemPage extends AbstractPage {
   static readonly browsersAndApps = 'Przeglądarki i inne aplikacje WWW';
   static readonly operatingSystems = 'Systemy operacyjne';
   static readonly requirements = 'Wymagania';
-  static readonly minimalRequirements =
-    'Minimalne wymagania do korzystania z serwisu';
+  static readonly minimalRequirements = 'Minimalne wymagania do korzystania z serwisu';
   static readonly recommended = 'Zalecane';
 
-  static readonly orwellStatIntro =
-    'Orwell Stat to system statystyk internetowych';
+  static readonly orwellStatIntro = 'Orwell Stat to system statystyk internetowych';
   static readonly wsbNlu = { name: 'WSB-NLU', href: 'http://wsb-nlu.edu.pl/' };
   static readonly hubertGajewski = {
     name: 'Hubert Gajewski',
@@ -29,20 +27,8 @@ export class AboutSystemPage extends AbstractPage {
 
   static readonly browserCount = 'ponad 90';
   static readonly osCount = 'ponad 400';
-  static readonly sampleBrowsers = [
-    'Chrome',
-    'Firefox',
-    'Edge',
-    'Safari',
-    'Opera',
-  ] as const;
-  static readonly sampleOSes = [
-    'Linux',
-    'Windows',
-    'macOS',
-    'Android',
-    'iOS',
-  ] as const;
+  static readonly sampleBrowsers = ['Chrome', 'Firefox', 'Edge', 'Safari', 'Opera'] as const;
+  static readonly sampleOSes = ['Linux', 'Windows', 'macOS', 'Android', 'iOS'] as const;
 
   static readonly screenshots = {
     links: {
@@ -71,12 +57,7 @@ export class AboutSystemPage extends AbstractPage {
   static readonly hdRequirementText = 'rozdzielczość 1024x768 pikseli';
 
   constructor(page: Page) {
-    super(
-      page,
-      AboutSystemPage.url,
-      AboutSystemPage.title,
-      AboutSystemPage.accessKey
-    );
+    super(page, AboutSystemPage.url, AboutSystemPage.title, AboutSystemPage.accessKey);
   }
 
   get heading() {

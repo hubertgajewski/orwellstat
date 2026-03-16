@@ -54,6 +54,7 @@ All commands must be run from `playwright/typescript/`.
   - `contact.spec.ts` — Contact page headings and statsbar content tests
   - `statistics.spec.ts` — Service statistics page: SVG chart rendering and statistics table tests
   - `validation.spec.ts` — W3C XHTML and CSS validation tests across all pages (classic W3C Markup Validator + CSS validator APIs); Chromium-only
+  - `visual.spec.ts` — Full-page visual regression snapshots for home (default and Purple Rain style), about system, contact, and statistics pages using `toHaveScreenshot()` with `maxDiffPixelRatio: 0.01`; home page masks `#statsbar` lists (dynamic new-browser/OS list items) via `getByRole('list')`; statistics page masks `getByRole('table')` (live data) and disables animations; baselines stored in `tests/visual.spec.ts-snapshots/` with per-platform suffixes (`-darwin`, `-linux`)
 - `auth.setup.ts` — Playwright auth setup: logs in via UI and saves storage state to `.auth/user.json`
 - `pages/` — Page Object Model classes
   - `base.page.ts` — `BasePage` interface (`url`, `title`, `goto()`, `heading`, optional `accessKey`)
@@ -92,8 +93,12 @@ All commands must be run from `playwright/typescript/`.
 - On failure: screenshots, video, and console/DOM log attachments are saved
 - `trace: 'on-first-retry'`
 - `baseURL` is driven by the `ENV` variable (`production` by default, `staging` when `ENV=staging`); `httpCredentials` are injected automatically when `BASIC_AUTH_USER` is set
+- `expect.toHaveScreenshot: { maxDiffPixelRatio: 0.01 }` — global threshold for visual regression tests
+- `snapshotPathTemplate` includes `{platform}` so macOS (`-darwin`) and Linux (`-linux`) each have their own baselines; macOS baselines are committed from local runs, Linux baselines are generated via the CI workflow
 
-**CI:** `.github/workflows/playwright-typescript.yml` — runs on push/PR to main/master with `working-directory: playwright/typescript`; uploads `playwright/typescript/playwright-report/` as an artifact (retained 30 days); upload is skipped when running locally with `act`.
+**CI:** `.github/workflows/playwright-typescript.yml` — runs on push/PR to main/master with `working-directory: playwright/typescript`; uploads `playwright/typescript/playwright-report/` as an artifact (retained 30 days); upload is skipped when running locally with `act`. Also supports `workflow_dispatch` with two inputs: `update_visual_baselines` (boolean, regenerates Linux baselines for all 5 browser projects via `--update-snapshots` and commits them back) and `ref` (branch to run on; defaults to triggering branch). To generate Linux baselines for a feature branch: Actions → "Playwright Typescript Tests" → "Run workflow" → enter the branch name in `ref`, check `update_visual_baselines`.
+
+**Standalone baseline update:** `.github/workflows/update-visual-baselines.yml` — `workflow_dispatch`-only workflow that regenerates Linux baselines for all 5 browser projects and commits them back directly; accepts a `branch` input (defaults to `main`). Use this when you want to regenerate baselines without running the full test suite.
 
 ---
 
@@ -141,8 +146,7 @@ When fixing a GitHub issue, follow these steps in order:
 4. Review against the [code review checklist](#code-review-checklist)
 5. Run the affected test(s) — must pass
 6. Create a branch from remote `main` named `feature/<issue-number>` or `bugfix/<issue-number>` (e.g. `feature/19`)
-7. Commit with a **short, single-line message** in the format `<issue-number> <short description>` (e.g. `19 Add explicit SvgAnalysis type to page.evaluate()`). No body, no `Co-Authored-By` trailer — single line only.
-8. **Review the diff as a fresh reviewer** — run `git diff HEAD~1` and treat every changed file as unfamiliar code. Work through the checklist below and **explicitly state each finding** (even if the finding is "no issues"). Saying "the diff looks clean" without articulating the checks performed is not acceptable.
+7. **Review the diff as a fresh reviewer** — run `git diff` (staged + unstaged) and treat every changed file as unfamiliar code. Work through the checklist below and **explicitly state each finding** (even if the finding is "no issues"). Saying "the diff looks clean" without articulating the checks performed is not acceptable.
 
    **General checks (every diff):**
    - Every non-obvious change: *"Would I understand why this was done just from the diff?"* If no, add a code comment or adjust the implementation.
@@ -157,7 +161,9 @@ When fixing a GitHub issue, follow these steps in order:
    - No env vars copied blindly from another workflow without verifying they apply — each env var must have a reason visible in the file or a comment.
    - Secrets written to disk (e.g. `echo "KEY=${{ secrets.KEY }}" >> .env`) must be scoped to the minimum needed and never logged.
    - Steps that only make sense in specific contexts (e.g. artifact upload skipped under `act`) must have an `if:` condition with a clear comment explaining the guard.
-9. Push and create a PR
+8. **Verify all acceptance criteria and the Definition of Done** — read every Given/When/Then scenario and every DoD checkbox in the issue. For each item, explicitly confirm it is satisfied or identify what is missing. Do not proceed to commit until all criteria pass.
+9. Commit with a **short, single-line message** in the format `<issue-number> <short description>` (e.g. `19 Add explicit SvgAnalysis type to page.evaluate()`). No body, no `Co-Authored-By` trailer — single line only.
+10. Push and create a PR — include `Closes #<issue-number>` in the PR body so GitHub links and auto-closes the issue on merge
 
 ---
 

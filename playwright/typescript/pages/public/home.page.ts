@@ -11,15 +11,15 @@ export class HomePage extends AbstractPage {
   static readonly newBrowsers = NEW_BROWSERS;
   static readonly newOSes = NEW_OSES;
 
-  static readonly recentBrowsersSection =
-    'Ostatnio dodane przeglądarki i inne aplikacje WWW';
+  static readonly recentBrowsersSection = 'Ostatnio dodane przeglądarki i inne aplikacje WWW';
   static readonly recentOsesSection = 'Ostatnio dodane systemy operacyjne';
-  static readonly allBrowsersLink =
-    'wszystkich obsługiwanych przeglądarek i innych aplikacji WWW';
-  static readonly allOsesLink =
-    'wszystkich obsługiwanych systemów operacyjnych';
+  static readonly allBrowsersLink = 'wszystkich obsługiwanych przeglądarek i innych aplikacji WWW';
+  static readonly allOsesLink = 'wszystkich obsługiwanych systemów operacyjnych';
   static readonly previouslyAddedLink = 'poprzednio dodanych';
   static readonly recentlyAddedLink = 'ostatnio dodanych';
+
+  static readonly styleSelector = 'Wybierz styl';
+  static readonly stylePurpleRain = 'Purple Rain';
 
   constructor(page: Page) {
     super(page, HomePage.url, HomePage.title, HomePage.accessKey);
