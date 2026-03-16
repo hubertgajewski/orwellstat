@@ -4,12 +4,10 @@ on:
     branches: [main, master]
   pull_request:
     branches: [main, master]
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     defaults:
       run:
         working-directory: bruno
@@ -21,8 +19,8 @@ jobs:
         with:
           node-version: lts/*
 
-      - name: Install Bruno CLI
-        run: npm install -g @usebruno/cli
+      - name: Install dependencies
+        run: npm ci
 
       - name: Create .env
         run: |
@@ -30,4 +28,4 @@ jobs:
           echo "ORWELLSTAT_PASSWORD=${{ secrets.ORWELLSTAT_PASSWORD }}" >> .env
 
       - name: Run Bruno tests
-        run: bru run --env production
+        run: npx bru run --env production

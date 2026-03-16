@@ -21,7 +21,6 @@ bruno/                      # Bruno API request collection
 |------|-------------|---------|
 | [Node.js](https://nodejs.org/) v18+ | Playwright tests | [nodejs.org](https://nodejs.org/) |
 | [Bruno](https://www.usebruno.com/) | API request collection | Standalone app or [VSCode extension](https://marketplace.visualstudio.com/items?itemName=bruno-api-client.bruno) |
-| Bruno CLI | Running Bruno requests from terminal | `brew install bruno-cli` |
 | [Docker Desktop](https://www.docker.com/products/docker-desktop/) | Running GitHub Actions locally | [docker.com](https://www.docker.com/products/docker-desktop/) |
 | [act](https://github.com/nektos/act) | Running GitHub Actions locally | `brew install act` |
 
@@ -183,11 +182,10 @@ BASIC_AUTH_PASSWORD=<staging basic auth password>
 Run from the `bruno/` directory:
 
 ```bash
-bru run --env production
-bru run --env staging
+npm ci                        # install Bruno CLI (first time or after lockfile changes)
+npx bru run --env production
+npx bru run --env staging
 ```
-
-Install the CLI if needed: `brew install bruno-cli`
 
 ### Requests
 
