@@ -56,6 +56,11 @@ test('statistics page visual regression', async ({ page }) => {
   // Wait for the <object> to be visible (non-zero dimensions) so its height is stable
   // in the layout before screenshotting; without this the footer may shift after capture.
   await expect(page.locator('object[type="image/svg+xml"]')).toBeVisible();
+  // Fix the table to a stable height so the footer stays at a fixed position even when
+  // new browser/OS rows are added to live data; content is already masked below.
+  await page.addStyleTag({
+    content: 'table { height: 300px !important; overflow: hidden !important; }',
+  });
   await expect(page).toHaveScreenshot({
     fullPage: true,
     animations: 'disabled',
