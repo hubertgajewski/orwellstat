@@ -218,7 +218,7 @@ act push -W .github/workflows/playwright-typescript.yml --container-architecture
 act push -W .github/workflows/bruno.yml --container-architecture linux/amd64
 ```
 
-On first run, `act` will ask for a Docker image size — choose **Medium** (~500MB). The workflow itself installs Playwright browsers via `npx playwright install --with-deps`.
+On first run, `act` will ask for a Docker image size — choose **Medium** (~500MB). The Playwright workflow installs browsers via `npx playwright install --with-deps`; the Bruno workflow only needs Node and `npm ci`.
 
 > **Note:** The `--container-architecture linux/amd64` flag is required on Apple Silicon (M-series) Macs to avoid compatibility issues.
 
