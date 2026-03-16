@@ -6,7 +6,7 @@ Multi-language, multi-framework end-to-end test suite for [Orwell Stat](https://
 
 ```
 .env                        # credentials (git-ignored); see .env.example
-.env.example                # template: ORWELLSTAT_USER, ORWELLSTAT_PASSWORD
+.env.example                # template: ORWELLSTAT_USER, ORWELLSTAT_PASSWORD, ENV, BASIC_AUTH_USER, BASIC_AUTH_PASSWORD
 .github/workflows/          # CI workflows (one per sub-project)
 SECURITY.md                 # security policy and vulnerability reporting
 playwright/
@@ -21,6 +21,7 @@ bruno/                      # Bruno API request collection
 |------|-------------|---------|
 | [Node.js](https://nodejs.org/) v18+ | Playwright tests | [nodejs.org](https://nodejs.org/) |
 | [Bruno](https://www.usebruno.com/) | API request collection | Standalone app or [VSCode extension](https://marketplace.visualstudio.com/items?itemName=bruno-api-client.bruno) |
+| Bruno CLI | Running Bruno requests from terminal | `brew install bruno-cli` |
 | [Docker Desktop](https://www.docker.com/products/docker-desktop/) | Running GitHub Actions locally | [docker.com](https://www.docker.com/products/docker-desktop/) |
 | [act](https://github.com/nektos/act) | Running GitHub Actions locally | `brew install act` |
 
@@ -33,11 +34,12 @@ Copy `.env.example` to `.env` at the repo root and fill in your credentials:
 ```
 ORWELLSTAT_USER=<username>
 ORWELLSTAT_PASSWORD=<password>
+ENV=<production|staging>
 BASIC_AUTH_USER=<staging basic auth user>
 BASIC_AUTH_PASSWORD=<staging basic auth password>
 ```
 
-`ORWELLSTAT_USER` and `ORWELLSTAT_PASSWORD` are required for all environments. `BASIC_AUTH_USER` and `BASIC_AUTH_PASSWORD` are only needed when running against staging — Playwright passes them automatically as HTTP Basic Auth credentials when set. In CI, all four are injected as GitHub Actions secrets.
+`ORWELLSTAT_USER` and `ORWELLSTAT_PASSWORD` are required for all environments. `ENV` selects the target environment for Playwright — `production` (default) or `staging`; omitting it defaults to `production`. `BASIC_AUTH_USER` and `BASIC_AUTH_PASSWORD` are only needed when running against staging — Playwright passes them automatically as HTTP Basic Auth credentials when set. In CI, all vars are injected as GitHub Actions secrets.
 
 ---
 
@@ -142,7 +144,7 @@ npm run format:check
 - All projects use `storageState: '.auth/user.json'` (written by `auth.setup.ts`)
 - On failure: screenshots, video, and console/DOM log attachments are saved
 - `trace: 'on-first-retry'`
-- Commented-out staging `baseURL` (`https://stage.orwellstat.hubertgajewski.com`) can be enabled for staging; when enabled, `httpCredentials` are injected automatically if `BASIC_AUTH_USER` is set
+- `baseURL` is driven by the `ENV` variable (`production` by default, `staging` when `ENV=staging`); `httpCredentials` are injected automatically when `BASIC_AUTH_USER` is set
 
 **CI:** `.github/workflows/playwright-typescript.yml` — runs on push/PR to main/master with `working-directory: playwright/typescript`; uploads `playwright/typescript/playwright-report/` as an artifact (retained 30 days); upload is skipped when running locally with `act`.
 
@@ -156,14 +158,7 @@ Bruno API request collection for manual and automated HTTP testing.
 
 Open the `bruno/` directory in the Bruno standalone app or use the Bruno VSCode extension.
 
-### Environments
-
-| Environment | Base URL |
-|---|---|
-| production | `https://orwellstat.hubertgajewski.com` |
-| staging | `https://stage.orwellstat.hubertgajewski.com` |
-
-Environment secrets (passwords, Basic auth credentials) are stored in `bruno/environments/.env` (git-ignored). Create this file locally:
+Copy `bruno/.env.example` to `bruno/.env` (git-ignored) and fill in the values:
 
 ```
 ORWELLSTAT_USER=<username>
@@ -172,14 +167,34 @@ BASIC_AUTH_USER=<staging basic auth user>
 BASIC_AUTH_PASSWORD=<staging basic auth password>
 ```
 
-> Staging requires HTTP Basic authentication in addition to the application login. The `BASIC_AUTH_USER` and `BASIC_AUTH_PASSWORD` variables are only needed for the staging environment.
+> `bruno/.env` must be at the collection root — Bruno CLI reads secrets from there, not from `environments/`.
+
+### Environments
+
+| Environment | Base URL |
+|---|---|
+| production | `https://orwellstat.hubertgajewski.com` |
+| staging | `https://stage.orwellstat.hubertgajewski.com` |
+
+> Staging requires HTTP Basic authentication (`BASIC_AUTH_USER` / `BASIC_AUTH_PASSWORD`) in addition to the application login.
+
+### CLI
+
+Run from the `bruno/` directory:
+
+```bash
+bru run --env production
+bru run --env staging
+```
+
+Install the CLI if needed: `brew install bruno-cli`
 
 ### Requests
 
 | File | Description |
 |---|---|
-| `login-valid-credentials.bru` | POST `/zone/` with valid credentials — expects 200 |
-| `login-invalid-credentials.bru` | POST `/zone/` with invalid credentials — expects 401 |
+| `login-valid.bru` | POST `/zone/` with valid credentials — expects 200 |
+| `login-invalid.bru` | POST `/zone/` with invalid credentials — expects 401 |
 
 ---
 

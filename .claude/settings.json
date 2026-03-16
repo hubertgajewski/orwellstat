@@ -4,9 +4,8 @@
       "Bash(npx playwright test*)",
       "Bash(npx playwright show-report*)",
       "Bash(npx playwright install*)",
-      "Read(**/password-reset.page.ts)",
-      "Read(**/login-valid-credentials.bru)",
-      "Read(**/login-invalid-credentials.bru)"
+      "Bash(bru run*)",
+      "Read(**/password-reset.page.ts)"
     ],
     "deny": [
       "Read(.env)",

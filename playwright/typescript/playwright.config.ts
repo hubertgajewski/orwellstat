@@ -3,6 +3,17 @@ import dotenv from 'dotenv';
 
 dotenv.config({ path: new URL('../../.env', import.meta.url).pathname });
 
+const BASE_URLS: Record<string, string> = {
+  production: 'https://orwellstat.hubertgajewski.com',
+  staging: 'https://stage.orwellstat.hubertgajewski.com',
+};
+
+const env = process.env.ENV ?? 'production';
+if (!(env in BASE_URLS)) {
+  throw new Error(`Unknown ENV "${env}". Accepted values: ${Object.keys(BASE_URLS).join(', ')}`);
+}
+const baseURL = BASE_URLS[env];
+
 /**
  * See https://playwright.dev/docs/test-configuration.
  */
@@ -18,8 +29,7 @@ export default defineConfig({
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
 
   use: {
-    baseURL: 'https://orwellstat.hubertgajewski.com',
-//     baseURL: 'https://stage.orwellstat.hubertgajewski.com',
+    baseURL,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',

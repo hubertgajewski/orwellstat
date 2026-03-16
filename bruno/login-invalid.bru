@@ -1,7 +1,7 @@
 meta {
-  name: Login with valid credentials
+  name: Login with invalid credentials
   type: http
-  seq: 2
+  seq: 1
 }
 
 post {
@@ -11,8 +11,8 @@ post {
 }
 
 script:pre-request {
-  const user = bru.getEnvVar('BASIC_AUTH_USER');
-  const pass = bru.getEnvVar('BASIC_AUTH_PASSWORD');
+  const user = bru.getProcessEnv('BASIC_AUTH_USER');
+  const pass = bru.getProcessEnv('BASIC_AUTH_PASSWORD');
   if (user) {
     req.setHeader('Authorization', 'Basic ' + btoa(user + ':' + pass));
   }
@@ -23,13 +23,13 @@ headers {
 }
 
 body:form-urlencoded {
-  username: {{ORWELLSTAT_USER}}
-  password: {{ORWELLSTAT_PASSWORD}}
+  username: test
+  password: test
   option: login
 }
 
 tests {
-  test("returns 200 OK", function() {
-    expect(res.status).to.equal(200);
+  test("should return 401 Unauthorized for invalid credentials", function() {
+    expect(res.status).to.equal(401);
   });
 }
