@@ -106,7 +106,7 @@ npm run format:check
   - `contact.spec.ts` — Contact page headings and statsbar content tests
   - `statistics.spec.ts` — Service statistics page: SVG chart rendering and statistics table tests
   - `validation.spec.ts` — W3C XHTML and CSS validation tests across all pages (classic W3C Markup Validator + CSS validator APIs); Chromium-only
-  - `visual.spec.ts` — Full-page visual regression snapshots for home (default and Purple Rain style), about system, contact, and statistics pages using `toHaveScreenshot()` with `maxDiffPixelRatio: 0.01`; home page masks `#statsbar > .text > ul` (dynamic new-browser/OS list items); statistics page masks `table` (live data) and disables animations; baselines stored in `tests/visual.spec.ts-snapshots/`
+  - `visual.spec.ts` — Full-page visual regression snapshots for home (default and Purple Rain style), about system, contact, and statistics pages using `toHaveScreenshot()` with `maxDiffPixelRatio: 0.01`; home page masks `#statsbar` lists (dynamic new-browser/OS list items) via `getByRole('list')`; statistics page masks `getByRole('table')` (live data) and disables animations; baselines stored in `tests/visual.spec.ts-snapshots/` with per-platform suffixes (`-darwin`, `-linux`)
 - `auth.setup.ts` — Playwright auth setup: logs in via UI and saves storage state to `.auth/user.json`
 - `pages/` — Page Object Model classes
   - `base.page.ts` — `BasePage` interface (`url`, `title`, `goto()`, `heading`, optional `accessKey`)
@@ -146,9 +146,11 @@ npm run format:check
 - `trace: 'on-first-retry'`
 - `baseURL` is driven by the `ENV` variable (`production` by default, `staging` when `ENV=staging`); `httpCredentials` are injected automatically when `BASIC_AUTH_USER` is set
 - `expect.toHaveScreenshot: { maxDiffPixelRatio: 0.01 }` — global threshold for visual regression tests
-- `snapshotPathTemplate` omits the OS platform token so baselines generated on macOS work on Linux CI within the 1% tolerance
+- `snapshotPathTemplate` includes `{platform}` so macOS (`-darwin`) and Linux (`-linux`) each have their own baselines; macOS baselines are committed from local runs, Linux baselines are generated via the `Update visual baselines` workflow
 
 **CI:** `.github/workflows/playwright-typescript.yml` — runs on push/PR to main/master with `working-directory: playwright/typescript`; uploads `playwright/typescript/playwright-report/` as an artifact (retained 30 days); upload is skipped when running locally with `act`.
+
+**Visual baseline update workflow:** `.github/workflows/update-visual-baselines.yml` — triggered manually via `workflow_dispatch` (Actions → "Update visual baselines"); accepts a `branch` input (defaults to the triggering branch); runs `playwright test tests/visual.spec.ts --update-snapshots` on Ubuntu and commits the new `-linux` PNGs back to the branch. Run this whenever `visual.spec.ts` tests are added or baselines need refreshing on CI.
 
 ---
 

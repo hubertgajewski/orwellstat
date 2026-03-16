@@ -1,0 +1,45 @@
+name: Update visual baselines
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to update baselines on'
+        required: false
+        default: 'main'
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch || github.ref_name }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+      - name: Install dependencies
+        run: npm ci
+        working-directory: playwright/typescript
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps
+        working-directory: playwright/typescript
+      - name: Regenerate visual baselines
+        run: npx playwright test tests/visual.spec.ts --update-snapshots
+        working-directory: playwright/typescript
+        env:
+          ORWELLSTAT_USER: ${{ secrets.ORWELLSTAT_USER }}
+          ORWELLSTAT_PASSWORD: ${{ secrets.ORWELLSTAT_PASSWORD }}
+      - name: Commit updated baselines
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add playwright/typescript/tests/visual.spec.ts-snapshots/
+          if git diff --cached --quiet; then
+            echo "No baseline changes to commit"
+          else
+            git commit -m "Update Linux visual baselines [skip ci]"
+            git push
+          fi
