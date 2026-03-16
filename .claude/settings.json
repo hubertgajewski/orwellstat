@@ -16,7 +16,10 @@
       "Read(**/*.pfx)",
       "Read(**/*secret*)",
       "Read(**/*password*)",
-      "Read(**/*credentials*)"
+      "Read(**/*credentials*.json)",
+      "Read(**/*credentials*.env)",
+      "Read(**/*credentials*.yaml)",
+      "Read(**/*credentials*.yml)"
     ]
   }
 }

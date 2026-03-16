@@ -12,7 +12,7 @@ For a full project overview, setup instructions, and commands see [README.md](RE
 
 ```
 .env                        # credentials (git-ignored); see .env.example
-.env.example                # template: ORWELLSTAT_USER, ORWELLSTAT_PASSWORD, BASIC_AUTH_USER, BASIC_AUTH_PASSWORD
+.env.example                # template: ORWELLSTAT_USER, ORWELLSTAT_PASSWORD, ENV, BASIC_AUTH_USER, BASIC_AUTH_PASSWORD, ANTHROPIC_API_KEY, CLAUDE_DIAGNOSIS
 .github/workflows/          # CI workflows (one per sub-project)
 SECURITY.md                 # security policy and vulnerability reporting
 playwright/
@@ -28,11 +28,12 @@ Credentials are stored in `.env` at the **repo root** and shared across all sub-
 ```
 ORWELLSTAT_USER=<username>
 ORWELLSTAT_PASSWORD=<password>
+ENV=<production|staging>
 BASIC_AUTH_USER=<staging basic auth user>
 BASIC_AUTH_PASSWORD=<staging basic auth password>
 ```
 
-`ORWELLSTAT_USER` and `ORWELLSTAT_PASSWORD` are required for all environments. `BASIC_AUTH_USER` and `BASIC_AUTH_PASSWORD` are only needed for staging — Playwright passes them as HTTP Basic Auth credentials when set. In CI all four are injected as GitHub Actions secrets. Sub-projects load them via `dotenv` with a path pointing two levels up (`../../.env`).
+`ORWELLSTAT_USER` and `ORWELLSTAT_PASSWORD` are required for all environments. `ENV` selects the target environment for Playwright — accepted values are `production` (default) and `staging`; omitting it defaults to `production`. `BASIC_AUTH_USER` and `BASIC_AUTH_PASSWORD` are only needed for staging — Playwright passes them as HTTP Basic Auth credentials when set. In CI all vars are injected as GitHub Actions secrets. Sub-projects load them via `dotenv` with a path pointing two levels up (`../../.env`).
 
 ---
 
@@ -90,7 +91,7 @@ All commands must be run from `playwright/typescript/`.
 - All projects use `storageState: '.auth/user.json'` (written by `auth.setup.ts`)
 - On failure: screenshots, video, and console/DOM log attachments are saved
 - `trace: 'on-first-retry'`
-- Commented-out staging `baseURL` (`https://stage.orwellstat.hubertgajewski.com`) can be enabled for staging; when enabled, `httpCredentials` are injected automatically if `BASIC_AUTH_USER` is set
+- `baseURL` is driven by the `ENV` variable (`production` by default, `staging` when `ENV=staging`); `httpCredentials` are injected automatically when `BASIC_AUTH_USER` is set
 
 **CI:** `.github/workflows/playwright-typescript.yml` — runs on push/PR to main/master with `working-directory: playwright/typescript`; uploads `playwright/typescript/playwright-report/` as an artifact (retained 30 days); upload is skipped when running locally with `act`.
 
@@ -106,7 +107,7 @@ Before committing changes to `playwright/typescript`, review against these crite
 - **TypeScript quality** — no `!` non-null assertions on env vars; `page.evaluate()` calls have explicit generic type; no implicit `any`; no unused imports; path aliases used instead of relative imports (`@fixtures/*`, `@pages/*`, `@utils/*`, `@test-data/*`, `@types-local/*`); `tsc --noEmit` passes
 - **Potential bugs** — async/await not missing on Playwright calls; no unhandled promise rejections; locators not reused across navigations; any file reading `process.env` credentials calls `loadEnv(import.meta.url, N)` at module top level (missing this passes on CI but fails locally)
 - **Flakiness** — no fixed timeouts; animation waits use `requestAnimationFrame`; auth setup asserts login actually succeeded; no assumptions about element order without explicit count assertion
-- **Security** — no credentials hardcoded anywhere; `.env` and `bruno/environments/.env` remain gitignored; Bruno secrets use `vars:secret` (not plaintext in `.bru` files); no sensitive data in committed config files (`.actrc`, `playwright.config.ts`, etc.); `ORWELLSTAT_USER`/`ORWELLSTAT_PASSWORD` sourced only from `.env` (local) or GitHub Actions secrets (CI)
+- **Security** — no credentials hardcoded anywhere; `.env` and `bruno/.env` remain gitignored; Bruno dotenv secrets accessed via `{{process.env.VAR}}` / `bru.getProcessEnv()` (not plaintext in `.bru` files); no sensitive data in committed config files (`.actrc`, `playwright.config.ts`, etc.); `ORWELLSTAT_USER`/`ORWELLSTAT_PASSWORD` sourced only from `.env` (local) or GitHub Actions secrets (CI)
 - **Formatting** — code is formatted with Prettier (`npm run format` from `playwright/typescript/`); never commit files that would fail `npm run format:check`
 - **Consistency with existing patterns** — new utils and test files documented in **both** `CLAUDE.md` and `README.md` (both files have mirrored architecture sections); new page files exported via the appropriate `index.ts`; code style matches surrounding files; JSON/config files are valid (no stray braces, no syntax errors)
 
@@ -148,4 +149,18 @@ When fixing a GitHub issue, follow these steps in order:
 
 ## bruno
 
-Bruno API request collection in `bruno/`. Environments are in `bruno/environments/` — `production.bru` and `staging.bru`. Secrets go in `bruno/environments/.env` (git-ignored). Staging requires HTTP Basic authentication (`BASIC_AUTH_USER`, `BASIC_AUTH_PASSWORD`).
+Bruno API request collection in `bruno/`. Environments are in `bruno/environments/` — `production.bru` and `staging.bru`.
+
+**Secrets** go in `bruno/.env` at the collection root (git-ignored via the top-level `.env` pattern). Copy `bruno/.env.example` to `bruno/.env` and fill in the values. This file must be at the collection root — Bruno CLI does not read from `environments/.env`.
+
+**CLI usage** (run from `bruno/`):
+```bash
+bru run --env production
+bru run --env staging
+```
+
+**Variable syntax in `.bru` files:**
+- Template variables (request body, URL): `{{process.env.VAR_NAME}}` for dotenv secrets; `{{varName}}` for `vars {}` block values
+- Pre-request scripts: `bru.getProcessEnv('VAR_NAME')` for dotenv secrets; `bru.getEnvVar('VAR_NAME')` for `vars`/`vars:secret` values
+
+Staging requires HTTP Basic authentication (`BASIC_AUTH_USER`, `BASIC_AUTH_PASSWORD`) in addition to the application login.

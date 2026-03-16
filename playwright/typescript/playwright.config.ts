@@ -3,6 +3,13 @@ import dotenv from 'dotenv';
 
 dotenv.config({ path: new URL('../../.env', import.meta.url).pathname });
 
+const BASE_URLS: Record<string, string> = {
+  production: 'https://orwellstat.hubertgajewski.com',
+  staging: 'https://stage.orwellstat.hubertgajewski.com',
+};
+
+const baseURL = BASE_URLS[process.env.ENV ?? 'production'] ?? BASE_URLS['production'];
+
 /**
  * See https://playwright.dev/docs/test-configuration.
  */
@@ -18,8 +25,7 @@ export default defineConfig({
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
 
   use: {
-    baseURL: 'https://orwellstat.hubertgajewski.com',
-//     baseURL: 'https://stage.orwellstat.hubertgajewski.com',
+    baseURL,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
