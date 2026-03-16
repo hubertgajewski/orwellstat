@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       update_visual_baselines:
-        description: 'Regenerate Linux visual baselines (--update-snapshots) and commit them back'
+        description: 'Regenerate Linux visual baselines for all 5 browser projects (--update-snapshots) and commit them back to the branch'
         type: boolean
         default: false
       ref:
@@ -21,13 +21,10 @@ jobs:
   test:
     timeout-minutes: 30
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.ref || github.ref }}
-          token: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/setup-node@v4
         with:
           node-version: lts/*
@@ -48,18 +45,12 @@ jobs:
         env:
           ORWELLSTAT_USER: ${{ secrets.ORWELLSTAT_USER }}
           ORWELLSTAT_PASSWORD: ${{ secrets.ORWELLSTAT_PASSWORD }}
-      - name: Commit updated visual baselines
+      - name: Upload updated baselines
         if: ${{ github.event.inputs.update_visual_baselines == 'true' }}
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add playwright/typescript/tests/visual.spec.ts-snapshots/
-          if git diff --cached --quiet; then
-            echo "No baseline changes to commit"
-          else
-            git commit -m "Update Linux visual baselines [skip ci]"
-            git push
-          fi
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-baselines-linux
+          path: playwright/typescript/tests/visual.spec.ts-snapshots/
       - name: Detect local act runner
         id: detect-act
         if: ${{ !cancelled() }}
@@ -73,3 +64,31 @@ jobs:
           name: playwright-report
           path: playwright/typescript/playwright-report/
           retention-days: 30
+
+  commit-baselines:
+    needs: test
+    if: ${{ github.event.inputs.update_visual_baselines == 'true' }}
+    timeout-minutes: 5
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.ref || github.ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: visual-baselines-linux
+          path: playwright/typescript/tests/visual.spec.ts-snapshots/
+      - name: Commit updated visual baselines
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add playwright/typescript/tests/visual.spec.ts-snapshots/
+          if git diff --cached --quiet; then
+            echo "No baseline changes to commit"
+          else
+            git commit -m "Update Linux visual baselines [skip ci]"
+            git push origin HEAD:${{ github.event.inputs.ref }}
+          fi
