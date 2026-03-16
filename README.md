@@ -21,7 +21,6 @@ bruno/                      # Bruno API request collection
 |------|-------------|---------|
 | [Node.js](https://nodejs.org/) v18+ | Playwright tests | [nodejs.org](https://nodejs.org/) |
 | [Bruno](https://www.usebruno.com/) | API request collection | Standalone app or [VSCode extension](https://marketplace.visualstudio.com/items?itemName=bruno-api-client.bruno) |
-| Bruno CLI | Running Bruno requests from terminal | `brew install bruno-cli` |
 | [Docker Desktop](https://www.docker.com/products/docker-desktop/) | Running GitHub Actions locally | [docker.com](https://www.docker.com/products/docker-desktop/) |
 | [act](https://github.com/nektos/act) | Running GitHub Actions locally | `brew install act` |
 
@@ -183,11 +182,10 @@ BASIC_AUTH_PASSWORD=<staging basic auth password>
 Run from the `bruno/` directory:
 
 ```bash
-bru run --env production
-bru run --env staging
+npm ci                        # install Bruno CLI (first time or after lockfile changes)
+npx bru run --env production
+npx bru run --env staging
 ```
-
-Install the CLI if needed: `brew install bruno-cli`
 
 ### Requests
 
@@ -195,6 +193,8 @@ Install the CLI if needed: `brew install bruno-cli`
 |---|---|
 | `login-valid.bru` | POST `/zone/` with valid credentials — expects 200 |
 | `login-invalid.bru` | POST `/zone/` with invalid credentials — expects 401 |
+
+**CI:** `.github/workflows/bruno.yml` — runs on push/PR to main/master; writes secrets into `bruno/.env` and runs `bru run --env production`.
 
 ---
 
@@ -215,9 +215,10 @@ act push --container-architecture linux/amd64
 
 # Run a specific workflow
 act push -W .github/workflows/playwright-typescript.yml --container-architecture linux/amd64
+act push -W .github/workflows/bruno.yml --container-architecture linux/amd64
 ```
 
-On first run, `act` will ask for a Docker image size — choose **Medium** (~500MB). The workflow itself installs Playwright browsers via `npx playwright install --with-deps`.
+On first run, `act` will ask for a Docker image size — choose **Medium** (~500MB). The Playwright workflow installs browsers via `npx playwright install --with-deps`; the Bruno workflow only needs Node and `npm ci`.
 
 > **Note:** The `--container-architecture linux/amd64` flag is required on Apple Silicon (M-series) Macs to avoid compatibility issues.
 

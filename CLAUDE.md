@@ -18,7 +18,7 @@ SECURITY.md                 # security policy and vulnerability reporting
 playwright/
   typescript/               # Playwright tests in TypeScript
 selenium/                   # Selenium tests (planned)
-bruno/                      # Bruno API request collection
+bruno/                      # Bruno API request collection; package.json locks @usebruno/cli version
 ```
 
 ## Environment variables
@@ -142,7 +142,21 @@ When fixing a GitHub issue, follow these steps in order:
 5. Run the affected test(s) — must pass
 6. Create a branch from remote `main` named `feature/<issue-number>` or `bugfix/<issue-number>` (e.g. `feature/19`)
 7. Commit with a **short, single-line message** in the format `<issue-number> <short description>` (e.g. `19 Add explicit SvgAnalysis type to page.evaluate()`). No body, no `Co-Authored-By` trailer — single line only.
-8. **Review the diff as a fresh reviewer** — run `git diff HEAD~1` and read the diff as someone who was not part of the discussion and has no context beyond what is visible in the code. For every non-obvious change ask: *"Would I understand why this was done just from the diff?"* If the answer is no, either add a comment in the code or adjust the implementation before pushing.
+8. **Review the diff as a fresh reviewer** — run `git diff HEAD~1` and treat every changed file as unfamiliar code. Work through the checklist below and **explicitly state each finding** (even if the finding is "no issues"). Saying "the diff looks clean" without articulating the checks performed is not acceptable.
+
+   **General checks (every diff):**
+   - Every non-obvious change: *"Would I understand why this was done just from the diff?"* If no, add a code comment or adjust the implementation.
+   - No credentials, tokens, or secrets in committed files.
+   - No dead code, commented-out blocks, or debug artifacts left in.
+   - Docs updated: if a file documented in `CLAUDE.md` or `README.md` changed, verify both files reflect the change.
+
+   **CI / workflow files (`.github/workflows/*.yml`):**
+   - `timeout-minutes` set at the job level — no job should run unbounded.
+   - All `actions/*` pinned to a specific major version (e.g. `@v4`); third-party actions pinned to a full SHA.
+   - `node-version: lts/*` is acceptable for Node setup; npm package versions must be pinned in `package.json` + `package-lock.json` (use `npm ci`, not `npm install -g @package`).
+   - No env vars copied blindly from another workflow without verifying they apply — each env var must have a reason visible in the file or a comment.
+   - Secrets written to disk (e.g. `echo "KEY=${{ secrets.KEY }}" >> .env`) must be scoped to the minimum needed and never logged.
+   - Steps that only make sense in specific contexts (e.g. artifact upload skipped under `act`) must have an `if:` condition with a clear comment explaining the guard.
 9. Push and create a PR
 
 ---
@@ -155,8 +169,9 @@ Bruno API request collection in `bruno/`. Environments are in `bruno/environment
 
 **CLI usage** (run from `bruno/`):
 ```bash
-bru run --env production
-bru run --env staging
+npm ci                        # install Bruno CLI (first time or after package-lock.json changes)
+npx bru run --env production
+npx bru run --env staging
 ```
 
 **Variable syntax in `.bru` files:**
@@ -164,3 +179,5 @@ bru run --env staging
 - Pre-request scripts: `bru.getProcessEnv('VAR_NAME')` for dotenv secrets; `bru.getEnvVar('VAR_NAME')` for `vars`/`vars:secret` values
 
 Staging requires HTTP Basic authentication (`BASIC_AUTH_USER`, `BASIC_AUTH_PASSWORD`) in addition to the application login.
+
+**CI:** `.github/workflows/bruno.yml` — runs on push/PR to main/master; writes `ORWELLSTAT_USER` and `ORWELLSTAT_PASSWORD` from GitHub Actions secrets into `bruno/.env` and runs `bru run --env production`.
