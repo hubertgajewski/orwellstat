@@ -5,6 +5,13 @@ import { SvgAnalysis } from '@types-local/svg-analysis';
 import { StatisticsRow } from '@types-local/statistics-row';
 
 test('SVG chart is rendered on stats page', async ({ page }) => {
+  // Firefox does not cache Basic Auth credentials for <object> sub-resources on staging.
+  // Pre-navigate to chart_all.php so Firefox caches the credentials before the <object> loads it.
+  if (process.env.BASIC_AUTH_USER) {
+    const preAuthResponse = await page.goto(ServiceStatisticsPage.svgChartPreAuthUrl);
+    expect(preAuthResponse?.status()).toBe(200);
+  }
+
   const [svgResponse] = await Promise.all([
     page.waitForResponse((response) => response.url().includes(ServiceStatisticsPage.svgChartUrl)),
     page.goto(ServiceStatisticsPage.url),

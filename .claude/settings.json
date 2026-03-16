@@ -1,21 +1,38 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npx playwright test*)",
-      "Bash(npx playwright show-report*)",
-      "Bash(npx playwright install*)",
       "Bash(bru run*)",
-      "Read(**/password-reset.page.ts)"
+      "Bash(gh api*)",
+      "Bash(gh issue list*)",
+      "Bash(gh issue view*)",
+      "Bash(gh pr diff*)",
+      "Bash(gh pr list*)",
+      "Bash(gh pr view*)",
+      "Bash(gh repo view*)",
+      "Bash(gh run list*)",
+      "Bash(gh run view*)",
+      "Bash(npx playwright install*)",
+      "Bash(npx playwright show-report*)",
+      "Bash(npx playwright test*)",
+      "Bash(npx tsc*)",
+      "mcp__playwright__browser_click",
+      "mcp__playwright__browser_evaluate",
+      "mcp__playwright__browser_navigate",
+      "Read(**/password-reset.page.ts)",
+      "WebFetch(domain:docs.usebruno.com)",
+      "WebFetch(domain:orwellstat.hubertgajewski.com)",
+      "WebFetch(domain:playwright.dev)",
+      "WebFetch(domain:stage.orwellstat.hubertgajewski.com)"
     ],
     "deny": [
       "Read(.env)",
-      "Read(**/*.pem)",
+      "Read(**/*credentials*)",
+      "Read(**/*password*)",
+      "Read(**/*secret*)",
       "Read(**/*.key)",
       "Read(**/*.p12)",
-      "Read(**/*.pfx)",
-      "Read(**/*secret*)",
-      "Read(**/*password*)",
-      "Read(**/*credentials*)"
+      "Read(**/*.pem)",
+      "Read(**/*.pfx)"
     ]
   }
 }

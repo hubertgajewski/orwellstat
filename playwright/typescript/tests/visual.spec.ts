@@ -47,15 +47,18 @@ test('contact page visual regression', async ({ page }) => {
 test('statistics page visual regression', async ({ page }) => {
   // Wait for the SVG chart response before screenshotting to ensure it is fully loaded.
   // animations: 'disabled' freezes the SVG animation for a stable baseline.
-  // The statistics table contains live data that changes frequently; mask it to keep the
-  // baseline stable while still verifying page structure and the SVG chart.
+  // The statistics table and SVG chart contain live data that changes frequently; mask both
+  // to keep the baseline stable while still verifying page structure.
   await Promise.all([
     page.waitForResponse((response) => response.url().includes(ServiceStatisticsPage.svgChartUrl)),
     page.goto(ServiceStatisticsPage.url),
   ]);
+  // Wait for the <object> to be visible (non-zero dimensions) so its height is stable
+  // in the layout before screenshotting; without this the footer may shift after capture.
+  await expect(page.locator('object[type="image/svg+xml"]')).toBeVisible();
   await expect(page).toHaveScreenshot({
     fullPage: true,
     animations: 'disabled',
-    mask: [page.getByRole('table')],
+    mask: [page.getByRole('table'), page.locator('object[type="image/svg+xml"]')],
   });
 });

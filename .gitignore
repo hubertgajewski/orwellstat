@@ -4,4 +4,12 @@
 *.bak
 .DS_Store
 .claude/settings.local.json
+.playwright-mcp/
+bruno/.env
 bruno/environments/.env
+bruno/test-results/
+playwright/typescript/data/
+playwright/typescript/index.html
+playwright/typescript/playwright-report-ci/
+playwright/typescript/trace/
+test-results/

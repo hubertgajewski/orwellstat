@@ -106,7 +106,7 @@ npm run format:check
   - `contact.spec.ts` — Contact page headings and statsbar content tests
   - `statistics.spec.ts` — Service statistics page: SVG chart rendering and statistics table tests
   - `validation.spec.ts` — W3C XHTML and CSS validation tests across all pages (classic W3C Markup Validator + CSS validator APIs); Chromium-only
-  - `visual.spec.ts` — Full-page visual regression snapshots for home (default and Purple Rain style), about system, contact, and statistics pages using `toHaveScreenshot()` with `maxDiffPixelRatio: 0.01`; home page masks `#statsbar` lists (dynamic new-browser/OS list items) via `getByRole('list')`; statistics page masks `getByRole('table')` (live data) and disables animations; baselines stored in `tests/visual.spec.ts-snapshots/` with per-platform suffixes (`-darwin`, `-linux`)
+  - `visual.spec.ts` — Full-page visual regression snapshots for home (default and Purple Rain style), about system, contact, and statistics pages using `toHaveScreenshot()` with `maxDiffPixelRatio: 0.01`; home page masks `#statsbar` lists (dynamic new-browser/OS list items) via `getByRole('list')`; statistics page masks `getByRole('table')` (live data) and `object[type="image/svg+xml"]` (dynamic SVG chart), waits for `<object>` to be visible before screenshotting to stabilise layout, and disables animations; baselines stored in `tests/visual.spec.ts-snapshots/` with per-platform suffixes (`-darwin`, `-linux`)
 - `auth.setup.ts` — Playwright auth setup: logs in via UI and saves storage state to `.auth/user.json`
 - `pages/` — Page Object Model classes
   - `base.page.ts` — `BasePage` interface (`url`, `title`, `goto()`, `heading`, optional `accessKey`)
@@ -151,6 +151,8 @@ npm run format:check
 **CI:** `.github/workflows/playwright-typescript.yml` — runs on push/PR to main/master with `working-directory: playwright/typescript`; uploads `playwright/typescript/playwright-report/` as an artifact (retained 30 days); upload is skipped when running locally with `act`. Also supports `workflow_dispatch` with two inputs: `update_visual_baselines` (boolean, regenerates Linux baselines for all 5 browser projects via `--update-snapshots` and commits them back) and `ref` (branch to run on; defaults to triggering branch). To generate Linux baselines for a feature branch: Actions → "Playwright Typescript Tests" → "Run workflow" → enter the branch name in `ref`, check `update_visual_baselines`.
 
 **Standalone baseline update:** `.github/workflows/update-visual-baselines.yml` — `workflow_dispatch`-only workflow that regenerates Linux baselines for all 5 browser projects and commits them back directly; accepts a `branch` input (defaults to `main`). Use this when you want to regenerate baselines without running the full test suite.
+
+**Automated code review:** `.github/workflows/claude-code-review.yml` — triggers on pull request events (opened, synchronize, ready_for_review, reopened); runs `anthropics/claude-code-action@v1` to review the PR and post inline comments; focuses on Playwright test correctness, POM conventions, TypeScript quality, and consistency; requires `ANTHROPIC_API_KEY` secret.
 
 ---
 
