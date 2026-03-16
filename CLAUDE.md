@@ -54,6 +54,7 @@ All commands must be run from `playwright/typescript/`.
   - `contact.spec.ts` — Contact page headings and statsbar content tests
   - `statistics.spec.ts` — Service statistics page: SVG chart rendering and statistics table tests
   - `validation.spec.ts` — W3C XHTML and CSS validation tests across all pages (classic W3C Markup Validator + CSS validator APIs); Chromium-only
+  - `visual.spec.ts` — Full-page visual regression snapshots for home, about system, contact, and statistics pages using `toHaveScreenshot()` with `maxDiffPixelRatio: 0.01`; home page masks `#nowosci` (dynamic new-browser/OS entries); statistics page masks `table` (live data) and disables animations; baselines stored in `tests/visual.spec.ts-snapshots/`
 - `auth.setup.ts` — Playwright auth setup: logs in via UI and saves storage state to `.auth/user.json`
 - `pages/` — Page Object Model classes
   - `base.page.ts` — `BasePage` interface (`url`, `title`, `goto()`, `heading`, optional `accessKey`)
@@ -92,6 +93,8 @@ All commands must be run from `playwright/typescript/`.
 - On failure: screenshots, video, and console/DOM log attachments are saved
 - `trace: 'on-first-retry'`
 - `baseURL` is driven by the `ENV` variable (`production` by default, `staging` when `ENV=staging`); `httpCredentials` are injected automatically when `BASIC_AUTH_USER` is set
+- `expect.toHaveScreenshot: { maxDiffPixelRatio: 0.01 }` — global threshold for visual regression tests
+- `snapshotPathTemplate` omits the OS platform token so baselines generated on macOS work on Linux CI within the 1% tolerance
 
 **CI:** `.github/workflows/playwright-typescript.yml` — runs on push/PR to main/master with `working-directory: playwright/typescript`; uploads `playwright/typescript/playwright-report/` as an artifact (retained 30 days); upload is skipped when running locally with `act`.
 
@@ -141,8 +144,7 @@ When fixing a GitHub issue, follow these steps in order:
 4. Review against the [code review checklist](#code-review-checklist)
 5. Run the affected test(s) — must pass
 6. Create a branch from remote `main` named `feature/<issue-number>` or `bugfix/<issue-number>` (e.g. `feature/19`)
-7. Commit with a **short, single-line message** in the format `<issue-number> <short description>` (e.g. `19 Add explicit SvgAnalysis type to page.evaluate()`). No body, no `Co-Authored-By` trailer — single line only.
-8. **Review the diff as a fresh reviewer** — run `git diff HEAD~1` and treat every changed file as unfamiliar code. Work through the checklist below and **explicitly state each finding** (even if the finding is "no issues"). Saying "the diff looks clean" without articulating the checks performed is not acceptable.
+7. **Review the diff as a fresh reviewer** — run `git diff` (staged + unstaged) and treat every changed file as unfamiliar code. Work through the checklist below and **explicitly state each finding** (even if the finding is "no issues"). Saying "the diff looks clean" without articulating the checks performed is not acceptable.
 
    **General checks (every diff):**
    - Every non-obvious change: *"Would I understand why this was done just from the diff?"* If no, add a code comment or adjust the implementation.
@@ -157,6 +159,7 @@ When fixing a GitHub issue, follow these steps in order:
    - No env vars copied blindly from another workflow without verifying they apply — each env var must have a reason visible in the file or a comment.
    - Secrets written to disk (e.g. `echo "KEY=${{ secrets.KEY }}" >> .env`) must be scoped to the minimum needed and never logged.
    - Steps that only make sense in specific contexts (e.g. artifact upload skipped under `act`) must have an `if:` condition with a clear comment explaining the guard.
+8. Commit with a **short, single-line message** in the format `<issue-number> <short description>` (e.g. `19 Add explicit SvgAnalysis type to page.evaluate()`). No body, no `Co-Authored-By` trailer — single line only.
 9. Push and create a PR
 
 ---
