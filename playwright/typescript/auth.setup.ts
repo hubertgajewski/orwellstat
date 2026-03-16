@@ -8,9 +8,7 @@ const { user, password } = requireCredentials();
 setup('authenticate', async ({ page }) => {
   await page.goto('/');
   await page.locator('[name="username"]').fill(user);
-  await page
-    .locator('[name="password"]')
-    .fill(password);
+  await page.locator('[name="password"]').fill(password);
   await page.locator('form[action="/zone/"]').getByRole('button').click();
   await page.waitForURL('**/zone/');
   await expect(page.getByText(AbstractPage.loggedInAs)).toBeVisible();

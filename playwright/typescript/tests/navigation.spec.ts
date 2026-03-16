@@ -43,10 +43,7 @@ test.describe('navigation', () => {
   });
 
   test('about system', async ({ page }) => {
-    await page
-      .locator('#menubar')
-      .getByRole('link', { name: 'O systemie', exact: true })
-      .click();
+    await page.locator('#menubar').getByRole('link', { name: 'O systemie', exact: true }).click();
 
     await expectHeadings(page, [
       AboutSystemPage.signIn,
@@ -66,17 +63,11 @@ test.describe('navigation', () => {
       .getByRole('link', { name: 'Statystyki serwisu', exact: true })
       .click();
 
-    await expectHeadings(page, [
-      ServiceStatisticsPage.signIn,
-      ServiceStatisticsPage.statistics,
-    ]);
+    await expectHeadings(page, [ServiceStatisticsPage.signIn, ServiceStatisticsPage.statistics]);
   });
 
   test('contact', async ({ page }) => {
-    await page
-      .locator('#menubar')
-      .getByRole('link', { name: 'Kontakt', exact: true })
-      .click();
+    await page.locator('#menubar').getByRole('link', { name: 'Kontakt', exact: true }).click();
 
     await expectHeadings(page, [ContactPage.signIn, ContactPage.contact]);
   });

@@ -6,8 +6,6 @@ import AxeBuilder from '@axe-core/playwright';
  * that there are no WCAG2AAA violations.
  */
 export async function expectNoAccessibilityViolations(page: Page) {
-  const results = await new AxeBuilder({ page })
-    .withTags(['wcag2aaa'])
-    .analyze();
+  const results = await new AxeBuilder({ page }).withTags(['wcag2aaa']).analyze();
   expect(results.violations).toEqual([]);
 }
