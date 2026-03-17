@@ -12,7 +12,7 @@ For a full project overview, setup instructions, and commands see [README.md](RE
 
 ```
 .env                        # credentials (git-ignored); see .env.example
-.env.example                # template: ORWELLSTAT_USER, ORWELLSTAT_PASSWORD, ENV, BASIC_AUTH_USER, BASIC_AUTH_PASSWORD
+.env.example                # template: ORWELLSTAT_USER, ORWELLSTAT_PASSWORD, ENV, BASIC_AUTH_USER, BASIC_AUTH_PASSWORD, ANTHROPIC_API_KEY, CLAUDE_DIAGNOSIS
 .github/workflows/          # CI workflows (one per sub-project)
 SECURITY.md                 # security policy and vulnerability reporting
 playwright/
@@ -31,9 +31,11 @@ ORWELLSTAT_PASSWORD=<password>
 ENV=<production|staging>
 BASIC_AUTH_USER=<staging basic auth user>
 BASIC_AUTH_PASSWORD=<staging basic auth password>
+ANTHROPIC_API_KEY=<Anthropic API key>
+CLAUDE_DIAGNOSIS=true
 ```
 
-`ORWELLSTAT_USER` and `ORWELLSTAT_PASSWORD` are required for all environments. `ENV` selects the target environment for Playwright — accepted values are `production` (default) and `staging`; omitting it defaults to `production`. `BASIC_AUTH_USER` and `BASIC_AUTH_PASSWORD` are only needed for staging — Playwright passes them as HTTP Basic Auth credentials when set. In CI all vars are injected as GitHub Actions secrets. Sub-projects load them via `dotenv` with a path pointing two levels up (`../../.env`).
+`ORWELLSTAT_USER` and `ORWELLSTAT_PASSWORD` are required for all environments. `BASIC_AUTH_USER` and `BASIC_AUTH_PASSWORD` are only needed for staging — Playwright passes them as HTTP Basic Auth credentials when set. `ANTHROPIC_API_KEY` and `CLAUDE_DIAGNOSIS=true` are both optional — when both are present, failed tests receive an `AI diagnosis` attachment in the Playwright report; when either is absent the fixture behaves identically to without them. In CI all vars are injected as GitHub Actions secrets. Sub-projects load them via `dotenv` with a path pointing two levels up (`../../.env`).
 
 ---
 
@@ -64,7 +66,7 @@ All commands must be run from `playwright/typescript/`.
   - `authenticated/` — Authenticated page classes: `InformationPage`, `StatsPage`, `HitsPage`, `ScriptsPage`, `AdminPage`; exported via `index.ts` as `AUTHENTICATED_PAGE_CLASSES`
 - `fixtures/base.fixture.ts` — Custom Playwright fixture extending `test` with:
   - `authenticatedRequest` — logs in via POST `/zone/` before each test
-  - Captures browser console logs and XHTML DOM snapshot (`dom.xhtml` with XML declaration and `<?xml-stylesheet?>` PIs) as attachments on test failure
+  - Captures browser console logs and XHTML DOM snapshot (`dom.xhtml` with XML declaration and `<?xml-stylesheet?>` PIs) as attachments on test failure; when `ANTHROPIC_API_KEY` and `CLAUDE_DIAGNOSIS=true` are both set, also attaches an `AI diagnosis` generated via `claude-haiku-4-5`
   - Re-exports `expect`, `request`, `Page`, `Locator`, `BrowserContext` from `@playwright/test`
   - Re-exports `pixelmatch` and `PNG` (used for pixel-diff screenshot comparison)
 - `utils/accessibility.util.ts` — `expectNoAccessibilityViolations()` using `@axe-core/playwright` (WCAG2AAA)
