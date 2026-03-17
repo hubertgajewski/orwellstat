@@ -19,8 +19,28 @@ env:
 
 jobs:
   test:
-    timeout-minutes: 30
+    name: ${{ matrix.project }}
+    timeout-minutes: 15
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - project: 'Chromium'
+            browser: chromium
+            id: chromium
+          - project: 'Firefox'
+            browser: firefox
+            id: firefox
+          - project: 'Webkit'
+            browser: webkit
+            id: webkit
+          - project: 'Mobile Chrome'
+            browser: chromium
+            id: mobile-chrome
+          - project: 'Mobile Safari'
+            browser: webkit
+            id: mobile-safari
     steps:
       - uses: actions/checkout@v6
         with:
@@ -28,6 +48,8 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: lts/*
+          cache: 'npm'
+          cache-dependency-path: playwright/typescript/package-lock.json
       - name: Install dependencies
         run: npm ci
         working-directory: playwright/typescript
@@ -35,14 +57,18 @@ jobs:
         run: npm audit --audit-level=high
         working-directory: playwright/typescript
       - name: Install Playwright Browsers
-        run: npx playwright install --with-deps
+        # chromium is always installed because the auth setup project (auth.setup.ts) has no
+        # explicit browser configured and therefore defaults to Chromium. Every matrix job needs
+        # it available to run the setup dependency. For Chromium/Mobile Chrome jobs the duplicate
+        # is idempotent and harmless.
+        run: npx playwright install --with-deps chromium ${{ matrix.browser }}
         working-directory: playwright/typescript
       - name: Run Playwright tests
         run: |
           if [ "${{ github.event.inputs.update_visual_baselines }}" = "true" ]; then
-            npx playwright test tests/visual.spec.ts --update-snapshots
+            npx playwright test tests/visual.spec.ts --update-snapshots --project="${{ matrix.project }}"
           else
-            npx playwright test
+            npx playwright test --project="${{ matrix.project }}"
           fi
         working-directory: playwright/typescript
         env:
@@ -54,7 +80,7 @@ jobs:
         if: ${{ github.event.inputs.update_visual_baselines == 'true' }}
         uses: actions/upload-artifact@v7
         with:
-          name: visual-baselines-linux
+          name: visual-baselines-linux-${{ matrix.id }}
           path: playwright/typescript/tests/visual.spec.ts-snapshots/
       - name: Detect local act runner
         id: detect-act
@@ -66,13 +92,13 @@ jobs:
       - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() && steps.detect-act.outputs.running != 'true' }}
         with:
-          name: playwright-report
+          name: playwright-report-${{ matrix.id }}
           path: playwright/typescript/playwright-report/
           retention-days: 30
 
   commit-baselines:
     needs: test
-    if: ${{ github.event.inputs.update_visual_baselines == 'true' }}
+    if: ${{ always() && github.event.inputs.update_visual_baselines == 'true' && needs.test.result != 'cancelled' }}
     timeout-minutes: 5
     runs-on: ubuntu-latest
     permissions:
@@ -84,8 +110,9 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/download-artifact@v8
         with:
-          name: visual-baselines-linux
+          pattern: visual-baselines-linux-*
           path: playwright/typescript/tests/visual.spec.ts-snapshots/
+          merge-multiple: true
       - name: Commit updated visual baselines
         run: |
           git config user.name "github-actions[bot]"
