@@ -49,7 +49,7 @@ jobs:
           ORWELLSTAT_USER: ${{ secrets.ORWELLSTAT_USER }}
           ORWELLSTAT_PASSWORD: ${{ secrets.ORWELLSTAT_PASSWORD }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          CLAUDE_DIAGNOSIS: ${{ secrets.CLAUDE_DIAGNOSIS }}
+          CLAUDE_DIAGNOSIS: ${{ vars.CLAUDE_DIAGNOSIS }}
       - name: Upload updated baselines
         if: ${{ github.event.inputs.update_visual_baselines == 'true' }}
         uses: actions/upload-artifact@v7

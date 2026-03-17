@@ -83,7 +83,8 @@ export const test = base.extend<OrwellStatFixtures>({
               },
             ],
           });
-          const diagnosis = response.content[0].type === 'text' ? response.content[0].text : '';
+          const firstBlock = response.content[0];
+          const diagnosis = firstBlock?.type === 'text' ? firstBlock.text : '';
           if (diagnosis) {
             const diagPath = testInfo.outputPath('diagnosis.md');
             writeFileSync(diagPath, diagnosis);
@@ -92,8 +93,9 @@ export const test = base.extend<OrwellStatFixtures>({
               contentType: 'text/plain',
             });
           }
-        } catch {
+        } catch (err) {
           // Diagnosis is best-effort; never fail a test because of it
+          console.warn('[AI diagnosis] skipped:', err);
         }
       }
     }
