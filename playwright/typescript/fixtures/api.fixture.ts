@@ -22,9 +22,9 @@ export const test = base.extend<ApiFixtures>({
         password: password,
       },
     });
-    expect(response.ok()).toBeTruthy();
+    expect(response.status()).toBe(200);
     await use(request);
   },
 });
 
-export { expect, type APIRequestContext } from '@playwright/test';
+export { expect, type APIRequestContext } from '@fixtures/base.fixture';
