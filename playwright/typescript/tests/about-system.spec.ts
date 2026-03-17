@@ -3,71 +3,80 @@ import { AboutSystemPage } from '@pages/public/about-system.page';
 import { expectHeadings } from '@utils/string.util';
 
 test('about system page - headings and statsbar content', async ({ page }) => {
-  await page.goto(AboutSystemPage.url);
+  await test.step('navigate to page', async () => {
+    await page.goto(AboutSystemPage.url);
+  });
 
   const statsbar = page.locator('#statsbar');
 
-  await expectHeadings(page, [
-    AboutSystemPage.signIn,
-    AboutSystemPage.whatIsOrwellStat,
-    AboutSystemPage.whatDataIsCollected,
-    AboutSystemPage.browsersAndApps,
-    AboutSystemPage.operatingSystems,
-    AboutSystemPage.requirements,
-    AboutSystemPage.minimalRequirements,
-    AboutSystemPage.recommended,
-  ]);
+  await test.step('verify headings', async () => {
+    await expectHeadings(page, [
+      AboutSystemPage.signIn,
+      AboutSystemPage.whatIsOrwellStat,
+      AboutSystemPage.whatDataIsCollected,
+      AboutSystemPage.browsersAndApps,
+      AboutSystemPage.operatingSystems,
+      AboutSystemPage.requirements,
+      AboutSystemPage.minimalRequirements,
+      AboutSystemPage.recommended,
+    ]);
+  });
 
-  // Login section – authenticated state shows logout button
-  await expect(statsbar.getByText(AboutSystemPage.loggedInAs, { exact: false })).toBeVisible();
-  await expect(
-    statsbar.getByRole('button', { name: AboutSystemPage.logoutButton, exact: true })
-  ).toBeVisible();
+  await test.step('verify statsbar login section', async () => {
+    await expect(statsbar.getByText(AboutSystemPage.loggedInAs, { exact: false })).toBeVisible();
+    await expect(
+      statsbar.getByRole('button', { name: AboutSystemPage.logoutButton, exact: true })
+    ).toBeVisible();
+  });
 
-  // "Co to jest Orwell Stat?" – text and external links
-  await expect(statsbar.getByText(AboutSystemPage.orwellStatIntro, { exact: false })).toBeVisible();
-  await expect(
-    statsbar.getByRole('link', { name: AboutSystemPage.wsbNlu.name, exact: true })
-  ).toHaveAttribute('href', AboutSystemPage.wsbNlu.href);
-  await expect(
-    statsbar.getByRole('link', { name: AboutSystemPage.hubertGajewski.name, exact: true })
-  ).toHaveAttribute('href', AboutSystemPage.hubertGajewski.href);
-  await expect(
-    statsbar.getByRole('link', { name: AboutSystemPage.tomaszGorazd.name, exact: true })
-  ).toHaveAttribute('href', AboutSystemPage.tomaszGorazd.href);
+  await test.step('verify intro and external links', async () => {
+    await expect(
+      statsbar.getByText(AboutSystemPage.orwellStatIntro, { exact: false })
+    ).toBeVisible();
+    await expect(
+      statsbar.getByRole('link', { name: AboutSystemPage.wsbNlu.name, exact: true })
+    ).toHaveAttribute('href', AboutSystemPage.wsbNlu.href);
+    await expect(
+      statsbar.getByRole('link', { name: AboutSystemPage.hubertGajewski.name, exact: true })
+    ).toHaveAttribute('href', AboutSystemPage.hubertGajewski.href);
+    await expect(
+      statsbar.getByRole('link', { name: AboutSystemPage.tomaszGorazd.name, exact: true })
+    ).toHaveAttribute('href', AboutSystemPage.tomaszGorazd.href);
+  });
 
-  // "Jakie dane rejestruje system?" – browser/OS counts
-  await expect(statsbar.getByText(AboutSystemPage.browserCount, { exact: false })).toBeVisible();
-  await expect(statsbar.getByText(AboutSystemPage.osCount, { exact: false })).toBeVisible();
+  await test.step('verify browser and OS counts and lists', async () => {
+    await expect(statsbar.getByText(AboutSystemPage.browserCount, { exact: false })).toBeVisible();
+    await expect(statsbar.getByText(AboutSystemPage.osCount, { exact: false })).toBeVisible();
 
-  // Sample browser names in the list
-  for (const browser of AboutSystemPage.sampleBrowsers) {
-    await expect(statsbar.getByRole('listitem').getByText(browser, { exact: true })).toBeVisible();
-  }
+    for (const browser of AboutSystemPage.sampleBrowsers) {
+      await expect(
+        statsbar.getByRole('listitem').getByText(browser, { exact: true })
+      ).toBeVisible();
+    }
 
-  // Sample OS names in the list
-  for (const os of AboutSystemPage.sampleOSes) {
-    await expect(statsbar.getByRole('listitem').getByText(os, { exact: true })).toBeVisible();
-  }
+    for (const os of AboutSystemPage.sampleOSes) {
+      await expect(statsbar.getByRole('listitem').getByText(os, { exact: true })).toBeVisible();
+    }
+  });
 
-  // "Wymagania" – images with alt text
-  for (const screenshot of Object.values(AboutSystemPage.screenshots)) {
-    await expect(statsbar.locator(`img[src="${screenshot.src}"]`)).toHaveAttribute(
-      'alt',
-      screenshot.alt
-    );
-  }
+  await test.step('verify requirements screenshots', async () => {
+    for (const screenshot of Object.values(AboutSystemPage.screenshots)) {
+      await expect(statsbar.locator(`img[src="${screenshot.src}"]`)).toHaveAttribute(
+        'alt',
+        screenshot.alt
+      );
+    }
+  });
 
-  // "Zalecane" section – Adobe SVG Viewer link
-  await expect(
-    statsbar.getByRole('link', { name: AboutSystemPage.adobeSvgViewer.name, exact: true })
-  ).toHaveAttribute('href', AboutSystemPage.adobeSvgViewer.href);
-
-  // Minimum requirements – key text fragments
-  await expect(
-    statsbar.getByText(AboutSystemPage.vgaRequirementText, { exact: false })
-  ).toBeVisible();
-  await expect(
-    statsbar.getByText(AboutSystemPage.hdRequirementText, { exact: false })
-  ).toBeVisible();
+  await test.step('verify requirements text', async () => {
+    await expect(
+      statsbar.getByRole('link', { name: AboutSystemPage.adobeSvgViewer.name, exact: true })
+    ).toHaveAttribute('href', AboutSystemPage.adobeSvgViewer.href);
+    await expect(
+      statsbar.getByText(AboutSystemPage.vgaRequirementText, { exact: false })
+    ).toBeVisible();
+    await expect(
+      statsbar.getByText(AboutSystemPage.hdRequirementText, { exact: false })
+    ).toBeVisible();
+  });
 });
