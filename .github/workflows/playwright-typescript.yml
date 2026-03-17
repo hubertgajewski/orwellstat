@@ -56,6 +56,10 @@ jobs:
         run: npm audit --audit-level=high
         working-directory: playwright/typescript
       - name: Install Playwright Browsers
+        # chromium is always installed because the auth setup project (auth.setup.ts) has no
+        # explicit browser configured and therefore defaults to Chromium. Every matrix job needs
+        # it available to run the setup dependency. For Chromium/Mobile Chrome jobs the duplicate
+        # is idempotent and harmless.
         run: npx playwright install --with-deps chromium ${{ matrix.browser }}
         working-directory: playwright/typescript
       - name: Run Playwright tests
