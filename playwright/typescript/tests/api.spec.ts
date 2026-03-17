@@ -1,4 +1,4 @@
-import { test, expect } from '@fixtures/base.fixture';
+import { test, expect } from '@fixtures/api.fixture';
 import { PUBLIC_PAGE_CLASSES } from '@pages/public/index';
 import { AUTHENTICATED_PAGE_CLASSES } from '@pages/authenticated/index';
 
