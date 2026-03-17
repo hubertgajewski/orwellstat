@@ -19,6 +19,7 @@ env:
 
 jobs:
   test:
+    name: ${{ matrix.project }}
     timeout-minutes: 15
     runs-on: ubuntu-latest
     strategy:
