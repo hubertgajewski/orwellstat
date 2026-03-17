@@ -56,7 +56,7 @@ jobs:
         run: npm audit --audit-level=high
         working-directory: playwright/typescript
       - name: Install Playwright Browsers
-        run: npx playwright install --with-deps ${{ matrix.browser }}
+        run: npx playwright install --with-deps chromium ${{ matrix.browser }}
         working-directory: playwright/typescript
       - name: Run Playwright tests
         run: |
@@ -93,7 +93,7 @@ jobs:
 
   commit-baselines:
     needs: test
-    if: ${{ github.event.inputs.update_visual_baselines == 'true' }}
+    if: ${{ always() && github.event.inputs.update_visual_baselines == 'true' && needs.test.result != 'cancelled' }}
     timeout-minutes: 5
     runs-on: ubuntu-latest
     permissions:
