@@ -20,7 +20,7 @@ on:
           - firefox
           - webkit
       update_visual_baselines:
-        description: 'Regenerate Linux visual baselines for all 5 browser projects (--update-snapshots) and commit them back to the branch'
+        description: 'Regenerate Linux visual baselines via --update-snapshots and commit them back to the branch (only the browser projects selected by the project input are updated)'
         type: boolean
         default: false
       ref:
@@ -39,14 +39,15 @@ jobs:
     steps:
       - name: Compute matrix
         id: compute
+        env:
+          # Use env vars to avoid direct ${{ }} interpolation in the shell body (script injection risk)
+          PROJECT: ${{ inputs.project }}
+          EVENT: ${{ github.event_name }}
         run: |
           ALL='{"include":[{"project":"Chromium","browser":"chromium","id":"chromium"},{"project":"Firefox","browser":"firefox","id":"firefox"},{"project":"Webkit","browser":"webkit","id":"webkit"},{"project":"Mobile Chrome","browser":"chromium","id":"mobile-chrome"},{"project":"Mobile Safari","browser":"webkit","id":"mobile-safari"}]}'
           CHROMIUM='{"include":[{"project":"Chromium","browser":"chromium","id":"chromium"},{"project":"Mobile Chrome","browser":"chromium","id":"mobile-chrome"}]}'
           FIREFOX='{"include":[{"project":"Firefox","browser":"firefox","id":"firefox"}]}'
           WEBKIT='{"include":[{"project":"Webkit","browser":"webkit","id":"webkit"},{"project":"Mobile Safari","browser":"webkit","id":"mobile-safari"}]}'
-
-          PROJECT="${{ inputs.project }}"
-          EVENT="${{ github.event_name }}"
 
           if [ "$EVENT" != "workflow_dispatch" ] || [ -z "$PROJECT" ] || [ "$PROJECT" = "all" ]; then
             echo "matrix=$ALL" >> "$GITHUB_OUTPUT"
