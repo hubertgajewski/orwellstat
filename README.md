@@ -2,6 +2,16 @@
 
 Multi-language, multi-framework end-to-end test suite for [Orwell Stat](https://orwellstat.hubertgajewski.com) — a Polish-language web analytics and statistics service.
 
+## Claude slash commands
+
+Three project-scoped slash commands are available in Claude Code (stored in `.claude/commands/`):
+
+| Command | Usage | What it does |
+| --- | --- | --- |
+| `/fix-issue` | `/fix-issue <number>` | Fetches the issue and runs the full issue fix workflow from `CLAUDE.md` in order, verifying each step before proceeding |
+| `/create-issue` | `/create-issue <description>` | Scaffolds a GitHub issue in the documented format (User Story / Context / AC / Implementation Hint / DoD) and creates it via `gh issue create` |
+| `/review` | `/review` | Works through every item on the code review checklist from `CLAUDE.md` and explicitly states a finding (pass / fail / N/A) for each item |
+
 ## Repository structure
 
 ```
