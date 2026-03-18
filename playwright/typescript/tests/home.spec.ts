@@ -3,7 +3,7 @@ import { HomePage } from '@pages/public';
 import { PreviouslyAddedPage } from '@pages/public/previously-added.page';
 import { expectHeadings } from '@utils/string.util';
 
-test('home page', async ({ page }) => {
+test('home page', { tag: '@regression' }, async ({ page }) => {
   await page.goto(HomePage.url);
 
   const previouslyAddedLinks = page.getByRole('link', {
