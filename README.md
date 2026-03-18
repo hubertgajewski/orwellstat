@@ -293,7 +293,7 @@ With 16 GB allocated to Docker, all 5 browser containers fit in memory and can r
 act push -W .github/workflows/playwright-typescript.yml --container-architecture linux/amd64
 ```
 
-To increase Docker Desktop memory from the terminal (macOS):
+To increase Docker Desktop memory from the terminal (macOS), quit Docker Desktop first, then run (requires `jq` — `brew install jq`):
 
 ```bash
 jq '.MemoryMiB = 16384' \
@@ -303,4 +303,8 @@ jq '.MemoryMiB = 16384' \
      ~/Library/Group\ Containers/group.com.docker/settings-store.json
 ```
 
-Then restart Docker Desktop and verify with `docker info --format '{{.MemTotal}}'`.
+Then restart Docker Desktop and verify with:
+
+```bash
+docker info --format '{{.MemTotal}}' | awk '{printf "%.0f GB\n", $1/1073741824}'
+```
