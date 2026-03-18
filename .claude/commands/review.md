@@ -38,7 +38,7 @@ Run `git diff HEAD` to see all changes, then work through every checklist item b
 - async/await not missing on Playwright calls
 - No unhandled promise rejections
 - Locators not reused across navigations
-- Any file reading `process.env` credentials calls `loadEnv(import.meta.url, N)` at module top level
+- Any file reading `process.env` credentials calls `loadEnv(import.meta.url, N)` at module top level (missing this passes on CI but fails locally)
 
 ## Flakiness
 - No fixed timeouts
