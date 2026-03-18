@@ -1,6 +1,6 @@
-> **Maintenance:** This file embeds the GitHub issue format from `CLAUDE.md` verbatim. Whenever that section in `CLAUDE.md` changes, update this file to match.
+Draft and create a GitHub issue in the project's documented format.
 
-Create a GitHub issue for the following: $ARGUMENTS
+Description: $ARGUMENTS
 
 Scaffold the issue in the exact format from CLAUDE.md, then create it via `gh issue create`.
 

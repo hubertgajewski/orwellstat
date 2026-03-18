@@ -1,6 +1,6 @@
-> **Maintenance:** This file embeds the issue fix workflow and code review checklist from `CLAUDE.md` verbatim. Whenever either section in `CLAUDE.md` changes, update this file to match.
+Fix a GitHub issue end-to-end: fetch, implement, test, review, commit, and open a PR.
 
-Fix GitHub issue $ARGUMENTS following the issue fix workflow from CLAUDE.md. Execute every step in order and do not proceed past step N until step N is verified complete.
+Issue number: $ARGUMENTS
 
 **Step 1 — Fetch the issue**
 Run `gh issue view $ARGUMENTS` and read every section: User Story, Context, Acceptance Criteria, Implementation Hint, and Definition of Done. State what the issue requires before touching any code.

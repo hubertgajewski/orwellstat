@@ -1,6 +1,4 @@
-> **Maintenance:** This file embeds the code review checklist from `CLAUDE.md` verbatim. Whenever that section in `CLAUDE.md` changes, update this file to match.
-
-Review all staged and unstaged changes against the code review checklist from CLAUDE.md.
+Review staged and unstaged changes against the project's code review checklist.
 
 Run `git diff HEAD` to see all changes, then work through every checklist item below. For each item, explicitly state a finding: **pass**, **fail** (with the specific problem), or **N/A** (with the reason it does not apply). Saying "no issues" without articulating what was checked is not acceptable.
 
