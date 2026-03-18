@@ -249,7 +249,7 @@ Use [`act`](https://github.com/nektos/act) to run workflows locally before pushi
 - **Docker Desktop** — must be running ([docker.com](https://www.docker.com/products/docker-desktop/))
 - **act**
   - macOS: requires [Homebrew](https://brew.sh), then `brew install act`
-  - Linux: download binary from [nektos/act releases](https://github.com/nektos/act/releases) and add to `PATH`
+  - Linux: run the official install script (`curl https://raw.githubusercontent.com/nektos/act/master/install.sh | sudo bash`), or download a binary from [nektos/act releases](https://github.com/nektos/act/releases) and add it to `PATH`
   - Windows 11: `winget install nektos.act` (winget is included with Windows 11)
 
 ### Usage
@@ -313,7 +313,7 @@ jq '.MemoryMiB = 16384' \
 **Windows 11** — quit Docker Desktop first, then run in PowerShell:
 
 ```powershell
-$path = "$env:APPDATA\Docker\settings.json"
+$path = "$env:APPDATA\Docker\settings-store.json"
 $s = Get-Content $path | ConvertFrom-Json
 $s.memoryMiB = 16384
 $s | ConvertTo-Json -Depth 10 | Set-Content $path
