@@ -139,9 +139,9 @@ test('system statistics', async ({ page }) => {
     });
     expect(dataRows).toHaveLength(rowCount - 4); // 1 header row + 3 footer rows
     for (let i = 0; i < dataRows.length; i++) {
-      expect(dataRows[i].lp, `row ${i + 1}: lp`).toBe(String(i + 1));
-      expect(dataRows[i].count, `row ${i + 1}: count`).toMatch(/^\d+$/);
-      expect(dataRows[i].percent, `row ${i + 1}: percent`).toMatch(/^\d+\.\d{2}%$/);
+      expect.soft(dataRows[i].lp, `row ${i + 1}: lp`).toBe(String(i + 1));
+      expect.soft(dataRows[i].count, `row ${i + 1}: count`).toMatch(/^\d+$/);
+      expect.soft(dataRows[i].percent, `row ${i + 1}: percent`).toMatch(/^\d+\.\d{2}%$/);
     }
   });
 
