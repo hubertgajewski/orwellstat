@@ -10,20 +10,20 @@ import {
 import { AUTHENTICATED_PAGE_CLASSES } from '@pages/authenticated/index';
 
 for (const PageClass of PUBLIC_PAGE_CLASSES) {
-  test(`${PageClass.url} has correct title`, async ({ page }) => {
+  test(`${PageClass.url} has correct title`, { tag: '@smoke' }, async ({ page }) => {
     await page.goto(PageClass.url);
     await expect(page).toHaveTitle(PageClass.title);
   });
 }
 
 for (const PageClass of AUTHENTICATED_PAGE_CLASSES) {
-  test(`${PageClass.url} has correct title`, async ({ page }) => {
+  test(`${PageClass.url} has correct title`, { tag: '@smoke' }, async ({ page }) => {
     await page.goto(PageClass.url);
     await expect(page).toHaveTitle(PageClass.title);
   });
 }
 
-test.describe('navigation', () => {
+test.describe('navigation', { tag: '@smoke' }, () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
   });

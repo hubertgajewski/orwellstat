@@ -3,7 +3,7 @@ import { expectNoAccessibilityViolations } from '@utils/accessibility.util';
 import { PUBLIC_PAGE_CLASSES } from '@pages/public/index';
 import { AUTHENTICATED_PAGE_CLASSES } from '@pages/authenticated/index';
 
-test.describe('accessibility', () => {
+test.describe('accessibility', { tag: '@regression' }, () => {
   test.skip(
     ({ browserName }) => browserName !== 'chromium',
     'Accessibility tests run on Chromium only'

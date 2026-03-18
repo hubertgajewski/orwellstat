@@ -4,7 +4,7 @@ import { expectHeadings } from '@utils/string.util';
 import { SvgAnalysis } from '@types-local/svg-analysis';
 import { StatisticsRow } from '@types-local/statistics-row';
 
-test('SVG chart is rendered on stats page', async ({ page }) => {
+test('SVG chart is rendered on stats page', { tag: '@regression' }, async ({ page }) => {
   const svgResponse = await test.step('navigate and wait for chart', async () => {
     // Firefox does not cache Basic Auth credentials for <object> sub-resources on staging.
     // Pre-navigate to chart_all.php so Firefox caches the credentials before the <object> loads it.
@@ -83,7 +83,7 @@ test('SVG chart is rendered on stats page', async ({ page }) => {
   });
 });
 
-test('system statistics', async ({ page }) => {
+test('system statistics', { tag: '@regression' }, async ({ page }) => {
   await test.step('navigate to page', async () => {
     await page.goto(ServiceStatisticsPage.url);
   });

@@ -2,16 +2,20 @@ import { test, expect } from '@fixtures/api.fixture';
 import { PUBLIC_PAGE_CLASSES } from '@pages/public/index';
 import { AUTHENTICATED_PAGE_CLASSES } from '@pages/authenticated/index';
 
-test('public pages without authentication', async ({ unauthenticatedRequest }) => {
-  const responses = await Promise.all(
-    PUBLIC_PAGE_CLASSES.map((PageClass) => unauthenticatedRequest.get(PageClass.url))
-  );
-  for (const response of responses) {
-    expect(response.status()).toBe(200);
+test(
+  'public pages without authentication',
+  { tag: '@smoke' },
+  async ({ unauthenticatedRequest }) => {
+    const responses = await Promise.all(
+      PUBLIC_PAGE_CLASSES.map((PageClass) => unauthenticatedRequest.get(PageClass.url))
+    );
+    for (const response of responses) {
+      expect(response.status()).toBe(200);
+    }
   }
-});
+);
 
-test('public pages with authentication', async ({ authenticatedRequest }) => {
+test('public pages with authentication', { tag: '@smoke' }, async ({ authenticatedRequest }) => {
   const responses = await Promise.all(
     PUBLIC_PAGE_CLASSES.map((PageClass) => authenticatedRequest.get(PageClass.url))
   );
@@ -20,7 +24,7 @@ test('public pages with authentication', async ({ authenticatedRequest }) => {
   }
 });
 
-test('authenticated pages', async ({ authenticatedRequest }) => {
+test('authenticated pages', { tag: '@smoke' }, async ({ authenticatedRequest }) => {
   const responses = await Promise.all(
     AUTHENTICATED_PAGE_CLASSES.map((PageClass) => authenticatedRequest.get(PageClass.url))
   );
@@ -29,7 +33,7 @@ test('authenticated pages', async ({ authenticatedRequest }) => {
   }
 });
 
-test('failed authentication', async ({ request }) => {
+test('failed authentication', { tag: '@smoke' }, async ({ request }) => {
   const response = await request.post('/zone/', {
     form: {
       username: 'test',

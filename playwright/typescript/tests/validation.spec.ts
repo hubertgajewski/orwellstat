@@ -4,7 +4,7 @@ import { PUBLIC_PAGE_CLASSES } from '@pages/public/index';
 import { AUTHENTICATED_PAGE_CLASSES } from '@pages/authenticated/index';
 import { HomePage } from '@pages/public/home.page';
 
-test.describe('markup and CSS validation', () => {
+test.describe('markup and CSS validation', { tag: '@regression' }, () => {
   test.skip(
     ({ browserName }) => browserName !== 'chromium',
     'Validation tests run on Chromium only'

@@ -2,7 +2,7 @@ import { test, expect } from '@fixtures/base.fixture';
 import { ContactPage } from '@pages/public/contact.page';
 import { expectHeadings } from '@utils/string.util';
 
-test('contact page - headings and statsbar content', async ({ page }) => {
+test('contact page - headings and statsbar content', { tag: '@regression' }, async ({ page }) => {
   await page.goto(ContactPage.url);
 
   const statsbar = page.locator('#statsbar');
