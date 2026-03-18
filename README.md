@@ -17,12 +17,12 @@ bruno/                      # Bruno API request collection
 
 ## Prerequisites
 
-| Tool | Required for | Install |
-|------|-------------|---------|
-| [Node.js](https://nodejs.org/) v18+ | Playwright tests | [nodejs.org](https://nodejs.org/) |
-| [Bruno](https://www.usebruno.com/) | API request collection | Standalone app or [VSCode extension](https://marketplace.visualstudio.com/items?itemName=bruno-api-client.bruno) |
-| [Docker Desktop](https://www.docker.com/products/docker-desktop/) | Running GitHub Actions locally | [docker.com](https://www.docker.com/products/docker-desktop/) |
-| [act](https://github.com/nektos/act) | Running GitHub Actions locally | `brew install act` |
+| Tool                                                              | Required for                   | Install                                                                                                          |
+| ----------------------------------------------------------------- | ------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| [Node.js](https://nodejs.org/) v18+                               | Playwright tests               | [nodejs.org](https://nodejs.org/)                                                                                |
+| [Bruno](https://www.usebruno.com/)                                | API request collection         | Standalone app or [VSCode extension](https://marketplace.visualstudio.com/items?itemName=bruno-api-client.bruno) |
+| [Docker Desktop](https://www.docker.com/products/docker-desktop/) | Running GitHub Actions locally | [docker.com](https://www.docker.com/products/docker-desktop/)                                                    |
+| [act](https://github.com/nektos/act)                              | Running GitHub Actions locally | `brew install act`                                                                                               |
 
 Node.js includes `npm` — no separate installation needed. Docker and `act` are optional — only needed for local CI testing.
 
@@ -112,9 +112,9 @@ npm run format:check
 
 Tests are tagged `@smoke` or `@regression` using Playwright's test options syntax (`{ tag: '@smoke' }`).
 
-| Tag | Purpose | Files |
-|---|---|---|
-| `@smoke` | Quick health check: HTTP status, page titles, heading visibility | `api.spec.ts`, `navigation.spec.ts` |
+| Tag           | Purpose                                                                              | Files                                                                                                                                            |
+| ------------- | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `@smoke`      | Quick health check: HTTP status, page titles, heading visibility                     | `api.spec.ts`, `navigation.spec.ts`                                                                                                              |
 | `@regression` | Deep checks: table content, SVG analysis, external link hrefs, accessibility, visual | `home.spec.ts`, `about-system.spec.ts`, `contact.spec.ts`, `statistics.spec.ts`, `accessibility.spec.ts`, `validation.spec.ts`, `visual.spec.ts` |
 
 Use `--grep` to run a subset and `--grep-invert` to exclude it (see [Running tests](#running-tests)).
@@ -174,7 +174,7 @@ Use `--grep` to run a subset and `--grep-invert` to exclude it (see [Running tes
 - `expect.toHaveScreenshot: { maxDiffPixelRatio: 0.01 }` — global threshold for visual regression tests
 - `snapshotPathTemplate` includes `{platform}` so macOS (`-darwin`) and Linux (`-linux`) each have their own baselines; macOS baselines are committed from local runs, Linux baselines are generated via the CI workflow
 
-**CI:** `.github/workflows/playwright-typescript.yml` — runs on push/PR to main/master with `working-directory: playwright/typescript`; uses a matrix strategy (`fail-fast: false`) to run each of the 5 browser projects (Chromium, Firefox, Webkit, Mobile Chrome, Mobile Safari) in parallel, each in its own job; each matrix job installs only the browser it needs (`chromium`, `firefox`, or `webkit`) and uploads its report as `playwright-report-<id>` (retained 30 days); npm dependencies are cached via `actions/setup-node` `cache: 'npm'` keyed on `package-lock.json`; upload is skipped when running locally with `act`. Also supports `workflow_dispatch` with two inputs: `update_visual_baselines` (boolean, regenerates Linux baselines for all 5 browser projects via `--update-snapshots` — each matrix job uploads `visual-baselines-linux-<id>` and the `commit-baselines` job downloads all five with `merge-multiple: true` before committing) and `ref` (branch to run on; defaults to triggering branch). To generate Linux baselines for a feature branch: Actions → "Playwright Typescript Tests" → "Run workflow" → enter the branch name in `ref`, check `update_visual_baselines`.
+**CI:** `.github/workflows/playwright-typescript.yml` — runs on push/PR to main/master with `working-directory: playwright/typescript`; uses a matrix strategy (`fail-fast: false`) to run each of the 5 browser projects (Chromium, Firefox, Webkit, Mobile Chrome, Mobile Safari) in parallel, each in its own job; each matrix job installs only the browser it needs (`chromium`, `firefox`, or `webkit`) and uploads its report as `playwright-report-<id>` (retained 30 days); npm dependencies are cached via `actions/setup-node` `cache: 'npm'` keyed on `package-lock.json`; upload is skipped when running locally with `act`. Also supports `workflow_dispatch` with three inputs: `project` (choice: `all` / `chromium` / `firefox` / `webkit`; defaults to `all` — a `setup-matrix` job computes the matrix at runtime so only matching browser entries run; selecting `chromium` also runs Mobile Chrome, `webkit` also runs Mobile Safari), `update_visual_baselines` (boolean, regenerates Linux baselines for all 5 browser projects via `--update-snapshots` — each matrix job uploads `visual-baselines-linux-<id>` and the `commit-baselines` job downloads all five with `merge-multiple: true` before committing), and `ref` (branch to run on; defaults to triggering branch). To generate Linux baselines for a feature branch: Actions → "Playwright Typescript Tests" → "Run workflow" → enter the branch name in `ref`, check `update_visual_baselines`.
 
 **Standalone baseline update:** `.github/workflows/update-visual-baselines.yml` — `workflow_dispatch`-only workflow that regenerates Linux baselines for all 5 browser projects and commits them back directly; accepts a `branch` input (defaults to `main`). Use this when you want to regenerate baselines without running the full test suite.
 
@@ -203,10 +203,10 @@ BASIC_AUTH_PASSWORD=<staging basic auth password>
 
 ### Environments
 
-| Environment | Base URL |
-|---|---|
-| production | `https://orwellstat.hubertgajewski.com` |
-| staging | `https://stage.orwellstat.hubertgajewski.com` |
+| Environment | Base URL                                      |
+| ----------- | --------------------------------------------- |
+| production  | `https://orwellstat.hubertgajewski.com`       |
+| staging     | `https://stage.orwellstat.hubertgajewski.com` |
 
 > Staging requires HTTP Basic authentication (`BASIC_AUTH_USER` / `BASIC_AUTH_PASSWORD`) in addition to the application login.
 
@@ -229,9 +229,9 @@ In `.bru` files:
 
 ### Requests
 
-| File | Description |
-|---|---|
-| `login-valid.bru` | POST `/zone/` with valid credentials — expects 200 |
+| File                | Description                                          |
+| ------------------- | ---------------------------------------------------- |
+| `login-valid.bru`   | POST `/zone/` with valid credentials — expects 200   |
 | `login-invalid.bru` | POST `/zone/` with invalid credentials — expects 401 |
 
 **CI:** `.github/workflows/bruno.yml` — runs on push/PR to main/master; writes secrets into `bruno/.env` and runs `bru run --env production`.
