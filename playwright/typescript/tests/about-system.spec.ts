@@ -33,15 +33,15 @@ test('about system page - headings and statsbar content', async ({ page }) => {
     await expect(
       statsbar.getByText(AboutSystemPage.orwellStatIntro, { exact: false })
     ).toBeVisible();
-    await expect(
-      statsbar.getByRole('link', { name: AboutSystemPage.wsbNlu.name, exact: true })
-    ).toHaveAttribute('href', AboutSystemPage.wsbNlu.href);
-    await expect(
-      statsbar.getByRole('link', { name: AboutSystemPage.hubertGajewski.name, exact: true })
-    ).toHaveAttribute('href', AboutSystemPage.hubertGajewski.href);
-    await expect(
-      statsbar.getByRole('link', { name: AboutSystemPage.tomaszGorazd.name, exact: true })
-    ).toHaveAttribute('href', AboutSystemPage.tomaszGorazd.href);
+    await expect
+      .soft(statsbar.getByRole('link', { name: AboutSystemPage.wsbNlu.name, exact: true }))
+      .toHaveAttribute('href', AboutSystemPage.wsbNlu.href);
+    await expect
+      .soft(statsbar.getByRole('link', { name: AboutSystemPage.hubertGajewski.name, exact: true }))
+      .toHaveAttribute('href', AboutSystemPage.hubertGajewski.href);
+    await expect
+      .soft(statsbar.getByRole('link', { name: AboutSystemPage.tomaszGorazd.name, exact: true }))
+      .toHaveAttribute('href', AboutSystemPage.tomaszGorazd.href);
   });
 
   await test.step('verify browser and OS counts and lists', async () => {
@@ -61,22 +61,21 @@ test('about system page - headings and statsbar content', async ({ page }) => {
 
   await test.step('verify requirements screenshots', async () => {
     for (const screenshot of Object.values(AboutSystemPage.screenshots)) {
-      await expect(statsbar.locator(`img[src="${screenshot.src}"]`)).toHaveAttribute(
-        'alt',
-        screenshot.alt
-      );
+      await expect
+        .soft(statsbar.locator(`img[src="${screenshot.src}"]`))
+        .toHaveAttribute('alt', screenshot.alt);
     }
   });
 
   await test.step('verify requirements text', async () => {
-    await expect(
-      statsbar.getByRole('link', { name: AboutSystemPage.adobeSvgViewer.name, exact: true })
-    ).toHaveAttribute('href', AboutSystemPage.adobeSvgViewer.href);
-    await expect(
-      statsbar.getByText(AboutSystemPage.vgaRequirementText, { exact: false })
-    ).toBeVisible();
-    await expect(
-      statsbar.getByText(AboutSystemPage.hdRequirementText, { exact: false })
-    ).toBeVisible();
+    await expect
+      .soft(statsbar.getByRole('link', { name: AboutSystemPage.adobeSvgViewer.name, exact: true }))
+      .toHaveAttribute('href', AboutSystemPage.adobeSvgViewer.href);
+    await expect
+      .soft(statsbar.getByText(AboutSystemPage.vgaRequirementText, { exact: false }))
+      .toBeVisible();
+    await expect
+      .soft(statsbar.getByText(AboutSystemPage.hdRequirementText, { exact: false }))
+      .toBeVisible();
   });
 });
