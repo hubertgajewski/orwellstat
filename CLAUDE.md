@@ -1,106 +1,10 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides behavioral instructions to Claude Code (claude.ai/code) when working with code in this repository.
 
-> **Keep this file and `README.md` up to date.** Whenever the project structure changes — new directories, renamed files, new sub-projects, changed commands, updated CI, modified environment variables — update the relevant sections of both files before finishing the task.
+> **Keep `README.md` up to date.** Whenever the project structure changes — new directories, renamed files, new sub-projects, changed commands, updated CI, modified environment variables — update `README.md` before finishing the task. `CLAUDE.md` documents behavioral instructions only; update it only when adding, changing, or removing behavioral guidance for Claude — such as the code review checklist, issue format, issue fix workflow, or any other conventions Claude should follow.
 
-For a full project overview, setup instructions, and commands see [README.md](README.md).
-
----
-
-## Repository structure
-
-```
-.env                        # credentials (git-ignored); see .env.example
-.env.example                # template: ORWELLSTAT_USER, ORWELLSTAT_PASSWORD, ENV, BASIC_AUTH_USER, BASIC_AUTH_PASSWORD, ANTHROPIC_API_KEY, CLAUDE_DIAGNOSIS
-.github/workflows/          # CI workflows (one per sub-project)
-SECURITY.md                 # security policy and vulnerability reporting
-playwright/
-  typescript/               # Playwright tests in TypeScript
-selenium/                   # Selenium tests (planned)
-bruno/                      # Bruno API request collection; package.json locks @usebruno/cli version
-```
-
-## Environment variables
-
-Credentials are stored in `.env` at the **repo root** and shared across all sub-projects:
-
-```
-ORWELLSTAT_USER=<username>
-ORWELLSTAT_PASSWORD=<password>
-ENV=<production|staging>
-BASIC_AUTH_USER=<staging basic auth user>
-BASIC_AUTH_PASSWORD=<staging basic auth password>
-ANTHROPIC_API_KEY=<Anthropic API key>
-CLAUDE_DIAGNOSIS=true
-```
-
-`ORWELLSTAT_USER` and `ORWELLSTAT_PASSWORD` are required for all environments. `BASIC_AUTH_USER` and `BASIC_AUTH_PASSWORD` are only needed for staging — Playwright passes them as HTTP Basic Auth credentials when set. `ANTHROPIC_API_KEY` and `CLAUDE_DIAGNOSIS=true` are both optional — when both are present, failed tests receive an `AI diagnosis` attachment in the Playwright report; when either is absent the fixture behaves identically to without them. In CI all vars are injected as GitHub Actions secrets. Sub-projects load them via `dotenv` with a path pointing two levels up (`../../.env`).
-
----
-
-## playwright/typescript
-
-All commands must be run from `playwright/typescript/`.
-
-### Architecture
-
-**Directory structure** (`playwright/typescript/`):
-
-- `tests/` — Playwright test specs (`.spec.ts`)
-  - `navigation.spec.ts` — UI navigation and accessibility tests
-  - `api.spec.ts` — HTTP-level tests for public and authenticated pages
-  - `accessibility.spec.ts` — WCAG accessibility tests across pages
-  - `home.spec.ts` — Home page content and navigation tests (including `PreviouslyAddedPage`)
-  - `about-system.spec.ts` — About System page headings and statsbar content tests
-  - `contact.spec.ts` — Contact page headings and statsbar content tests
-  - `statistics.spec.ts` — Service statistics page: SVG chart rendering and statistics table tests
-  - `validation.spec.ts` — W3C XHTML and CSS validation tests across all pages (classic W3C Markup Validator + CSS validator APIs); Chromium-only
-  - `visual.spec.ts` — Full-page visual regression snapshots for home (default and Purple Rain style), about system, contact, and statistics pages using `toHaveScreenshot()` with `maxDiffPixelRatio: 0.01`; home page masks `#statsbar` lists (dynamic new-browser/OS list items) via `getByRole('list')`; statistics page masks `getByRole('table')` (live data) and `object[type="image/svg+xml"]` (dynamic SVG chart), removes all but the first 5 rows from the statistics table via `page.evaluate()` to keep the footer at a stable position regardless of how many browser/OS rows live data contains (CSS height/overflow tricks are ineffective here: Playwright's `fullPage` screenshot and mask both use the element's full bounding box, not the clipped visual; physically removing rows is the only reliable fix), waits for `<object>` to be visible before screenshotting to stabilise layout, and disables animations; baselines stored in `tests/visual.spec.ts-snapshots/` with per-platform suffixes (`-darwin`, `-linux`)
-- `auth.setup.ts` — Playwright auth setup: logs in via UI and saves storage state to `.auth/user.json`
-- `pages/` — Page Object Model classes
-  - `base.page.ts` — `BasePage` interface (`url`, `title`, `goto()`, `heading`, optional `accessKey`)
-  - `abstract.page.ts` — `AbstractPage` abstract class implementing `BasePage` boilerplate; all page classes extend this; defines shared static strings (`signIn`, `loggedInAs`, `logoutButton`)
-  - `common.ts` — Shared heading string constants (`NEWS`, `NEW_BROWSERS`, `NEW_OSES`) used by multiple page classes
-  - `public/` — Public page classes: `HomePage`, `AboutSystemPage`, `ServiceStatisticsPage`, `ContactPage`, `RegisterPage`, `PasswordResetPage`, `PreviouslyAddedPage`; exported via `index.ts` as `PUBLIC_PAGE_CLASSES` (except `PreviouslyAddedPage`)
-  - `authenticated/` — Authenticated page classes: `InformationPage`, `StatsPage`, `HitsPage`, `ScriptsPage`, `AdminPage`; exported via `index.ts` as `AUTHENTICATED_PAGE_CLASSES`
-- `fixtures/base.fixture.ts` — Custom Playwright fixture extending `test` with a `page` override that captures browser console logs and an XHTML DOM snapshot (`dom.xhtml` with XML declaration and `<?xml-stylesheet?>` PIs) as attachments on test failure, then calls `attachAiDiagnosis()`; re-exports `expect`, `request`, `Page`, `Locator`, `BrowserContext` from `@playwright/test`; re-exports `pixelmatch` and `PNG` (used for pixel-diff screenshot comparison)
-- `fixtures/api.fixture.ts` — Extends `base.fixture.ts` with HTTP request fixtures: `unauthenticatedRequest` (plain context) and `authenticatedRequest` (logs in via POST `/zone/`); import from here in tests that use either fixture
-- `utils/accessibility.util.ts` — `expectNoAccessibilityViolations()` using `@axe-core/playwright` (WCAG2AAA)
-- `utils/string.util.ts` — `expectHeadings()` helper: asserts visibility of multiple headings on a page
-- `utils/env.util.ts` — `loadEnv(importMetaUrl, levelsUp)` loads `.env` relative to the calling file; `requireCredentials()` validates and returns `ORWELLSTAT_USER`/`ORWELLSTAT_PASSWORD`, throwing a descriptive error if either is missing
-- `utils/validation.util.ts` — `expectValidXhtml(request, xhtml)` POSTs raw markup to the classic W3C Markup Validation Service (`validator.w3.org/check`) and asserts no errors (correct for XHTML 1.0 Strict; Nu is HTML5-only and gives false positives); `expectValidCss(request, cssUrl)` queries W3C CSS validator by URI and asserts zero errors
-- `utils/diagnosis.util.ts` — `attachAiDiagnosis(testInfo, logs, domContent)`: calls the Anthropic API (`claude-haiku-4-5`) to produce a diagnosis attachment on test failure; no-ops when `ANTHROPIC_API_KEY` or `CLAUDE_DIAGNOSIS=true` are absent; errors are caught and warned so diagnosis never fails a test
-- `types/` — Shared TypeScript interfaces; exported via path alias `@types-local/*`
-  - `svg-analysis.ts` — `SvgAnalysis` interface: shape of the object returned by `page.evaluate()` in `statistics.spec.ts`
-  - `statistics-row.ts` — `StatisticsRow` interface: shape of each data row returned by the bulk `page.evaluate()` in `statistics.spec.ts`
-- `test-data/` — Reserved for static test data (currently empty)
-
-**Page Object Model pattern:** Each page class extends `AbstractPage` and defines static `url`, `title` (and optionally `accessKey`) properties used in data-driven loops. The constructor calls `super(page, url, title, accessKey)`. Only the `heading` getter and page-specific static string constants need to be defined per class.
-
-**Path aliases** (defined in `tsconfig.json`):
-
-- `@fixtures/*` → `./fixtures/*`
-- `@pages/*` → `./pages/*`
-- `@test-data/*` → `./test-data/*`
-- `@types-local/*` → `./types/*`
-- `@utils/*` → `./utils/*`
-
-**Playwright config** (`playwright.config.ts`):
-
-- 5 browser projects: Chromium, Firefox, WebKit, Mobile Chrome (Galaxy S24), Mobile Safari (iPhone 15)
-- All projects use `storageState: '.auth/user.json'` (written by `auth.setup.ts`)
-- On failure: screenshots, video, and console/DOM log attachments are saved
-- `trace: 'on-first-retry'`
-- `baseURL` is driven by the `ENV` variable (`production` by default, `staging` when `ENV=staging`); `httpCredentials` are injected automatically when `BASIC_AUTH_USER` is set
-- `expect.toHaveScreenshot: { maxDiffPixelRatio: 0.01 }` — global threshold for visual regression tests
-- `snapshotPathTemplate` includes `{platform}` so macOS (`-darwin`) and Linux (`-linux`) each have their own baselines; macOS baselines are committed from local runs, Linux baselines are generated via the CI workflow
-
-**CI:** `.github/workflows/playwright-typescript.yml` — runs on push/PR to main/master with `working-directory: playwright/typescript`; uses a matrix strategy (`fail-fast: false`) to run each of the 5 browser projects (Chromium, Firefox, Webkit, Mobile Chrome, Mobile Safari) in parallel, each in its own job; each matrix job installs only the browser it needs (`chromium`, `firefox`, or `webkit`) and uploads its report as `playwright-report-<id>` (retained 30 days); npm dependencies are cached via `actions/setup-node` `cache: 'npm'` keyed on `package-lock.json`; upload is skipped when running locally with `act`. Also supports `workflow_dispatch` with two inputs: `update_visual_baselines` (boolean, regenerates Linux baselines for all 5 browser projects via `--update-snapshots` — each matrix job uploads `visual-baselines-linux-<id>` and the `commit-baselines` job downloads all five with `merge-multiple: true` before committing) and `ref` (branch to run on; defaults to triggering branch). To generate Linux baselines for a feature branch: Actions → "Playwright Typescript Tests" → "Run workflow" → enter the branch name in `ref`, check `update_visual_baselines`.
-
-**Standalone baseline update:** `.github/workflows/update-visual-baselines.yml` — `workflow_dispatch`-only workflow that regenerates Linux baselines for all 5 browser projects and commits them back directly; accepts a `branch` input (defaults to `main`). Use this when you want to regenerate baselines without running the full test suite.
-
-**Automated code review:** `.github/workflows/claude-code-review.yml` — triggers on pull request events (opened, synchronize, ready_for_review, reopened); runs `anthropics/claude-code-action@v1` (model: `claude-sonnet-4-6`) to review the PR and post inline comments; focuses on Playwright test correctness, POM conventions, TypeScript quality, and consistency; requires `ANTHROPIC_API_KEY` secret.
+For repository structure, environment variable definitions, `playwright/typescript` architecture (directory layout, POM conventions, path aliases, Playwright config, CI workflows), and Bruno documentation, see [README.md](README.md). That file is the single source of truth for all reference material.
 
 ---
 
@@ -116,7 +20,7 @@ Before committing changes to `playwright/typescript`, review against these crite
 - **Flakiness** — no fixed timeouts; animation waits use `requestAnimationFrame`; auth setup asserts login actually succeeded; no assumptions about element order without explicit count assertion
 - **Security** — no credentials hardcoded anywhere; `.env` and `bruno/.env` remain gitignored; Bruno dotenv secrets accessed via `{{process.env.VAR}}` / `bru.getProcessEnv()` (not plaintext in `.bru` files); no sensitive data in committed config files (`.actrc`, `playwright.config.ts`, etc.); `ORWELLSTAT_USER`/`ORWELLSTAT_PASSWORD` sourced only from `.env` (local) or GitHub Actions secrets (CI)
 - **Formatting** — code is formatted with Prettier (`npm run format` from `playwright/typescript/`); never commit files that would fail `npm run format:check`
-- **Consistency with existing patterns** — new utils and test files documented in **both** `CLAUDE.md` and `README.md` (both files have mirrored architecture sections); new page files exported via the appropriate `index.ts`; code style matches surrounding files; JSON/config files are valid (no stray braces, no syntax errors)
+- **Consistency with existing patterns** — new utils and test files documented in `README.md`; new page files exported via the appropriate `index.ts`; code style matches surrounding files; JSON/config files are valid (no stray braces, no syntax errors)
 
 ---
 
@@ -154,7 +58,7 @@ When fixing a GitHub issue, follow these steps in order:
    - Every non-obvious change: *"Would I understand why this was done just from the diff?"* If no, add a code comment or adjust the implementation.
    - No credentials, tokens, or secrets in committed files.
    - No dead code, commented-out blocks, or debug artifacts left in.
-   - Docs updated: if a file documented in `CLAUDE.md` or `README.md` changed, verify both files reflect the change.
+   - Docs updated: if a file documented in `README.md` changed, verify it reflects the change.
 
    **CI / workflow files (`.github/workflows/*.yml`):**
    - `timeout-minutes` set at the job level — no job should run unbounded.
@@ -166,26 +70,3 @@ When fixing a GitHub issue, follow these steps in order:
 8. **Verify all acceptance criteria and the Definition of Done** — read every Given/When/Then scenario and every DoD checkbox in the issue. For each item, explicitly confirm it is satisfied or identify what is missing. Do not proceed to commit until all criteria pass.
 9. Commit with a **short, single-line message** in the format `<issue-number> <short description>` (e.g. `19 Add explicit SvgAnalysis type to page.evaluate()`). No body, no `Co-Authored-By` trailer — single line only.
 10. Push and create a PR — include `Closes #<issue-number>` in the PR body so GitHub links and auto-closes the issue on merge
-
----
-
-## bruno
-
-Bruno API request collection in `bruno/`. Environments are in `bruno/environments/` — `production.bru` and `staging.bru`.
-
-**Secrets** go in `bruno/.env` at the collection root (git-ignored via the top-level `.env` pattern). Copy `bruno/.env.example` to `bruno/.env` and fill in the values. This file must be at the collection root — Bruno CLI does not read from `environments/.env`.
-
-**CLI usage** (run from `bruno/`):
-```bash
-npm ci                        # install Bruno CLI (first time or after package-lock.json changes)
-npx bru run --env production
-npx bru run --env staging
-```
-
-**Variable syntax in `.bru` files:**
-- Template variables (request body, URL): `{{process.env.VAR_NAME}}` for dotenv secrets; `{{varName}}` for `vars {}` block values
-- Pre-request scripts: `bru.getProcessEnv('VAR_NAME')` for dotenv secrets; `bru.getEnvVar('VAR_NAME')` for `vars`/`vars:secret` values
-
-Staging requires HTTP Basic authentication (`BASIC_AUTH_USER`, `BASIC_AUTH_PASSWORD`) in addition to the application login.
-
-**CI:** `.github/workflows/bruno.yml` — runs on push/PR to main/master; writes `ORWELLSTAT_USER` and `ORWELLSTAT_PASSWORD` from GitHub Actions secrets into `bruno/.env` and runs `bru run --env production`.
