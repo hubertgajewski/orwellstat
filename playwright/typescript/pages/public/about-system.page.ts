@@ -47,7 +47,7 @@ export class AboutSystemPage extends AbstractPage {
       src: '/images/screenshots/firefox_p_small.jpg',
       alt: 'Zrzut ekranu użytkownika używającego przeglądarki Firefox z ustawionym stylem Wersja do druku',
     },
-  } as const;
+  } as const satisfies Record<string, { src: string; alt: string }>;
 
   static readonly adobeSvgViewer = {
     name: 'Adobe SVG Viewer',

@@ -1,5 +1,1 @@
-export interface StatisticsRow {
-  lp: string;
-  count: string;
-  percent: string;
-}
+export type StatisticsRow = Record<'lp' | 'count' | 'percent', string>;

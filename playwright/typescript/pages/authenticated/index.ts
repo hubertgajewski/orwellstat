@@ -1,3 +1,4 @@
+import { AbstractPage } from '@pages/abstract.page';
 import { InformationPage } from './information.page';
 import { StatsPage } from './stats.page';
 import { HitsPage } from './hits.page';
@@ -12,4 +13,4 @@ export const AUTHENTICATED_PAGE_CLASSES = [
   HitsPage,
   ScriptsPage,
   AdminPage,
-] as const;
+] as const satisfies readonly (typeof AbstractPage)[];

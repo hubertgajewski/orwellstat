@@ -1,3 +1,4 @@
+import { AbstractPage } from '@pages/abstract.page';
 import { HomePage } from './home.page';
 import { AboutSystemPage } from './about-system.page';
 import { ServiceStatisticsPage } from './service-statistics.page';
@@ -21,4 +22,4 @@ export const PUBLIC_PAGE_CLASSES = [
   ContactPage,
   RegisterPage,
   PasswordResetPage,
-] as const;
+] as const satisfies readonly (typeof AbstractPage)[];
