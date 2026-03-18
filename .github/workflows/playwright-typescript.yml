@@ -4,8 +4,21 @@ on:
     branches: [main, master]
   pull_request:
     branches: [main, master]
+  schedule:
+    # Runs at 03:00 UTC every Sunday
+    - cron: '0 3 * * 0'
   workflow_dispatch:
     inputs:
+      project:
+        description: 'Browser project to test (all runs the full matrix)'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - chromium
+          - firefox
+          - webkit
       update_visual_baselines:
         description: 'Regenerate Linux visual baselines for all 5 browser projects (--update-snapshots) and commit them back to the branch'
         type: boolean
@@ -18,29 +31,43 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
+  setup-matrix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      matrix: ${{ steps.compute.outputs.matrix }}
+    steps:
+      - name: Compute matrix
+        id: compute
+        run: |
+          ALL='{"include":[{"project":"Chromium","browser":"chromium","id":"chromium"},{"project":"Firefox","browser":"firefox","id":"firefox"},{"project":"Webkit","browser":"webkit","id":"webkit"},{"project":"Mobile Chrome","browser":"chromium","id":"mobile-chrome"},{"project":"Mobile Safari","browser":"webkit","id":"mobile-safari"}]}'
+          CHROMIUM='{"include":[{"project":"Chromium","browser":"chromium","id":"chromium"},{"project":"Mobile Chrome","browser":"chromium","id":"mobile-chrome"}]}'
+          FIREFOX='{"include":[{"project":"Firefox","browser":"firefox","id":"firefox"}]}'
+          WEBKIT='{"include":[{"project":"Webkit","browser":"webkit","id":"webkit"},{"project":"Mobile Safari","browser":"webkit","id":"mobile-safari"}]}'
+
+          PROJECT="${{ inputs.project }}"
+          EVENT="${{ github.event_name }}"
+
+          if [ "$EVENT" != "workflow_dispatch" ] || [ -z "$PROJECT" ] || [ "$PROJECT" = "all" ]; then
+            echo "matrix=$ALL" >> "$GITHUB_OUTPUT"
+          elif [ "$PROJECT" = "chromium" ]; then
+            echo "matrix=$CHROMIUM" >> "$GITHUB_OUTPUT"
+          elif [ "$PROJECT" = "firefox" ]; then
+            echo "matrix=$FIREFOX" >> "$GITHUB_OUTPUT"
+          elif [ "$PROJECT" = "webkit" ]; then
+            echo "matrix=$WEBKIT" >> "$GITHUB_OUTPUT"
+          else
+            echo "matrix=$ALL" >> "$GITHUB_OUTPUT"
+          fi
+
   test:
+    needs: setup-matrix
     name: ${{ matrix.project }}
     timeout-minutes: 15
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - project: 'Chromium'
-            browser: chromium
-            id: chromium
-          - project: 'Firefox'
-            browser: firefox
-            id: firefox
-          - project: 'Webkit'
-            browser: webkit
-            id: webkit
-          - project: 'Mobile Chrome'
-            browser: chromium
-            id: mobile-chrome
-          - project: 'Mobile Safari'
-            browser: webkit
-            id: mobile-safari
+      matrix: ${{ fromJSON(needs.setup-matrix.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v6
         with:
