@@ -263,3 +263,48 @@ On first run, `act` will ask for a Docker image size — choose **Medium** (~500
 > **Note:** The `--container-architecture linux/amd64` flag is required on Apple Silicon (M-series) Macs to avoid compatibility issues.
 
 > **Credentials:** The repo root contains `.actrc` which automatically passes `--secret-file .env` to every `act` invocation. `ORWELLSTAT_USER` and `ORWELLSTAT_PASSWORD` from `.env` are loaded as secrets with no extra flags needed.
+
+### Docker RAM requirements for the Playwright matrix
+
+The matrix strategy runs 5 browser projects in parallel, each in its own container. Every container installs Chromium (required by the auth setup project) plus its own browser:
+
+| Job | Browsers installed | RAM |
+|---|---|---|
+| Chromium | chromium | ~1.0 GB |
+| Mobile Chrome | chromium | ~1.0 GB |
+| Firefox | chromium + firefox | ~1.4 GB |
+| WebKit | chromium + webkit | ~1.2 GB |
+| Mobile Safari | chromium + webkit | ~1.2 GB |
+| **Total** | | **~5.8 GB active + ~2 GB Docker overhead** |
+
+**8 GB Docker RAM (default) — run a single browser only**
+
+With the default Docker Desktop memory limit (~8 GB), running all 5 matrix jobs simultaneously causes container OOM kills. Run Chromium only:
+
+```bash
+act push -W .github/workflows/playwright-typescript.yml --matrix id:chromium --container-architecture linux/amd64
+```
+
+**16 GB+ Docker RAM — full matrix run**
+
+With 16 GB allocated to Docker, all 5 browser containers fit in memory and can run in parallel, matching CI exactly:
+
+```bash
+act push -W .github/workflows/playwright-typescript.yml --container-architecture linux/amd64
+```
+
+To increase Docker Desktop memory from the terminal (macOS), quit Docker Desktop first, then run (requires `jq` — `brew install jq`):
+
+```bash
+jq '.MemoryMiB = 16384' \
+  ~/Library/Group\ Containers/group.com.docker/settings-store.json \
+  > /tmp/docker-settings.json \
+  && mv /tmp/docker-settings.json \
+     ~/Library/Group\ Containers/group.com.docker/settings-store.json
+```
+
+Then restart Docker Desktop and verify with:
+
+```bash
+docker info --format '{{.MemTotal}}' | awk '{printf "%.0f GB\n", $1/1073741824}'
+```
