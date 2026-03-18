@@ -22,7 +22,7 @@ bruno/                      # Bruno API request collection
 | [Node.js](https://nodejs.org/) v18+                               | Playwright tests               | [nodejs.org](https://nodejs.org/)                                                                                |
 | [Bruno](https://www.usebruno.com/)                                | API request collection         | Standalone app or [VSCode extension](https://marketplace.visualstudio.com/items?itemName=bruno-api-client.bruno) |
 | [Docker Desktop](https://www.docker.com/products/docker-desktop/) | Running GitHub Actions locally | [docker.com](https://www.docker.com/products/docker-desktop/)                                                    |
-| [act](https://github.com/nektos/act)                              | Running GitHub Actions locally | `brew install act`                                                                                               |
+| [act](https://github.com/nektos/act)                              | Running GitHub Actions locally | macOS: `brew install act` (requires [Homebrew](https://brew.sh)); Linux/Windows 11: [nektos/act releases](https://github.com/nektos/act/releases) |
 
 Node.js includes `npm` — no separate installation needed. Docker and `act` are optional — only needed for local CI testing.
 
@@ -172,7 +172,7 @@ Use `--grep` to run a subset and `--grep-invert` to exclude it (see [Running tes
 - `trace: 'on-first-retry'`
 - `baseURL` is driven by the `ENV` variable (`production` by default, `staging` when `ENV=staging`); `httpCredentials` are injected automatically when `BASIC_AUTH_USER` is set
 - `expect.toHaveScreenshot: { maxDiffPixelRatio: 0.01 }` — global threshold for visual regression tests
-- `snapshotPathTemplate` includes `{platform}` so macOS (`-darwin`) and Linux (`-linux`) each have their own baselines; macOS baselines are committed from local runs, Linux baselines are generated via the CI workflow
+- `snapshotPathTemplate` includes `{platform}` so macOS (`-darwin`), Linux (`-linux`), and Windows (`-win32`) each have their own baselines; macOS baselines are committed from local runs, Linux baselines are generated via the CI workflow; Windows is not officially supported for local baseline generation — use the CI workflow instead
 
 **CI:** `.github/workflows/playwright-typescript.yml` — runs on push/PR to main/master with `working-directory: playwright/typescript`; uses a matrix strategy (`fail-fast: false`) to run each of the 5 browser projects (Chromium, Firefox, Webkit, Mobile Chrome, Mobile Safari) in parallel, each in its own job; each matrix job installs only the browser it needs (`chromium`, `firefox`, or `webkit`) and uploads its report as `playwright-report-<id>` (retained 30 days); npm dependencies are cached via `actions/setup-node` `cache: 'npm'` keyed on `package-lock.json`; upload is skipped when running locally with `act`. Also supports `workflow_dispatch` with three inputs: `project` (choice: `all` / `chromium` / `firefox` / `webkit`; defaults to `all` — a `setup-matrix` job computes the matrix at runtime so only matching browser entries run; selecting `chromium` also runs Mobile Chrome, `webkit` also runs Mobile Safari), `update_visual_baselines` (boolean, regenerates Linux baselines for all 5 browser projects via `--update-snapshots` — each matrix job uploads `visual-baselines-linux-<id>` and the `commit-baselines` job downloads all five with `merge-multiple: true` before committing), and `ref` (branch to run on; defaults to triggering branch). To generate Linux baselines for a feature branch: Actions → "Playwright Typescript Tests" → "Run workflow" → enter the branch name in `ref`, check `update_visual_baselines`.
 
@@ -242,10 +242,15 @@ In `.bru` files:
 
 Use [`act`](https://github.com/nektos/act) to run workflows locally before pushing.
 
+> **Note:** The commands in this section were verified on macOS only. Linux and Windows 11 equivalents are provided as a best-effort guide and may require adjustments.
+
 ### Requirements
 
 - **Docker Desktop** — must be running ([docker.com](https://www.docker.com/products/docker-desktop/))
-- **act** — `brew install act`
+- **act**
+  - macOS: requires [Homebrew](https://brew.sh), then `brew install act`
+  - Linux: download binary from [nektos/act releases](https://github.com/nektos/act/releases) and add to `PATH`
+  - Windows 11: `winget install nektos.act` (winget is included with Windows 11)
 
 ### Usage
 
@@ -260,7 +265,7 @@ act push -W .github/workflows/bruno.yml --container-architecture linux/amd64
 
 On first run, `act` will ask for a Docker image size — choose **Medium** (~500MB). The Playwright workflow installs browsers via `npx playwright install --with-deps`; the Bruno workflow only needs Node and `npm ci`.
 
-> **Note:** The `--container-architecture linux/amd64` flag is required on Apple Silicon (M-series) Macs to avoid compatibility issues.
+> **Note (macOS Apple Silicon):** The `--container-architecture linux/amd64` flag is required on Apple Silicon (M-series) Macs to avoid compatibility issues. Linux and Windows 11 users running on x86-64 hardware can omit this flag.
 
 > **Credentials:** The repo root contains `.actrc` which automatically passes `--secret-file .env` to every `act` invocation. `ORWELLSTAT_USER` and `ORWELLSTAT_PASSWORD` from `.env` are loaded as secrets with no extra flags needed.
 
@@ -293,7 +298,7 @@ With 16 GB allocated to Docker, all 5 browser containers fit in memory and can r
 act push -W .github/workflows/playwright-typescript.yml --container-architecture linux/amd64
 ```
 
-To increase Docker Desktop memory from the terminal (macOS), quit Docker Desktop first, then run (requires `jq` — `brew install jq`):
+**macOS** — quit Docker Desktop first, then run (requires `jq` — `brew install jq`, which itself requires [Homebrew](https://brew.sh)):
 
 ```bash
 jq '.MemoryMiB = 16384' \
@@ -303,7 +308,18 @@ jq '.MemoryMiB = 16384' \
      ~/Library/Group\ Containers/group.com.docker/settings-store.json
 ```
 
-Then restart Docker Desktop and verify with:
+**Linux** — Docker Engine on Linux does not impose a separate memory limit; containers share the host's available RAM directly. Ensure your system has at least 16 GB of physical RAM to run the full matrix.
+
+**Windows 11** — quit Docker Desktop first, then run in PowerShell:
+
+```powershell
+$path = "$env:APPDATA\Docker\settings.json"
+$s = Get-Content $path | ConvertFrom-Json
+$s.memoryMiB = 16384
+$s | ConvertTo-Json -Depth 10 | Set-Content $path
+```
+
+Then restart Docker Desktop and verify on any platform with:
 
 ```bash
 docker info --format '{{.MemTotal}}' | awk '{printf "%.0f GB\n", $1/1073741824}'
