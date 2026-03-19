@@ -1,0 +1,94 @@
+{
+  "pages": {
+    "/": {
+      "title": true,
+      "content": true,
+      "accessibility": true,
+      "visualRegression": false,
+      "api": true
+    },
+    "/about/": {
+      "title": true,
+      "content": true,
+      "accessibility": true,
+      "visualRegression": false,
+      "api": true
+    },
+    "/statistics/": {
+      "title": true,
+      "content": true,
+      "accessibility": true,
+      "visualRegression": false,
+      "api": true
+    },
+    "/contact/": {
+      "title": true,
+      "content": true,
+      "accessibility": true,
+      "visualRegression": false,
+      "api": true
+    },
+    "/register/": {
+      "title": true,
+      "content": false,
+      "accessibility": true,
+      "visualRegression": false,
+      "api": true
+    },
+    "/2/": {
+      "title": true,
+      "content": true,
+      "accessibility": true,
+      "visualRegression": false,
+      "api": true
+    },
+    "/password_reset/": {
+      "title": true,
+      "content": false,
+      "accessibility": true,
+      "visualRegression": false,
+      "api": true
+    },
+    "/zone/": {
+      "title": true,
+      "content": false,
+      "accessibility": false,
+      "visualRegression": false,
+      "api": true
+    },
+    "/zone/stats/": {
+      "title": true,
+      "content": false,
+      "accessibility": false,
+      "visualRegression": false,
+      "api": true
+    },
+    "/zone/hits/": {
+      "title": true,
+      "content": false,
+      "accessibility": false,
+      "visualRegression": false,
+      "api": true
+    },
+    "/zone/scripts/": {
+      "title": true,
+      "content": false,
+      "accessibility": false,
+      "visualRegression": false,
+      "api": true
+    },
+    "/zone/admin/": {
+      "title": true,
+      "content": false,
+      "accessibility": false,
+      "visualRegression": false,
+      "api": true
+    }
+  },
+  "forms": {
+    "login": false,
+    "hitsFilter": false,
+    "adminSettings": false,
+    "styleSelector": false
+  }
+}

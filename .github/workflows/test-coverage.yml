@@ -1,0 +1,64 @@
+name: Test Coverage Trends
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'playwright/typescript/coverage-matrix.json'
+      - 'playwright/typescript/tests/**'
+  workflow_dispatch:
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Calculate coverage matrix
+        run: |
+          python3 -c "
+          import json
+          from datetime import datetime
+
+          with open('playwright/typescript/coverage-matrix.json') as f:
+              matrix = json.load(f)
+
+          pages = matrix['pages']
+          forms = matrix['forms']
+
+          categories = {
+              'title': [],
+              'content': [],
+              'accessibility': [],
+              'visualRegression': [],
+              'api': []
+          }
+
+          for url, coverage in pages.items():
+              for cat in categories:
+                  if cat in coverage:
+                      categories[cat].append(coverage[cat])
+
+          print(f'## Test Coverage Matrix Report — {datetime.utcnow().strftime(\"%Y-%m-%d\")}')
+          print('')
+          print('| Category | Covered | Total | % |')
+          print('|----------|---------|-------|---|')
+
+          for cat, values in categories.items():
+              covered = sum(1 for v in values if v)
+              total = len(values)
+              pct = round(covered / total * 100) if total > 0 else 0
+              print(f'| {cat} | {covered} | {total} | {pct}% |')
+
+          form_covered = sum(1 for v in forms.values() if v)
+          form_total = len(forms)
+          form_pct = round(form_covered / form_total * 100) if form_total > 0 else 0
+          print(f'| forms | {form_covered} | {form_total} | {form_pct}% |')
+
+          all_values = [v for vals in categories.values() for v in vals] + list(forms.values())
+          overall_covered = sum(1 for v in all_values if v)
+          overall_total = len(all_values)
+          overall_pct = round(overall_covered / overall_total * 100) if overall_total > 0 else 0
+          print(f'| **Overall** | **{overall_covered}** | **{overall_total}** | **{overall_pct}%** |')
+          " >> \$GITHUB_STEP_SUMMARY
