@@ -4,7 +4,7 @@ This file provides behavioral instructions to Claude Code (claude.ai/code) when 
 
 > **Keep `README.md` up to date.** Whenever the project structure changes — new directories, renamed files, new sub-projects, changed commands, updated CI, modified environment variables — update `README.md` before finishing the task. `CLAUDE.md` documents behavioral instructions only; update it only when adding, changing, or removing behavioral guidance for Claude — such as the code review checklist, issue format, issue fix workflow, or any other conventions Claude should follow.
 
-> **Keep skill files in sync.** The files in `.claude/skills/` reference sections of this file by name. Whenever the **Code review checklist**, **GitHub issue format**, or **Issue fix workflow** sections are renamed or removed, update the corresponding skill file (`fix-issue/SKILL.md`, `create-issue/SKILL.md`, `review/SKILL.md`) to match before finishing the task.
+> **Skill files are the source of truth for their workflows.** `.claude/skills/fix-issue/SKILL.md` owns the issue fix workflow; `.claude/skills/create-issue/SKILL.md` owns the GitHub issue format. `CLAUDE.md` only points to them. When changing those workflows or formats, edit the skill file — not this file.
 
 For repository structure, environment variable definitions, `playwright/typescript` architecture (directory layout, POM conventions, path aliases, Playwright config, CI workflows), and Bruno documentation, see [README.md](README.md). That file is the single source of truth for all reference material.
 
@@ -29,33 +29,7 @@ Before committing changes to `playwright/typescript`, review against these crite
 
 ## GitHub issue format
 
-When creating GitHub issues for requirements, bugs, or code review findings, use this structure:
-
-**Title:** `[label] Short imperative description`
-
-**Body sections (in order):**
-
-1. **User Story** — "As a tester, I want ... so that ..."
-2. **Context** — explanation of the current problem with exact file references
-3. **Acceptance Criteria** — Given/When/Then scenarios covering the happy path and the failure case
-4. **Implementation Hint** — concrete code snippet showing the fix
-5. **Definition of Done** — checklist of observable, verifiable outcomes
-
-**Labels:** apply semantic labels such as `test-quality`, `flakiness`, `type-safety`, `pom`.
-
-**Milestone:** every issue must have a milestone. Pick the one that matches the nature of the work:
-
-| Milestone | Use when the issue is about… |
-|---|---|
-| **Test Coverage Expansion** | New tests, new spec files, new page objects, new test patterns, visual regression |
-| **CI Improvements** | GitHub Actions workflows — scheduling, triggers, parallelism, caching, Dependabot |
-| **Test Infrastructure** | Fixtures, utilities, configuration, environment setup, documentation, refactoring |
-| **Bug Fixes** | Bugs, flakiness fixes, security patches |
-| **Developer Tooling** | Claude Code hooks, slash commands, settings, local dev setup (`act`, scripts) |
-| **Quality Metrics Dashboard** | Defect escape rate, MTTR, coverage tracking, GitHub Pages dashboard |
-| **Learning Exercises** | Self-study, technology exploration, proof-of-concept work |
-
-If none of the existing milestones fit, **do not assign one silently** — propose a new milestone name and description to the user and wait for approval before creating it and assigning the issue.
+When creating GitHub issues for requirements, bugs, or code review findings, follow the format and steps in `.claude/skills/create-issue/SKILL.md`.
 
 ---
 
@@ -73,32 +47,4 @@ The ticket prefix must come first so `git log --oneline` and GitHub cross-refere
 
 ## Issue fix workflow
 
-When fixing a GitHub issue, follow these steps in order:
-
-1. Make the code change
-2. Run `tsc --noEmit` — must pass with no errors
-3. Run `npm run format` — auto-formats all files; no manual style fixes needed
-4. Review against the [code review checklist](#code-review-checklist)
-5. Run the affected test(s) — must pass
-6. Create a branch from remote `main` named `feature/<issue-number>` or `bugfix/<issue-number>` (e.g. `feature/19`)
-7. **Review the diff as a fresh reviewer** — run `git diff` (staged + unstaged) and treat every changed file as unfamiliar code. Work through the checklist below and **explicitly state each finding** (even if the finding is "no issues"). Saying "the diff looks clean" without articulating the checks performed is not acceptable.
-
-   **General checks (every diff):**
-   - Every non-obvious change: *"Would I understand why this was done just from the diff?"* If no, add a code comment or adjust the implementation.
-   - No credentials, tokens, or secrets in committed files.
-   - No dead code, commented-out blocks, or debug artifacts left in.
-   - Docs updated: if a file documented in `README.md` changed, verify it reflects the change.
-
-   **CI / workflow files (`.github/workflows/*.yml`):**
-   - `timeout-minutes` set at the job level — no job should run unbounded.
-   - All `actions/*` pinned to a specific major version (e.g. `@v4`); third-party actions pinned to a full SHA.
-   - `node-version: lts/*` is acceptable for Node setup; npm package versions must be pinned in `package.json` + `package-lock.json` (use `npm ci`, not `npm install -g @package`).
-   - No env vars copied blindly from another workflow without verifying they apply — each env var must have a reason visible in the file or a comment.
-   - Secrets written to disk (e.g. `echo "KEY=${{ secrets.KEY }}" >> .env`) must be scoped to the minimum needed and never logged.
-   - Steps that only make sense in specific contexts (e.g. artifact upload skipped under `act`) must have an `if:` condition with a clear comment explaining the guard.
-8. **Verify all acceptance criteria and the Definition of Done** — read every Given/When/Then scenario and every DoD checkbox in the issue. For each item, explicitly confirm it is satisfied or identify what is missing. Do not proceed to commit until all criteria pass.
-9. Commit following the [commit message convention](#commit-message-convention) — prefix with the issue number (e.g. `19 Add explicit SvgAnalysis type to page.evaluate()`).
-10. Push and create a PR — the PR body must include:
-    - `Closes #<issue-number>` so GitHub links and auto-closes the issue on merge
-    - A **Test plan** section with a checklist of observable, verifiable steps. Mark steps already verified during development as `[x]`. Steps that require a reviewer or CI to verify must be left as `[ ]`.
-11. **Verify the PR test plan** — after the PR is created, re-read every test plan item. For each `[ ]` item that can be verified now, execute and confirm it. Update the PR body via `gh pr edit` to mark newly confirmed items as `[x]`. For items that genuinely require a reviewer or CI, leave them as `[ ]` and note what is needed. If any item is found to be wrong or failing, implement a fix on the **same branch**: apply the fix, run tsc and format, work through the code review checklist, run the affected tests, then commit and push to the same branch before considering the task done.
+When fixing a GitHub issue, follow the steps in `.claude/skills/fix-issue/SKILL.md`.
