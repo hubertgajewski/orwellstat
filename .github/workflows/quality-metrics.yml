@@ -9,10 +9,15 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
+      contents: read
       issues: read
 
     steps:
       - uses: actions/checkout@v6
+
+      - name: Install gh CLI
+        # No-op on GitHub-hosted runners (gh pre-installed); installs for act containers
+        run: type -p gh > /dev/null || (sudo apt-get update -qq && sudo apt-get install -y gh)
 
       - name: Calculate quality metrics
         env:
