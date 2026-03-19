@@ -192,6 +192,21 @@ Use `--grep` to run a subset and `--grep-invert` to exclude it (see [Running tes
 
 **Automated code review:** `.github/workflows/claude-code-review.yml` — triggers on pull request events (opened, synchronize, ready_for_review, reopened); runs `anthropics/claude-code-action@v1` (model: `claude-sonnet-4-6`) to review the PR and post inline comments; focuses on Playwright test correctness, POM conventions, TypeScript quality, and consistency; requires `ANTHROPIC_API_KEY` secret.
 
+**Quality Metrics Dashboard:** `.github/workflows/quality-metrics.yml` — runs on schedule (every Monday at 6 AM UTC) and on `workflow_dispatch`; queries all issues labeled `bug` to calculate two metrics and writes them to the GitHub Actions step summary:
+
+- **Defect escape rate** = `found-in-production / (found-by-test + found-by-manual-testing + found-in-production)` — measures how effective testing is at catching bugs before users hit them.
+- **MTTR (Mean Time To Resolve)** = average of `(closedAt − createdAt)` across all closed `bug` issues, displayed in days/hours; also broken down by discovery label.
+
+Bug issues must carry one of three discovery labels (in addition to `bug`) for the escape rate formula to work:
+
+| Label | Meaning | Color |
+|---|---|---|
+| `found-by-test` | Caught by automated Playwright (or other) tests | green |
+| `found-by-manual-testing` | Discovered manually during staging testing | yellow |
+| `found-in-production` | Reported by actual users on production | red |
+
+MTTR is calculated for all `bug`-labeled issues regardless of discovery method, and also broken down per discovery label for insight into resolution speed by source.
+
 ---
 
 ## bruno

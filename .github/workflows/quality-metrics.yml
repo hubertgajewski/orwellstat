@@ -1,0 +1,106 @@
+name: Quality Metrics Dashboard
+on:
+  schedule:
+    - cron: '0 6 * * 1'  # Every Monday at 6 AM UTC
+  workflow_dispatch:
+
+jobs:
+  calculate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      issues: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Calculate quality metrics
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Defect escape rate
+          FOUND_BY_TEST=$(gh issue list --label "bug,found-by-test" --state all --json number --jq 'length')
+          FOUND_BY_MANUAL=$(gh issue list --label "bug,found-by-manual-testing" --state all --json number --jq 'length')
+          FOUND_IN_PROD=$(gh issue list --label "bug,found-in-production" --state all --json number --jq 'length')
+          TOTAL=$((FOUND_BY_TEST + FOUND_BY_MANUAL + FOUND_IN_PROD))
+
+          if [ "$TOTAL" -eq 0 ]; then
+            RATE="N/A (no bugs labeled yet)"
+          else
+            RATE=$(echo "scale=2; $FOUND_IN_PROD * 100 / $TOTAL" | bc)
+            RATE="${RATE}%"
+          fi
+
+          # MTTR — average resolution time for all closed bugs
+          MTTR_DATA=$(gh issue list --label "bug" --state closed --json number,createdAt,closedAt)
+          MTTR=$(echo "$MTTR_DATA" | python3 -c "
+          import json, sys
+          from datetime import datetime
+          issues = json.load(sys.stdin)
+          if not issues:
+              print('N/A (no closed bugs)')
+          else:
+              deltas = []
+              for i in issues:
+                  created = datetime.fromisoformat(i['createdAt'].replace('Z', '+00:00'))
+                  closed = datetime.fromisoformat(i['closedAt'].replace('Z', '+00:00'))
+                  deltas.append((closed - created).total_seconds())
+              avg = sum(deltas) / len(deltas)
+              days = avg / 86400
+              hours = avg / 3600
+              if days >= 1:
+                  print(f'{days:.1f} days')
+              else:
+                  print(f'{hours:.1f} hours')
+          ")
+
+          # MTTR broken down by discovery label (closed bugs only)
+          for LABEL in "found-by-test" "found-by-manual-testing" "found-in-production"; do
+            DATA=$(gh issue list --label "bug,$LABEL" --state closed --json number,createdAt,closedAt)
+            MTTR_BY_LABEL=$(echo "$DATA" | python3 -c "
+          import json, sys
+          from datetime import datetime
+          issues = json.load(sys.stdin)
+          if not issues:
+              print('N/A')
+          else:
+              deltas = []
+              for i in issues:
+                  created = datetime.fromisoformat(i['createdAt'].replace('Z', '+00:00'))
+                  closed = datetime.fromisoformat(i['closedAt'].replace('Z', '+00:00'))
+                  deltas.append((closed - created).total_seconds())
+              avg = sum(deltas) / len(deltas)
+              days = avg / 86400
+              hours = avg / 3600
+              if days >= 1:
+                  print(f'{days:.1f} days')
+              else:
+                  print(f'{hours:.1f} hours')
+          ")
+            case "$LABEL" in
+              "found-by-test")       MTTR_TEST="$MTTR_BY_LABEL" ;;
+              "found-by-manual-testing") MTTR_MANUAL="$MTTR_BY_LABEL" ;;
+              "found-in-production") MTTR_PROD="$MTTR_BY_LABEL" ;;
+            esac
+          done
+
+          echo "## Quality Metrics Report — $(date -u +%Y-%m-%d)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Defect Escape Rate" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Discovery method | Count |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Found by automated tests | $FOUND_BY_TEST |" >> $GITHUB_STEP_SUMMARY
+          echo "| Found by manual testing (staging) | $FOUND_BY_MANUAL |" >> $GITHUB_STEP_SUMMARY
+          echo "| Found in production | $FOUND_IN_PROD |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Total bugs** | **$TOTAL** |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Escape rate** | **$RATE** |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### MTTR (Mean Time To Resolve)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Scope | MTTR |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|------|" >> $GITHUB_STEP_SUMMARY
+          echo "| All closed bugs | $MTTR |" >> $GITHUB_STEP_SUMMARY
+          echo "| Found by automated tests | $MTTR_TEST |" >> $GITHUB_STEP_SUMMARY
+          echo "| Found by manual testing (staging) | $MTTR_MANUAL |" >> $GITHUB_STEP_SUMMARY
+          echo "| Found in production | $MTTR_PROD |" >> $GITHUB_STEP_SUMMARY
