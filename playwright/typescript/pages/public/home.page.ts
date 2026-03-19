@@ -18,9 +18,6 @@ export class HomePage extends AbstractPage {
   static readonly previouslyAddedLink = 'poprzednio dodanych';
   static readonly recentlyAddedLink = 'ostatnio dodanych';
 
-  static readonly styleSelector = 'Wybierz styl';
-  static readonly stylePurpleRain = 'Purple Rain';
-
   constructor(page: Page) {
     super(page, HomePage.url, HomePage.title, HomePage.accessKey);
   }
