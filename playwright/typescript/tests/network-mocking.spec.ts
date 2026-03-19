@@ -48,7 +48,7 @@ test.describe('network mocking with page.route()', { tag: '@regression' }, () =>
       });
     });
 
-    await page.goto(ServiceStatisticsPage.url);
+    await page.goto('about:blank');
 
     const result = await page.evaluate<W3cResponse, string>(async (url) => {
       const response = await fetch(`${url}?output=json`);
