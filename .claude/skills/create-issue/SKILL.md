@@ -1,3 +1,7 @@
+---
+description: Draft and create a GitHub issue in the project's documented format.
+---
+
 Draft and create a GitHub issue in the project's documented format.
 
 Description: $ARGUMENTS

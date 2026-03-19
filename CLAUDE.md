@@ -4,7 +4,7 @@ This file provides behavioral instructions to Claude Code (claude.ai/code) when 
 
 > **Keep `README.md` up to date.** Whenever the project structure changes — new directories, renamed files, new sub-projects, changed commands, updated CI, modified environment variables — update `README.md` before finishing the task. `CLAUDE.md` documents behavioral instructions only; update it only when adding, changing, or removing behavioral guidance for Claude — such as the code review checklist, issue format, issue fix workflow, or any other conventions Claude should follow.
 
-> **Keep slash command files in sync.** The files in `.claude/commands/` embed sections of this file verbatim. Whenever the **Code review checklist**, **GitHub issue format**, or **Issue fix workflow** sections change, update the corresponding command file (`review.md`, `create-issue.md`, `fix-issue.md`) to match before finishing the task.
+> **Keep skill files in sync.** The files in `.claude/skills/` reference sections of this file by name. Whenever the **Code review checklist**, **GitHub issue format**, or **Issue fix workflow** sections are renamed or removed, update the corresponding skill file (`fix-issue/SKILL.md`, `create-issue/SKILL.md`, `review/SKILL.md`) to match before finishing the task.
 
 For repository structure, environment variable definitions, `playwright/typescript` architecture (directory layout, POM conventions, path aliases, Playwright config, CI workflows), and Bruno documentation, see [README.md](README.md). That file is the single source of truth for all reference material.
 
