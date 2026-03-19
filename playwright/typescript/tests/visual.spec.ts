@@ -133,9 +133,9 @@ for (const style of [STYLE_IRISH_GREEN_SVG, STYLE_PRINT] as const) {
     async ({ page }) => {
       await page.goto(ServiceStatisticsPage.url);
       await page.getByRole('combobox', { name: STYLE_SELECTOR }).selectOption(style);
-      // Style form may redirect away; wait for load then navigate back to statistics explicitly.
+      // Style form may redirect away; wait for the navigation to start before proceeding.
       await Promise.all([
-        page.waitForLoadState('load'),
+        page.waitForURL('**'),
         page.getByRole('button', { name: STYLE_SELECTOR }).click(),
       ]);
       await Promise.all([
@@ -173,9 +173,9 @@ for (const style of [STYLE_PURPLE_RAIN, STYLE_HIGH_CONTRAST] as const) {
     async ({ page }) => {
       await page.goto(ServiceStatisticsPage.url);
       await page.getByRole('combobox', { name: STYLE_SELECTOR }).selectOption(style);
-      // Style form may redirect away; wait for load then navigate back to statistics explicitly.
+      // Style form may redirect away; wait for the navigation to start before proceeding.
       await Promise.all([
-        page.waitForLoadState('load'),
+        page.waitForURL('**'),
         page.getByRole('button', { name: STYLE_SELECTOR }).click(),
       ]);
       await page.goto(ServiceStatisticsPage.url);
