@@ -43,6 +43,18 @@ When creating GitHub issues for requirements, bugs, or code review findings, use
 
 ---
 
+## Commit message convention
+
+Commit messages are always a **short, single-line description** with no body and no `Co-Authored-By` trailer. When a commit relates to one or more GitHub issues, **prefix the message with the issue number(s)** separated by spaces, followed by the description:
+
+- Single issue: `63 Add network mocking tests`
+- Multiple issues: `63 64 Add network mocking tests and fixtures`
+- No issue: `Fix typo in README`
+
+The ticket prefix must come first so `git log --oneline` and GitHub cross-references work at a glance.
+
+---
+
 ## Issue fix workflow
 
 When fixing a GitHub issue, follow these steps in order:
@@ -69,5 +81,5 @@ When fixing a GitHub issue, follow these steps in order:
    - Secrets written to disk (e.g. `echo "KEY=${{ secrets.KEY }}" >> .env`) must be scoped to the minimum needed and never logged.
    - Steps that only make sense in specific contexts (e.g. artifact upload skipped under `act`) must have an `if:` condition with a clear comment explaining the guard.
 8. **Verify all acceptance criteria and the Definition of Done** — read every Given/When/Then scenario and every DoD checkbox in the issue. For each item, explicitly confirm it is satisfied or identify what is missing. Do not proceed to commit until all criteria pass.
-9. Commit with a **short, single-line message** in the format `<issue-number> <short description>` (e.g. `19 Add explicit SvgAnalysis type to page.evaluate()`). No body, no `Co-Authored-By` trailer — single line only.
+9. Commit following the [commit message convention](#commit-message-convention) — prefix with the issue number (e.g. `19 Add explicit SvgAnalysis type to page.evaluate()`).
 10. Push and create a PR — include `Closes #<issue-number>` in the PR body so GitHub links and auto-closes the issue on merge
