@@ -17,6 +17,8 @@ Three project-scoped skills are available in Claude Code (stored in `.claude/ski
 ```
 .env                        # credentials (git-ignored); see .env.example
 .env.example                # template: ORWELLSTAT_USER, ORWELLSTAT_PASSWORD, ENV, BASIC_AUTH_USER, BASIC_AUTH_PASSWORD, ANTHROPIC_API_KEY, CLAUDE_DIAGNOSIS
+CLAUDE.md                   # repository-specific behavioral guidance for Claude Code
+CODEX.md                    # Codex entrypoint; delegates shared repository guidance to CLAUDE.md
 .github/workflows/          # CI workflows (one per sub-project)
 QUALITY_METRICS.md          # auto-generated quality metrics report (escape rate, MTTR, coverage, trends)
 SECURITY.md                 # security policy and vulnerability reporting
