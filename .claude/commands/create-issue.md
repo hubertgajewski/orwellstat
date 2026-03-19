@@ -2,24 +2,11 @@ Draft and create a GitHub issue in the project's documented format.
 
 Description: $ARGUMENTS
 
-Scaffold the issue in the exact format from CLAUDE.md, then create it via `gh issue create`.
-
-**Required format:**
-
-**Title:** `[label] Short imperative description`
-
-**Body sections (in order):**
-
-1. **User Story** — "As a tester, I want ... so that ..."
-2. **Context** — explanation of the current problem with exact file references
-3. **Acceptance Criteria** — Given/When/Then scenarios covering the happy path and the failure case
-4. **Implementation Hint** — concrete code snippet showing the fix
-5. **Definition of Done** — checklist of observable, verifiable outcomes
-
-**Labels:** apply semantic labels such as `test-quality`, `flakiness`, `type-safety`, `pom`.
+Scaffold the issue following the **GitHub issue format** section in `CLAUDE.md` (title, body sections, labels, milestone), then create it via `gh issue create`.
 
 **Steps:**
-1. Draft the title and all five body sections based on `$ARGUMENTS`. Ask for clarification on any section where the input is ambiguous before proceeding.
-2. Present the full draft to the user for review.
-3. After approval, run `gh issue create --title "<title>" --body "<body>" --label "<labels>"` to create the issue.
-4. Output the URL of the created issue.
+1. Draft the title and all five body sections based on `$ARGUMENTS`. Ask for clarification on any ambiguous section before proceeding.
+2. Select the appropriate milestone using the milestone table in `CLAUDE.md`. If none fit, propose a new one and wait for approval.
+3. Present the full draft (title, body, labels, milestone) to the user for review.
+4. After approval, run `gh issue create --title "<title>" --body "<body>" --label "<labels>" --milestone "<milestone>"` to create the issue.
+5. Output the URL of the created issue.

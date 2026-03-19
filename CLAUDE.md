@@ -43,6 +43,20 @@ When creating GitHub issues for requirements, bugs, or code review findings, use
 
 **Labels:** apply semantic labels such as `test-quality`, `flakiness`, `type-safety`, `pom`.
 
+**Milestone:** every issue must have a milestone. Pick the one that matches the nature of the work:
+
+| Milestone | Use when the issue is about… |
+|---|---|
+| **Test Coverage Expansion** | New tests, new spec files, new page objects, new test patterns, visual regression |
+| **CI Improvements** | GitHub Actions workflows — scheduling, triggers, parallelism, caching, Dependabot |
+| **Test Infrastructure** | Fixtures, utilities, configuration, environment setup, documentation, refactoring |
+| **Bug Fixes** | Bugs, flakiness fixes, security patches |
+| **Developer Tooling** | Claude Code hooks, slash commands, settings, local dev setup (`act`, scripts) |
+| **Quality Metrics Dashboard** | Defect escape rate, MTTR, coverage tracking, GitHub Pages dashboard |
+| **Learning Exercises** | Self-study, technology exploration, proof-of-concept work |
+
+If none of the existing milestones fit, **do not assign one silently** — propose a new milestone name and description to the user and wait for approval before creating it and assigning the issue.
+
 ---
 
 ## Commit message convention
