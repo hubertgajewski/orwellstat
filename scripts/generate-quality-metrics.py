@@ -1,15 +1,18 @@
 """Generate quality metrics markdown report and update history JSON.
 
 Reads playwright/typescript/coverage-matrix.json for test coverage, queries
-GitHub issues via the gh CLI for escape rate and MTTR, appends a new data
-point to quality-metrics-history.json, and regenerates QUALITY_METRICS.md.
+GitHub issues via the gh CLI for escape rate and MTTR, upserts a data point
+for today in quality-metrics-history.json, and regenerates QUALITY_METRICS.md.
+Also appends the step summary to GITHUB_STEP_SUMMARY when the env var is set.
 
 Usage (requires GH_TOKEN in environment):
     python3 scripts/generate-quality-metrics.py
 """
 
 import json
+import os
 import subprocess
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -36,7 +39,13 @@ def gh_issues(labels, state="all", extra_fields=None):
         text=True,
         check=True,
     )
-    return json.loads(result.stdout)
+    issues = json.loads(result.stdout)
+    if len(issues) == 1000:
+        print(
+            f"Warning: --label {labels!r} --state {state} hit the 1000-item limit; counts may be understated.",
+            file=sys.stderr,
+        )
+    return issues
 
 
 def mttr(issues, na_label="N/A"):
@@ -44,9 +53,13 @@ def mttr(issues, na_label="N/A"):
         return na_label
     deltas = []
     for i in issues:
+        if not i.get("closedAt"):  # guard against null closedAt
+            continue
         created = datetime.fromisoformat(i["createdAt"].replace("Z", "+00:00"))
         closed = datetime.fromisoformat(i["closedAt"].replace("Z", "+00:00"))
         deltas.append((closed - created).total_seconds())
+    if not deltas:
+        return na_label
     avg = sum(deltas) / len(deltas)
     days = avg / 86400
     return f"{days:.1f} days" if days >= 1 else f"{avg / 3600:.1f} hours"
@@ -66,6 +79,15 @@ def compute_coverage(matrix):
 
 def icon(val):
     return ":white_check_mark:" if val else ":x:"
+
+
+def write_step_summary(lines):
+    """Append lines to the GitHub Actions step summary when GITHUB_STEP_SUMMARY is set."""
+    summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
+    if not summary_path:
+        return
+    with open(summary_path, "a") as f:
+        f.write("\n".join(lines) + "\n")
 
 
 def main():
@@ -105,13 +127,38 @@ def main():
         cov_pct, covered, total, pages, forms = None, 0, 0, {}, {}
         coverage_str = "N/A"
 
-    # --- Update history ---
+    # --- Step summary ---
+    write_step_summary([
+        f"## Quality Metrics Report — {today}",
+        "",
+        "### Defect Escape Rate",
+        "",
+        "| Discovery method | Count |",
+        "|-----------------|-------|",
+        f"| Found by automated tests | {n_test} |",
+        f"| Found by manual testing (staging) | {n_manual} |",
+        f"| Found in production | {n_prod} |",
+        f"| **Total bugs** | **{total_bugs}** |",
+        f"| **Escape rate** | **{escape_rate_str}** |",
+        "",
+        "### MTTR (Mean Time To Resolve)",
+        "",
+        "| Scope | MTTR |",
+        "|-------|------|",
+        f"| All closed bugs | {mttr_all} |",
+        f"| Found by automated tests | {mttr_test} |",
+        f"| Found by manual testing (staging) | {mttr_manual} |",
+        f"| Found in production | {mttr_prod} |",
+    ])
+
+    # --- Update history (upsert by date to avoid duplicate rows on re-runs) ---
     if HISTORY_FILE.exists():
         with open(HISTORY_FILE) as f:
             history = json.load(f)
     else:
         history = []
 
+    history = [p for p in history if p["date"] != today]
     history.append({
         "date": today,
         "escape_rate": escape_rate_str,

@@ -35,6 +35,14 @@ CI / workflow files (`.github/workflows/*.yml`):
 - No env vars copied blindly from another workflow without verifying they apply.
 - Secrets written to disk must be scoped to the minimum needed and never logged.
 - Steps that only make sense in specific contexts must have an `if:` condition with a clear comment.
+- Workflows that commit and push results back to the repository must have a `concurrency` group (`cancel-in-progress: false`) to prevent parallel runs racing on `git push`.
+- When multiple steps or scripts produce the same value, verify they use the same format and precision — inconsistencies cause the step summary and committed files to disagree.
+
+Scripts calling external APIs (e.g. `gh issue list`, REST calls):
+- Guard against null/missing fields before using them — external APIs can return nulls even on fields that are usually present.
+- Warn to stderr when a paginated call hits its item limit (e.g. `--limit 1000`) so silent data truncation is detectable.
+- Verify the script is idempotent — re-running with the same input must not corrupt state (e.g. upsert by a natural key rather than blindly appending).
+- Avoid duplicate API calls across steps: if two steps fetch the same data, consolidate them.
 
 **Step 7 — Verify all acceptance criteria and the Definition of Done**
 Read every Given/When/Then scenario and every DoD checkbox in the issue. For each item, explicitly confirm it is satisfied or identify what is missing. Do not proceed to commit until all criteria pass.

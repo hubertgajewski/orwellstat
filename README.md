@@ -280,6 +280,8 @@ Use [`act`](https://github.com/nektos/act) to run workflows locally before pushi
 
 > **Note:** The commands in this section were verified on macOS only. Linux and Windows 11 equivalents are provided as a best-effort guide and may require adjustments.
 
+> **Push-back workflows:** Workflows that commit and push results back to the repository (e.g. `quality-metrics.yml`) will always fail the `git push` step in `act`. This is expected — `act` containers have no GitHub credentials, so the push falls back to SSH and is rejected. All other steps (tool installation, script execution, git commit) run and can be verified locally. The push itself only works in real GitHub Actions, where `actions/checkout` injects `GITHUB_TOKEN` as a HTTPS credential automatically.
+
 ### Requirements
 
 - **Docker Desktop** — must be running ([docker.com](https://www.docker.com/products/docker-desktop/))
