@@ -18,7 +18,11 @@ Three project-scoped skills are available in Claude Code (stored in `.claude/ski
 .env                        # credentials (git-ignored); see .env.example
 .env.example                # template: ORWELLSTAT_USER, ORWELLSTAT_PASSWORD, ENV, BASIC_AUTH_USER, BASIC_AUTH_PASSWORD, ANTHROPIC_API_KEY, CLAUDE_DIAGNOSIS
 .github/workflows/          # CI workflows (one per sub-project)
+QUALITY_METRICS.md          # auto-generated quality metrics report (escape rate, MTTR, coverage, trends)
 SECURITY.md                 # security policy and vulnerability reporting
+quality-metrics-history.json  # historical quality metrics data points (auto-committed by workflow)
+scripts/
+  generate-quality-metrics.py  # generates QUALITY_METRICS.md and updates quality-metrics-history.json
 playwright/
   typescript/               # Playwright tests in TypeScript
 selenium/                   # Selenium tests (planned)
@@ -209,6 +213,8 @@ Bug issues must carry one of three discovery labels (in addition to `bug`) for t
 | `found-in-production` | Reported by actual users on production | red |
 
 MTTR is calculated for all `bug`-labeled issues regardless of discovery method, and also broken down per discovery label for insight into resolution speed by source.
+
+After calculating metrics, the workflow runs `scripts/generate-quality-metrics.py` to generate `QUALITY_METRICS.md` (a persistent, unified view readable directly on GitHub) and update `quality-metrics-history.json` with a new data point. Both files are committed and pushed back to the current branch automatically.
 
 ---
 

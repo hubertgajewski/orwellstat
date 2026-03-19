@@ -9,8 +9,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
-      contents: read
       issues: read
+      contents: write
 
     steps:
       - uses: actions/checkout@v6
@@ -75,3 +75,16 @@ jobs:
           echo "| Found by automated tests | $MTTR_TEST |" >> $GITHUB_STEP_SUMMARY
           echo "| Found by manual testing (staging) | $MTTR_MANUAL |" >> $GITHUB_STEP_SUMMARY
           echo "| Found in production | $MTTR_PROD |" >> $GITHUB_STEP_SUMMARY
+
+      - name: Generate quality metrics markdown
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 scripts/generate-quality-metrics.py
+
+      - name: Commit and push metrics
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add QUALITY_METRICS.md quality-metrics-history.json
+          git diff --staged --quiet || git commit -m "Update quality metrics report"
+          git push origin HEAD
