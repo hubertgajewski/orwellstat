@@ -8,9 +8,9 @@ Three project-scoped skills are available in Claude Code (stored in `.claude/ski
 
 | Skill | Usage | What it does |
 | --- | --- | --- |
-| `/fix-issue` | `/fix-issue <number>` | Fetches the issue and runs the full issue fix workflow from `.claude/skills/fix-issue/SKILL.md` in order, verifying each step before proceeding |
+| `/fix-issue` | `/fix-issue <number>` | Fixes a GitHub issue end-to-end: fetch, implement, test, review, commit, and open a PR |
 | `/create-issue` | `/create-issue <description>` | Scaffolds a GitHub issue in the documented format (User Story / Context / AC / Implementation Hint / DoD / milestone) and creates it via `gh issue create` |
-| `/review` | `/review` | Works through every item on the code review checklist from `CLAUDE.md` and explicitly states a finding (pass / fail / N/A) for each item |
+| `/review` | `/review` | Works through every item on the code review checklist from `.claude/skills/review/SKILL.md`, applies general diff checks and CI workflow checks, and explicitly states a finding (pass / fail / N/A) for each item |
 
 ## Repository structure
 
