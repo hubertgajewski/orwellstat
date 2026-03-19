@@ -1,4 +1,4 @@
-name: Update visual baselines
+name: Update Visual Baselines
 on:
   workflow_dispatch:
     inputs:
