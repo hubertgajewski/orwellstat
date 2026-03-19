@@ -4,28 +4,28 @@
       "title": true,
       "content": true,
       "accessibility": true,
-      "visualRegression": false,
+      "visualRegression": true,
       "api": true
     },
     "/about/": {
       "title": true,
       "content": true,
       "accessibility": true,
-      "visualRegression": false,
+      "visualRegression": true,
       "api": true
     },
     "/statistics/": {
       "title": true,
       "content": true,
       "accessibility": true,
-      "visualRegression": false,
+      "visualRegression": true,
       "api": true
     },
     "/contact/": {
       "title": true,
       "content": true,
       "accessibility": true,
-      "visualRegression": false,
+      "visualRegression": true,
       "api": true
     },
     "/register/": {
