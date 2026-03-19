@@ -34,5 +34,33 @@
       "Read(**/*.pem)",
       "Read(**/*.pfx)"
     ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "INPUT=$(cat); FILE=$(echo \"$INPUT\" | jq -r '.tool_input.file_path // empty'); if echo \"$FILE\" | grep -q 'playwright/typescript'; then ROOT=$(git -C \"$(dirname \"$FILE\")\" rev-parse --show-toplevel 2>/dev/null) && cd \"$ROOT/playwright/typescript\" && npx tsc --noEmit; npm run format; fi; true",
+            "timeout": 60,
+            "statusMessage": "Checking types and formatting..."
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "INPUT=$(cat); if echo \"$INPUT\" | jq -r '.tool_input.command // empty' | grep -q 'git commit'; then ROOT=$(git rev-parse --show-toplevel 2>/dev/null) && cd \"$ROOT/playwright/typescript\" && npx tsc --noEmit && npm run format:check; fi",
+            "timeout": 60,
+            "statusMessage": "Verifying types and format before commit..."
+          }
+        ]
+      }
+    ]
   }
 }
