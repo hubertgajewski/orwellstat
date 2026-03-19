@@ -18,10 +18,10 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Defect escape rate
-          FOUND_BY_TEST=$(gh issue list --label "bug,found-by-test" --state all --json number --jq 'length')
-          FOUND_BY_MANUAL=$(gh issue list --label "bug,found-by-manual-testing" --state all --json number --jq 'length')
-          FOUND_IN_PROD=$(gh issue list --label "bug,found-in-production" --state all --json number --jq 'length')
+          # Defect escape rate — use --limit 1000 to avoid the default 30-item cap
+          FOUND_BY_TEST=$(gh issue list --label "bug,found-by-test" --state all --limit 1000 --json number --jq 'length')
+          FOUND_BY_MANUAL=$(gh issue list --label "bug,found-by-manual-testing" --state all --limit 1000 --json number --jq 'length')
+          FOUND_IN_PROD=$(gh issue list --label "bug,found-in-production" --state all --limit 1000 --json number --jq 'length')
           TOTAL=$((FOUND_BY_TEST + FOUND_BY_MANUAL + FOUND_IN_PROD))
 
           if [ "$TOTAL" -eq 0 ]; then
@@ -32,55 +32,17 @@ jobs:
           fi
 
           # MTTR — average resolution time for all closed bugs
-          MTTR_DATA=$(gh issue list --label "bug" --state closed --json number,createdAt,closedAt)
-          MTTR=$(echo "$MTTR_DATA" | python3 -c "
-          import json, sys
-          from datetime import datetime
-          issues = json.load(sys.stdin)
-          if not issues:
-              print('N/A (no closed bugs)')
-          else:
-              deltas = []
-              for i in issues:
-                  created = datetime.fromisoformat(i['createdAt'].replace('Z', '+00:00'))
-                  closed = datetime.fromisoformat(i['closedAt'].replace('Z', '+00:00'))
-                  deltas.append((closed - created).total_seconds())
-              avg = sum(deltas) / len(deltas)
-              days = avg / 86400
-              hours = avg / 3600
-              if days >= 1:
-                  print(f'{days:.1f} days')
-              else:
-                  print(f'{hours:.1f} hours')
-          ")
+          MTTR=$(gh issue list --label "bug" --state closed --limit 1000 --json number,createdAt,closedAt \
+            | python3 .github/scripts/mttr.py "N/A (no closed bugs)")
 
           # MTTR broken down by discovery label (closed bugs only)
           for LABEL in "found-by-test" "found-by-manual-testing" "found-in-production"; do
-            DATA=$(gh issue list --label "bug,$LABEL" --state closed --json number,createdAt,closedAt)
-            MTTR_BY_LABEL=$(echo "$DATA" | python3 -c "
-          import json, sys
-          from datetime import datetime
-          issues = json.load(sys.stdin)
-          if not issues:
-              print('N/A')
-          else:
-              deltas = []
-              for i in issues:
-                  created = datetime.fromisoformat(i['createdAt'].replace('Z', '+00:00'))
-                  closed = datetime.fromisoformat(i['closedAt'].replace('Z', '+00:00'))
-                  deltas.append((closed - created).total_seconds())
-              avg = sum(deltas) / len(deltas)
-              days = avg / 86400
-              hours = avg / 3600
-              if days >= 1:
-                  print(f'{days:.1f} days')
-              else:
-                  print(f'{hours:.1f} hours')
-          ")
+            MTTR_BY_LABEL=$(gh issue list --label "bug,$LABEL" --state closed --limit 1000 --json number,createdAt,closedAt \
+              | python3 .github/scripts/mttr.py)
             case "$LABEL" in
-              "found-by-test")       MTTR_TEST="$MTTR_BY_LABEL" ;;
+              "found-by-test")           MTTR_TEST="$MTTR_BY_LABEL" ;;
               "found-by-manual-testing") MTTR_MANUAL="$MTTR_BY_LABEL" ;;
-              "found-in-production") MTTR_PROD="$MTTR_BY_LABEL" ;;
+              "found-in-production")     MTTR_PROD="$MTTR_BY_LABEL" ;;
             esac
           done
 
