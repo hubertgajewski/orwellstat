@@ -2,8 +2,6 @@
 description: Fix a GitHub issue end-to-end: fetch, implement, test, review, commit, and open a PR.
 ---
 
-Fix a GitHub issue end-to-end: fetch, implement, test, review, commit, and open a PR.
-
 Issue number: $ARGUMENTS
 
 **Step 1 — Fetch the issue**
