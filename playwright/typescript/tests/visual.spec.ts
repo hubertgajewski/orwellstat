@@ -3,6 +3,21 @@ import { HomePage } from '@pages/public/home.page';
 import { AboutSystemPage } from '@pages/public/about-system.page';
 import { ContactPage } from '@pages/public/contact.page';
 import { ServiceStatisticsPage } from '@pages/public/service-statistics.page';
+import {
+  STYLE_SELECTOR,
+  STYLE_IRISH_GREEN_SVG,
+  STYLE_PURPLE_RAIN,
+  STYLE_HIGH_CONTRAST,
+  STYLE_PRINT,
+} from '@pages/common';
+
+// All selectable styles; Irish Green SVG is the server default.
+const ALL_STYLES = [
+  STYLE_IRISH_GREEN_SVG,
+  STYLE_PURPLE_RAIN,
+  STYLE_HIGH_CONTRAST,
+  STYLE_PRINT,
+] as const satisfies readonly string[];
 
 test('home page visual regression', { tag: '@regression' }, async ({ page }) => {
   await page.goto(HomePage.url);
@@ -14,16 +29,11 @@ test('home page visual regression', { tag: '@regression' }, async ({ page }) => 
   });
 });
 
-test(
-  'home page visual regression - Purple Rain style',
-  { tag: '@regression' },
-  async ({ page }) => {
+for (const style of ALL_STYLES) {
+  test(`home page visual regression - ${style} style`, { tag: '@regression' }, async ({ page }) => {
     await page.goto(HomePage.url);
-    // Select a non-default style and submit; each style gets its own baseline.
-    await page
-      .getByRole('combobox', { name: HomePage.styleSelector })
-      .selectOption(HomePage.stylePurpleRain);
-    await page.getByRole('button', { name: HomePage.styleSelector }).click();
+    await page.getByRole('combobox', { name: STYLE_SELECTOR }).selectOption(style);
+    await page.getByRole('button', { name: STYLE_SELECTOR }).click();
     try {
       await expect(page).toHaveScreenshot({
         fullPage: true,
@@ -32,21 +42,55 @@ test(
     } finally {
       // Delete the SelectedStyle cookie — it is stored server-side in the session shared by
       // all tests via .auth/user.json, so not cleaning up would cause subsequent tests to
-      // render in Purple Rain and fail their baselines.
+      // render in the selected style and fail their baselines.
       await page.context().clearCookies({ name: 'SelectedStyle' });
     }
-  }
-);
+  });
+}
 
 test('about system page visual regression', { tag: '@regression' }, async ({ page }) => {
   await page.goto(AboutSystemPage.url);
   await expect(page).toHaveScreenshot({ fullPage: true });
 });
 
+for (const style of ALL_STYLES) {
+  test(
+    `about system page visual regression - ${style} style`,
+    { tag: '@regression' },
+    async ({ page }) => {
+      await page.goto(AboutSystemPage.url);
+      await page.getByRole('combobox', { name: STYLE_SELECTOR }).selectOption(style);
+      await page.getByRole('button', { name: STYLE_SELECTOR }).click();
+      try {
+        await expect(page).toHaveScreenshot({ fullPage: true });
+      } finally {
+        await page.context().clearCookies({ name: 'SelectedStyle' });
+      }
+    }
+  );
+}
+
 test('contact page visual regression', { tag: '@regression' }, async ({ page }) => {
   await page.goto(ContactPage.url);
   await expect(page).toHaveScreenshot({ fullPage: true });
 });
+
+for (const style of ALL_STYLES) {
+  test(
+    `contact page visual regression - ${style} style`,
+    { tag: '@regression' },
+    async ({ page }) => {
+      await page.goto(ContactPage.url);
+      await page.getByRole('combobox', { name: STYLE_SELECTOR }).selectOption(style);
+      await page.getByRole('button', { name: STYLE_SELECTOR }).click();
+      try {
+        await expect(page).toHaveScreenshot({ fullPage: true });
+      } finally {
+        await page.context().clearCookies({ name: 'SelectedStyle' });
+      }
+    }
+  );
+}
 
 test('statistics page visual regression', { tag: '@regression' }, async ({ page }) => {
   // Wait for the SVG chart response before screenshotting to ensure it is fully loaded.
@@ -79,3 +123,78 @@ test('statistics page visual regression', { tag: '@regression' }, async ({ page 
     mask: [page.getByRole('table'), page.locator('object[type="image/svg+xml"]')],
   });
 });
+
+// Irish Green SVG and Wersja do druku render the SVG chart on the statistics page;
+// these variants retain the full SVG wait and DOM stabilisation logic.
+for (const style of [STYLE_IRISH_GREEN_SVG, STYLE_PRINT] as const) {
+  test(
+    `statistics page visual regression - ${style} style`,
+    { tag: '@regression' },
+    async ({ page }) => {
+      await page.goto(ServiceStatisticsPage.url);
+      await page.getByRole('combobox', { name: STYLE_SELECTOR }).selectOption(style);
+      // Style form may redirect away; wait for the navigation to start before proceeding.
+      await Promise.all([
+        page.waitForURL('**'),
+        page.getByRole('button', { name: STYLE_SELECTOR }).click(),
+      ]);
+      await Promise.all([
+        page.waitForResponse((response) =>
+          response.url().includes(ServiceStatisticsPage.svgChartUrl)
+        ),
+        page.goto(ServiceStatisticsPage.url),
+      ]);
+      await expect(page.locator('object[type="image/svg+xml"]')).toBeVisible();
+      await page.evaluate<void>(() => {
+        const table = document.querySelector<HTMLTableElement>('table');
+        if (!table) return;
+        Array.from(table.rows)
+          .slice(5)
+          .forEach((row) => row.parentNode?.removeChild(row));
+      });
+      try {
+        await expect(page).toHaveScreenshot({
+          fullPage: true,
+          animations: 'disabled',
+          mask: [page.getByRole('table'), page.locator('object[type="image/svg+xml"]')],
+        });
+      } finally {
+        await page.context().clearCookies({ name: 'SelectedStyle' });
+      }
+    }
+  );
+}
+
+// Purple Rain and Wysoki kontrast do not render the SVG chart on the statistics page.
+for (const style of [STYLE_PURPLE_RAIN, STYLE_HIGH_CONTRAST] as const) {
+  test(
+    `statistics page visual regression - ${style} style`,
+    { tag: '@regression' },
+    async ({ page }) => {
+      await page.goto(ServiceStatisticsPage.url);
+      await page.getByRole('combobox', { name: STYLE_SELECTOR }).selectOption(style);
+      // Style form may redirect away; wait for the navigation to start before proceeding.
+      await Promise.all([
+        page.waitForURL('**'),
+        page.getByRole('button', { name: STYLE_SELECTOR }).click(),
+      ]);
+      await page.goto(ServiceStatisticsPage.url);
+      await page.evaluate<void>(() => {
+        const table = document.querySelector<HTMLTableElement>('table');
+        if (!table) return;
+        Array.from(table.rows)
+          .slice(5)
+          .forEach((row) => row.parentNode?.removeChild(row));
+      });
+      try {
+        await expect(page).toHaveScreenshot({
+          fullPage: true,
+          animations: 'disabled',
+          mask: [page.getByRole('table')],
+        });
+      } finally {
+        await page.context().clearCookies({ name: 'SelectedStyle' });
+      }
+    }
+  );
+}

@@ -89,6 +89,6 @@
     "login": false,
     "hitsFilter": false,
     "adminSettings": false,
-    "styleSelector": false
+    "styleSelector": true
   }
 }
