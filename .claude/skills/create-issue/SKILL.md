@@ -16,7 +16,7 @@ Description: $ARGUMENTS
 4. **Implementation Hint** — concrete code snippet showing the fix
 5. **Definition of Done** — checklist of observable, verifiable outcomes
 
-**Labels:** apply semantic labels such as `test-quality`, `flakiness`, `type-safety`, `pom`.
+**Labels:** apply semantic labels such as `test-quality`, `flakiness`, `type-safety`, `pom`. For bug issues (title prefix `[bug]`), also apply one of `found-by-test`, `found-by-manual-testing`, or `found-in-production` to record how the bug was discovered.
 
 **Milestone:** every issue must have a milestone. Pick the one that matches the nature of the work:
 
