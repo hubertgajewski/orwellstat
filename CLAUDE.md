@@ -84,4 +84,7 @@ When fixing a GitHub issue, follow these steps in order:
    - Steps that only make sense in specific contexts (e.g. artifact upload skipped under `act`) must have an `if:` condition with a clear comment explaining the guard.
 8. **Verify all acceptance criteria and the Definition of Done** — read every Given/When/Then scenario and every DoD checkbox in the issue. For each item, explicitly confirm it is satisfied or identify what is missing. Do not proceed to commit until all criteria pass.
 9. Commit following the [commit message convention](#commit-message-convention) — prefix with the issue number (e.g. `19 Add explicit SvgAnalysis type to page.evaluate()`).
-10. Push and create a PR — include `Closes #<issue-number>` in the PR body so GitHub links and auto-closes the issue on merge
+10. Push and create a PR — the PR body must include:
+    - `Closes #<issue-number>` so GitHub links and auto-closes the issue on merge
+    - A **Test plan** section with a checklist of observable, verifiable steps. Mark steps already verified during development as `[x]`. Steps that require a reviewer or CI to verify must be left as `[ ]`.
+11. **Verify the PR test plan** — after the PR is created, re-read every test plan item. For each `[ ]` item that can be verified now, execute and confirm it. Update the PR body via `gh pr edit` to mark newly confirmed items as `[x]`. For items that genuinely require a reviewer or CI, leave them as `[ ]` and note what is needed. If any item is found to be wrong or failing, implement a fix on the **same branch**: apply the fix, run tsc and format, work through the code review checklist, run the affected tests, then commit and push to the same branch before considering the task done.

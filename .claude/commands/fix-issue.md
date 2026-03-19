@@ -58,4 +58,9 @@ Read every Given/When/Then scenario and every DoD checkbox in the issue. For eac
 Stage changed files by name (never `git add -A`). Commit with a short, single-line message in the format `$ARGUMENTS <short description>` (e.g. `$ARGUMENTS Add explicit SvgAnalysis type to page.evaluate()`). No body, no `Co-Authored-By` trailer — single line only.
 
 **Step 11 — Push and create a PR**
-Push the branch and run `gh pr create` with `Closes #$ARGUMENTS` in the PR body so GitHub links and auto-closes the issue on merge.
+Push the branch and run `gh pr create`. The PR body must include:
+- `Closes #$ARGUMENTS` so GitHub links and auto-closes the issue on merge
+- A **Test plan** section with a checklist of observable, verifiable steps. Mark steps already verified during development as `[x]`. Steps that require a reviewer or CI to verify must be left as `[ ]`.
+
+**Step 12 — Verify the PR test plan**
+Re-read every test plan item. For each `[ ]` item that can be verified now, execute and confirm it. Update the PR body via `gh pr edit` to mark newly confirmed items as `[x]`. For items that genuinely require a reviewer or CI, leave them as `[ ]` and note what is needed. If any item is found to be wrong or failing, implement a fix on the **same branch**: apply the fix, run tsc and format, work through the code review checklist, run the affected tests, then commit and push to the same branch before considering the task done.

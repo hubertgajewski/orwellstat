@@ -42,7 +42,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "INPUT=$(cat); FILE=$(echo \"$INPUT\" | jq -r '.tool_input.file_path // empty'); if echo \"$FILE\" | grep -q 'playwright/typescript'; then ROOT=$(git -C \"$(dirname \"$FILE\")\" rev-parse --show-toplevel 2>/dev/null) && cd \"$ROOT/playwright/typescript\" && npx tsc --noEmit; npm run format; fi; true",
+            "command": "INPUT=$(cat); FILE=$(echo \"$INPUT\" | jq -r '.tool_input.file_path // empty'); if echo \"$FILE\" | grep -q 'playwright/typescript'; then ROOT=$(git -C \"$(dirname \"$FILE\")\" rev-parse --show-toplevel 2>/dev/null) && cd \"$ROOT/playwright/typescript\" && npx tsc --noEmit && npm run format; fi; true",
             "timeout": 60,
             "statusMessage": "Checking types and formatting..."
           }
@@ -55,7 +55,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "INPUT=$(cat); if echo \"$INPUT\" | jq -r '.tool_input.command // empty' | grep -q 'git commit'; then ROOT=$(git rev-parse --show-toplevel 2>/dev/null) && cd \"$ROOT/playwright/typescript\" && npx tsc --noEmit && npm run format:check; fi",
+            "command": "INPUT=$(cat); CMD=$(echo \"$INPUT\" | jq -r '.tool_input.command // empty'); if echo \"$CMD\" | grep -q 'git commit'; then ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || exit 2; cd \"$ROOT/playwright/typescript\" || exit 2; OUT=$(npx tsc --noEmit 2>&1); TSC_EXIT=$?; if [ $TSC_EXIT -ne 0 ]; then echo \"$OUT\" >&2; exit 2; fi; OUT=$(npm run format:check 2>&1); FMT_EXIT=$?; if [ $FMT_EXIT -ne 0 ]; then echo \"$OUT\" >&2; exit 2; fi; fi",
             "timeout": 60,
             "statusMessage": "Verifying types and format before commit..."
           }
