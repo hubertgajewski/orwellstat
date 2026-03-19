@@ -15,9 +15,13 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Install gh CLI
-        # No-op on GitHub-hosted runners (gh pre-installed); installs for act containers
-        run: type -p gh > /dev/null || (sudo apt-get update -qq && sudo apt-get install -y gh)
+      - name: Install missing tools
+        # No-op on GitHub-hosted runners (gh and bc pre-installed); installs for act containers
+        run: |
+          type -p gh > /dev/null && type -p bc > /dev/null && exit 0
+          sudo apt-get update -qq
+          type -p gh > /dev/null || sudo apt-get install -y gh
+          type -p bc > /dev/null || sudo apt-get install -y bc
 
       - name: Calculate quality metrics
         env:
