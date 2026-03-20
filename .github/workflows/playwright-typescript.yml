@@ -35,6 +35,8 @@ env:
 
 jobs:
   setup-matrix:
+    needs: check-approval
+    if: needs.check-approval.outputs.approved == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 2
     outputs:
