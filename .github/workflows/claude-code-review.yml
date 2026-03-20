@@ -5,6 +5,7 @@ on:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  CLAUDE_CODE_FORCE_GLOBAL_CACHE: true
 
 jobs:
   review:
