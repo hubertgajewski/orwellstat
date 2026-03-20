@@ -4,6 +4,9 @@ on:
     branches: [main, master]
   pull_request:
     branches: [main, master]
+  pull_request_review:
+    # submitted: re-run when a new approval arrives; dismissed: re-evaluate when an approval is revoked
+    types: [submitted, dismissed]
   schedule:
     # Runs at 03:00 UTC every Sunday
     - cron: '0 3 * * 0'
@@ -32,6 +35,8 @@ env:
 
 jobs:
   setup-matrix:
+    needs: check-approval
+    if: needs.check-approval.outputs.approved == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 2
     outputs:
@@ -61,8 +66,37 @@ jobs:
             echo "matrix=$ALL" >> "$GITHUB_OUTPUT"
           fi
 
+  check-approval:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions:
+      pull-requests: read
+    outputs:
+      approved: ${{ steps.check.outputs.approved }}
+    steps:
+      - name: Check for PR approval
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          # Non-PR events (push, schedule, workflow_dispatch) bypass the approval gate
+          if [ -z "$PR_NUMBER" ]; then
+            echo "approved=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          COUNT=$(gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" \
+            --json reviews \
+            --jq '[.reviews[] | select(.state == "APPROVED")] | length')
+          if [ "$COUNT" -gt 0 ]; then
+            echo "approved=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "approved=false" >> "$GITHUB_OUTPUT"
+          fi
+
   test:
-    needs: setup-matrix
+    needs: [setup-matrix, check-approval]
+    if: needs.check-approval.outputs.approved == 'true'
     name: ${{ matrix.project }}
     timeout-minutes: 15
     runs-on: ubuntu-latest

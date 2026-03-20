@@ -8,7 +8,11 @@ Issue number: $ARGUMENTS
 Run `gh issue view $ARGUMENTS` and read every section: User Story, Context, Acceptance Criteria, Implementation Hint, and Definition of Done. State what the issue requires before touching any code.
 
 **Step 2 — Create the branch**
-Create a branch from remote `main` named `feature/$ARGUMENTS` or `bugfix/$ARGUMENTS` as appropriate (e.g. `git checkout -b feature/$ARGUMENTS origin/main`).
+Before creating the branch, check whether the target name already exists on the remote:
+```bash
+git ls-remote --heads origin feature/$ARGUMENTS   # or bugfix/$ARGUMENTS
+```
+If it exists, inspect its recent commits (`git log origin/<branch> --oneline -5`) to decide whether those changes relate to this issue or to something different. If they appear unrelated, pick an alternative name by appending a suffix (e.g. `feature/$ARGUMENTS-2`, `feature/$ARGUMENTS-3`) and repeat the check until a free name is found. Then create the branch from remote `main` using the chosen name (e.g. `git checkout -b feature/$ARGUMENTS origin/main`).
 
 **Step 3 — Make the code change**
 Implement the fix described in the issue. Follow all conventions in `CLAUDE.md` (POM, fixtures, path aliases, security, etc.).
