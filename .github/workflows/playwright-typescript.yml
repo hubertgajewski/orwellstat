@@ -67,6 +67,7 @@ jobs:
           fi
 
   check-approval:
+    if: vars.PLAYWRIGHT_TYPESCRIPT == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 2
     permissions:

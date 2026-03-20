@@ -1,1 +1,2 @@
 --secret-file .env
+--var-file .vars

@@ -9,6 +9,7 @@ on:
     types: [submitted, dismissed]
 jobs:
   check-approval:
+    if: vars.BRUNO == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 2
     permissions:
