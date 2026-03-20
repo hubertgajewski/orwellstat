@@ -6,6 +6,7 @@ on:
 
 jobs:
   calculate:
+    if: vars.QUALITY_METRICS == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     concurrency:

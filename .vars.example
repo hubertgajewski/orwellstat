@@ -1,0 +1,10 @@
+# CI repository variables — loaded by Playwright via dotenv (local runs) and by act via --var-file (local CI).
+# In real GitHub Actions these are set under Settings → Variables → Actions.
+# Copy to .vars and set each variable to "true" to enable the corresponding workflow or feature.
+# When absent or any other value the workflow job or feature is skipped.
+CLAUDE_REVIEW=
+PLAYWRIGHT_TYPESCRIPT=
+BRUNO=
+QUALITY_METRICS=
+# Required alongside ANTHROPIC_API_KEY in .env to enable AI-powered test failure diagnosis.
+CLAUDE_DIAGNOSIS=
