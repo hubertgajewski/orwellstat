@@ -12,6 +12,14 @@ on:
     - cron: "0 3 * * 0"
   workflow_dispatch:
     inputs:
+      env:
+        description: 'Target environment (staging = auto-approve, production = requires reviewer approval)'
+        required: false
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
       project:
         description: "Browser project to test (all runs the full matrix)"
         required: false
@@ -116,6 +124,7 @@ jobs:
     name: ${{ matrix.project }}
     timeout-minutes: 15
     runs-on: ${{ inputs.runner || vars.RUNNER || 'ubuntu-latest' }}
+    environment: ${{ inputs.env || 'staging' }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.setup-matrix.outputs.matrix) }}
@@ -154,6 +163,7 @@ jobs:
           fi
         working-directory: playwright/typescript
         env:
+          ENV: ${{ vars.ENV }}
           ORWELLSTAT_USER: ${{ secrets.ORWELLSTAT_USER }}
           ORWELLSTAT_PASSWORD: ${{ secrets.ORWELLSTAT_PASSWORD }}
           ORWELLSTAT_USER_EMPTY: ${{ secrets.ORWELLSTAT_USER_EMPTY }}
