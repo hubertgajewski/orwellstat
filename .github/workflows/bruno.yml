@@ -4,8 +4,41 @@ on:
     branches: [main, master]
   pull_request:
     branches: [main, master]
+  pull_request_review:
+    # submitted: re-run when a new approval arrives; dismissed: re-evaluate when an approval is revoked
+    types: [submitted, dismissed]
 jobs:
+  check-approval:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions:
+      pull-requests: read
+    outputs:
+      approved: ${{ steps.check.outputs.approved }}
+    steps:
+      - name: Check for PR approval
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          # Non-PR events (push) bypass the approval gate
+          if [ -z "$PR_NUMBER" ]; then
+            echo "approved=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          COUNT=$(gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" \
+            --json reviews \
+            --jq '[.reviews[] | select(.state == "APPROVED")] | length')
+          if [ "$COUNT" -gt 0 ]; then
+            echo "approved=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "approved=false" >> "$GITHUB_OUTPUT"
+          fi
+
   test:
+    needs: check-approval
+    if: needs.check-approval.outputs.approved == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     defaults:
