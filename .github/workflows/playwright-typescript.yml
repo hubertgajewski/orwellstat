@@ -67,6 +67,7 @@ jobs:
           fi
 
   check-approval:
+    if: vars.PLAYWRIGHT_TYPESCRIPT == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 2
     permissions:
@@ -85,9 +86,8 @@ jobs:
             echo "approved=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          COUNT=$(gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" \
-            --json reviews \
-            --jq '[.reviews[] | select(.state == "APPROVED")] | length')
+          COUNT=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/reviews" \
+            --jq '[.[] | select(.state == "APPROVED")] | length')
           if [ "$COUNT" -gt 0 ]; then
             echo "approved=true" >> "$GITHUB_OUTPUT"
           else

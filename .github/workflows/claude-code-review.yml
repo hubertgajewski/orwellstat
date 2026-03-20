@@ -9,7 +9,7 @@ env:
 
 jobs:
   review:
-    if: github.actor != 'dependabot[bot]'
+    if: github.actor != 'dependabot[bot]' && vars.CLAUDE_REVIEW == 'true'
     timeout-minutes: 10
     runs-on: ubuntu-latest
     permissions:

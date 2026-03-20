@@ -6,6 +6,7 @@ export function loadEnv(importMetaUrl: string, levelsUp: number): void {
   const dir = dirname(fileURLToPath(importMetaUrl));
   const parts = Array(levelsUp).fill('..');
   dotenv.config({ path: resolve(dir, ...parts, '.env') });
+  dotenv.config({ path: resolve(dir, ...parts, '.vars') });
 }
 
 export function requireCredentials(): { user: string; password: string } {

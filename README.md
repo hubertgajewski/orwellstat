@@ -16,7 +16,9 @@ Three project-scoped skills are available in Claude Code (stored in `.claude/ski
 
 ```
 .env                        # credentials (git-ignored); see .env.example
-.env.example                # template: ORWELLSTAT_USER, ORWELLSTAT_PASSWORD, ENV, BASIC_AUTH_USER, BASIC_AUTH_PASSWORD, ANTHROPIC_API_KEY, CLAUDE_DIAGNOSIS
+.env.example                # template: ORWELLSTAT_USER, ORWELLSTAT_PASSWORD, ENV, BASIC_AUTH_USER, BASIC_AUTH_PASSWORD, ANTHROPIC_API_KEY
+.vars                       # CI repository variables (git-ignored); see .vars.example
+.vars.example               # template: CLAUDE_REVIEW, PLAYWRIGHT_TYPESCRIPT, BRUNO, QUALITY_METRICS, CLAUDE_DIAGNOSIS
 .github/workflows/          # CI workflows (one per sub-project)
 CLAUDE.md                   # repository-specific behavioral guidance for Claude Code
 CODEX.md                    # Codex entrypoint; delegates shared repository guidance to CLAUDE.md
@@ -54,10 +56,21 @@ ENV=<production|staging>
 BASIC_AUTH_USER=<staging basic auth user>
 BASIC_AUTH_PASSWORD=<staging basic auth password>
 ANTHROPIC_API_KEY=<Anthropic API key>
-CLAUDE_DIAGNOSIS=true
 ```
 
-`ORWELLSTAT_USER` and `ORWELLSTAT_PASSWORD` are required for all environments. `BASIC_AUTH_USER` and `BASIC_AUTH_PASSWORD` are only needed when running against staging — Playwright passes them automatically as HTTP Basic Auth credentials when set. `ANTHROPIC_API_KEY` and `CLAUDE_DIAGNOSIS=true` are both optional — when both are present, failed tests receive an `AI diagnosis` attachment in the Playwright report; when either is absent the fixture behaves identically to without them. In CI, all vars are injected as GitHub Actions secrets. Sub-projects load them via `dotenv` with a path pointing two levels up (`../../.env`).
+`ORWELLSTAT_USER` and `ORWELLSTAT_PASSWORD` are required for all environments. `BASIC_AUTH_USER` and `BASIC_AUTH_PASSWORD` are only needed when running against staging — Playwright passes them automatically as HTTP Basic Auth credentials when set. `ANTHROPIC_API_KEY` is optional — when present alongside `CLAUDE_DIAGNOSIS=true` in `.vars`, failed tests receive an `AI diagnosis` attachment in the Playwright report; when either is absent the fixture behaves identically to without them. In CI, secrets are injected as GitHub Actions secrets and variables via GitHub Actions variables. Sub-projects load them via `dotenv` with a path pointing two levels up (`../../.env` and `../../.vars`).
+
+### CI repository variables
+
+The following variables are set in **GitHub → Settings → Variables → Actions** (not secrets, not `.env`). Locally they live in `.vars` (loaded by Playwright via dotenv and by `act` via `--var-file`). Each is an opt-in gate: set to exactly `true` to enable; when absent or any other value the feature or workflow job is skipped.
+
+| Variable | Purpose | When it applies |
+|---|---|---|
+| `CLAUDE_DIAGNOSIS` | AI-powered test failure diagnosis attachment | Every Playwright run (local and CI) |
+| `CLAUDE_REVIEW` | `claude-code-review.yml` | PR events (opened, synchronize, ready_for_review, reopened) |
+| `PLAYWRIGHT_TYPESCRIPT` | `playwright-typescript.yml` | PR events, push to main, Sunday 03:00 UTC schedule, `workflow_dispatch` |
+| `BRUNO` | `bruno.yml` | PR events, push to main |
+| `QUALITY_METRICS` | `quality-metrics.yml` | Monday 06:00 UTC schedule, `workflow_dispatch` |
 
 `BASELINES_PAT` is a fine-grained GitHub Personal Access Token (Contents: Read and write) required by the Update Visual Baselines workflow to push directly to `main` — `GITHUB_TOKEN` cannot bypass branch protection rules. Create it under your GitHub profile → Settings → Developer settings → Personal access tokens → Fine-grained tokens, scoped to this repository only, and store it as a repository secret named `BASELINES_PAT`.
 
@@ -310,7 +323,7 @@ On first run, `act` will ask for a Docker image size — choose **Medium** (~500
 
 > **Note (macOS Apple Silicon):** The `--container-architecture linux/amd64` flag is required on Apple Silicon (M-series) Macs to avoid compatibility issues. Linux and Windows 11 users running on x86-64 hardware can omit this flag.
 
-> **Credentials:** The repo root contains `.actrc` which automatically passes `--secret-file .env` to every `act` invocation. `ORWELLSTAT_USER` and `ORWELLSTAT_PASSWORD` from `.env` are loaded as secrets with no extra flags needed.
+> **Credentials:** The repo root contains `.actrc` which automatically passes `--secret-file .env` and `--var-file .vars` to every `act` invocation. `ORWELLSTAT_USER` and `ORWELLSTAT_PASSWORD` from `.env` are loaded as secrets with no extra flags needed. Copy `.vars.example` to `.vars` and set variables to `true` to enable the corresponding workflow jobs and features — without this, all gated jobs are skipped.
 
 ### Docker RAM requirements for the Playwright matrix
 
