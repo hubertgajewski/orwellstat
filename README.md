@@ -63,14 +63,14 @@ ANTHROPIC_API_KEY=<Anthropic API key>
 
 ### CI repository variables
 
-The following variables are set in **GitHub → Settings → Variables → Actions** (not secrets, not `.env`). Locally they live in `.vars` (loaded by Playwright via dotenv and by `act` via `--var-file`). Each is an opt-in gate: set to exactly `true` to enable; when absent or any other value the feature or workflow job is skipped.
+The following variables are set in **GitHub → Settings → Variables → Actions** (not secrets, not `.env`). Locally they live in `.vars` (loaded by Playwright via dotenv and by `act` via `--var-file`). Each is an opt-in gate: set to exactly `true` to enable; when absent or any other value the feature or workflow job is skipped. Exception: `workflow_dispatch` runs always bypass the approval gate and run tests regardless of the variable value.
 
 | Variable | Purpose | When it applies |
 |---|---|---|
 | `CLAUDE_DIAGNOSIS` | AI-powered test failure diagnosis attachment | Every Playwright run (local and CI) |
 | `CLAUDE_REVIEW` | `claude-code-review.yml` | PR events (opened, synchronize, ready_for_review, reopened) |
 | `PLAYWRIGHT_TYPESCRIPT` | `playwright-typescript.yml` | PR events, push to main, Sunday 03:00 UTC schedule, `workflow_dispatch` |
-| `BRUNO` | `bruno.yml` | PR events, push to main |
+| `BRUNO` | `bruno.yml` | PR events, push to main, `workflow_dispatch` |
 | `QUALITY_METRICS` | `quality-metrics.yml` | Monday 06:00 UTC schedule, `workflow_dispatch` |
 
 ---
@@ -287,7 +287,7 @@ In `.bru` files:
 | `login-valid.bru`   | POST `/zone/` with valid credentials — expects 200   |
 | `login-invalid.bru` | POST `/zone/` with invalid credentials — expects 401 |
 
-**CI:** `.github/workflows/bruno.yml` — runs on push/PR to main/master and on `pull_request_review` (submitted/dismissed); a `check-approval` pre-check job requires at least one `APPROVED` review before tests run — push events bypass the gate automatically; writes secrets into `bruno/.env` and runs `bru run --env production`.
+**CI:** `.github/workflows/bruno.yml` — runs on push/PR to main/master, `pull_request_review` (submitted/dismissed), and `workflow_dispatch`; a `check-approval` pre-check job requires at least one `APPROVED` review before tests run — push and `workflow_dispatch` events bypass the gate automatically; writes secrets into `bruno/.env` and runs `bru run --env production`.
 
 ---
 
