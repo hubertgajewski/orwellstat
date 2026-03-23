@@ -1,5 +1,6 @@
 name: Bruno Tests
 on:
+  workflow_dispatch:
   push:
     branches: [main, master]
   pull_request:
@@ -9,7 +10,7 @@ on:
     types: [submitted, dismissed]
 jobs:
   check-approval:
-    if: vars.BRUNO == 'true'
+    if: vars.BRUNO == 'true' && github.event_name != 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 2
     permissions:
@@ -38,7 +39,7 @@ jobs:
 
   test:
     needs: check-approval
-    if: needs.check-approval.outputs.approved == 'true'
+    if: always() && (needs.check-approval.outputs.approved == 'true' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     defaults:

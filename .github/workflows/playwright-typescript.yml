@@ -36,7 +36,7 @@ env:
 jobs:
   setup-matrix:
     needs: check-approval
-    if: needs.check-approval.outputs.approved == 'true'
+    if: always() && (needs.check-approval.outputs.approved == 'true' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     timeout-minutes: 2
     outputs:
@@ -67,7 +67,7 @@ jobs:
           fi
 
   check-approval:
-    if: vars.PLAYWRIGHT_TYPESCRIPT == 'true'
+    if: vars.PLAYWRIGHT_TYPESCRIPT == 'true' && github.event_name != 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 2
     permissions:
@@ -96,7 +96,7 @@ jobs:
 
   test:
     needs: [setup-matrix, check-approval]
-    if: needs.check-approval.outputs.approved == 'true'
+    if: always() && (needs.check-approval.outputs.approved == 'true' || github.event_name == 'workflow_dispatch')
     name: ${{ matrix.project }}
     timeout-minutes: 15
     runs-on: ubuntu-latest
