@@ -31,6 +31,7 @@ scripts/
   generate-quality-metrics.py  # generates QUALITY_METRICS.md and updates quality-metrics-history.json
 mcp/
   playwright-runner/        # MCP server: run Playwright tests and retrieve structured results
+                            # (MCP_DOCKER and playwright servers are external — defined in .mcp.json, no local files)
 playwright/
   typescript/               # Playwright tests in TypeScript
 selenium/                   # Selenium tests (planned)
@@ -83,11 +84,11 @@ After cloning the repo and filling in `.env`, run these three setup steps:
 # 1. Playwright tests
 cd playwright/typescript && npm ci && npx playwright install --with-deps && cd ../..
 
-# 2. MCP server (playwright-runner) — needed for Claude Code agentic workflows
+# 2. MCP server (playwright-runner) — needed for agentic workflows
 cd mcp/playwright-runner && npm ci && cd ../..
 ```
 
-Then open Claude Code from the **repo root** so `.mcp.json` is picked up and the `playwright-runner` tools are available.
+Then open your AI assistant from the **repo root** so `.mcp.json` is picked up and all MCP server tools are available.
 
 ---
 
@@ -251,24 +252,23 @@ After calculating metrics, the workflow runs `scripts/generate-quality-metrics.p
 
 ---
 
-## mcp/playwright-runner
+## MCP servers
+
+Three MCP servers are declared in `.mcp.json` and loaded automatically by any MCP-compatible AI assistant opened from the repo root. `mcp/playwright-runner` requires a one-time `npm ci` (see Getting started); the other two are external and need no local setup.
+
+| Server | Key in `.mcp.json` | Purpose |
+|---|---|---|
+| playwright-runner | `playwright-runner` | Run Playwright tests and retrieve structured results |
+| playwright (browser) | `playwright` | Live browser automation — navigate, click, screenshot, snapshot |
+| Docker MCP gateway | `MCP_DOCKER` | Interact with Docker containers (used with `act` for local CI) |
+
+### playwright-runner
 
 An MCP server that runs the Playwright test suite and returns structured JSON results, enabling agentic workflows (self-healing, test generation verification) to act on test outcomes without parsing shell output.
 
-### Setup
+**Setup:** `cd mcp/playwright-runner && npm ci` — `npm ci` automatically builds the server via the `prepare` script; no separate build step needed. Restart your AI assistant after installing.
 
-```bash
-cd mcp/playwright-runner
-npm ci
-```
-
-`npm ci` automatically builds the server via the `prepare` script — no separate build step needed.
-
-Restart Claude Code after installing to pick up the `playwright-runner` entry from `.mcp.json`.
-
-> The path in `.mcp.json` (`mcp/playwright-runner/dist/index.js`) is relative to the working directory from which Claude Code is launched. Always open Claude Code from the **repo root**.
-
-### Tools
+> The path in `.mcp.json` (`mcp/playwright-runner/dist/index.js`) is relative to the working directory from which the AI assistant is launched. Always open it from the **repo root**.
 
 | Tool | Description |
 |---|---|
@@ -276,6 +276,33 @@ Restart Claude Code after installing to pick up the `playwright-runner` entry fr
 | `get_failed_tests` | Return failed tests from the last run with error messages and attachment paths |
 | `get_test_attachment` | Read the content of a named attachment (`dom.xhtml`, `diagnosis.md`) for a specific test |
 | `list_tests` | List all tests with their spec file and tags without running them |
+
+### playwright (browser automation)
+
+Browser automation server from `@playwright/mcp`. Allows MCP-compatible AI assistants to navigate pages, take screenshots, interact with UI elements, and inspect the running application directly from agentic workflows.
+
+**Setup:** No local setup — launched on demand via `npx @playwright/mcp@0.0.68`. Requires Node.js and a network connection on first use.
+
+> Additional tools beyond those listed below are available but not pre-approved in `.claude/settings.json` — Claude Code will prompt for confirmation before using them; other AI assistants may handle this differently.
+
+| Tool | Description |
+|---|---|
+| `browser_navigate` | Navigate to a URL |
+| `browser_click` | Click an element |
+| `browser_evaluate` | Execute JavaScript in the page context |
+| `browser_snapshot` | Capture an accessibility snapshot of the current page |
+| `browser_take_screenshot` | Take a screenshot |
+
+### MCP_DOCKER
+
+Docker MCP gateway. Used for interacting with Docker containers when running GitHub Actions locally via [`act`](https://github.com/nektos/act).
+
+**Setup:** Requires Docker Desktop (or Docker Engine) with the `docker mcp` plugin. No local setup — started on demand via `.mcp.json`.
+
+| Tool | Description |
+|---|---|
+| `mcp-exec` | Execute a command inside a running container |
+| `mcp-find` | Find containers by name or label |
 
 ---
 
