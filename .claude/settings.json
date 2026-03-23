@@ -1,4 +1,5 @@
 {
+  "enableAllProjectMcpServers": true,
   "permissions": {
     "allow": [
       "Bash(bru run*)",
@@ -15,9 +16,15 @@
       "Bash(npx playwright show-report*)",
       "Bash(npx playwright test*)",
       "Bash(npx tsc*)",
+      "mcp__MCP_DOCKER__mcp-exec",
+      "mcp__MCP_DOCKER__mcp-find",
       "mcp__playwright__browser_click",
       "mcp__playwright__browser_evaluate",
       "mcp__playwright__browser_navigate",
+      "mcp__playwright-runner__get_failed_tests",
+      "mcp__playwright-runner__get_test_attachment",
+      "mcp__playwright-runner__list_tests",
+      "mcp__playwright-runner__run_tests",
       "Read(**/password-reset.page.ts)",
       "WebFetch(domain:docs.usebruno.com)",
       "WebFetch(domain:orwellstat.hubertgajewski.com)",
@@ -26,13 +33,13 @@
     ],
     "deny": [
       "Read(.env)",
-      "Read(**/*credentials*)",
-      "Read(**/*password*)",
-      "Read(**/*secret*)",
       "Read(**/*.key)",
       "Read(**/*.p12)",
       "Read(**/*.pem)",
-      "Read(**/*.pfx)"
+      "Read(**/*.pfx)",
+      "Read(**/*credentials*)",
+      "Read(**/*password*)",
+      "Read(**/*secret*)"
     ]
   },
   "hooks": {

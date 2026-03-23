@@ -75,6 +75,20 @@ The following variables are set in **GitHub → Settings → Variables → Actio
 | `BRUNO` | `bruno.yml` | PR events, push to main, `workflow_dispatch` |
 | `QUALITY_METRICS` | `quality-metrics.yml` | Monday 06:00 UTC schedule, `workflow_dispatch` |
 
+## Getting started
+
+After cloning the repo and filling in `.env`, run these three setup steps:
+
+```bash
+# 1. Playwright tests
+cd playwright/typescript && npm ci && npx playwright install --with-deps && cd ../..
+
+# 2. MCP server (playwright-runner) — needed for Claude Code agentic workflows
+cd mcp/playwright-runner && npm ci && cd ../..
+```
+
+Then open Claude Code from the **repo root** so `.mcp.json` is picked up and the `playwright-runner` tools are available.
+
 ---
 
 ## playwright/typescript
