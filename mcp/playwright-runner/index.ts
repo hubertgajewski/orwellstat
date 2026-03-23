@@ -112,6 +112,7 @@ server.registerTool('run_tests', {
     cwd: PW_DIR,
     encoding: 'utf8',
     timeout: 300_000,
+    maxBuffer: 10 * 1024 * 1024,
   });
 
   if (result.error) return err(`Failed to spawn Playwright: ${result.error.message}`);
@@ -149,7 +150,7 @@ server.registerTool('get_failed_tests', {
       title: spec.title,
       file,
       failures: spec.tests
-        .filter((t) => t.results.at(-1)?.status !== 'passed')
+        .filter((t) => { const s = t.results.at(-1)?.status; return s === 'failed' || s === 'timedOut'; })
         .map((t) => ({
           project:     t.projectName,
           status:      t.results.at(-1)?.status,
@@ -178,15 +179,17 @@ server.registerTool('get_test_attachment', {
   if (!match) return err(`Test not found in last report: "${testTitle}"`);
 
   for (const test of match.spec.tests) {
-    for (const result of test.results) {
-      const attachment = result.attachments.find((a) => a.name === attachmentName);
-      if (attachment?.path && existsSync(attachment.path)) {
-        const MAX_BYTES = 1_000_000;
-        const { size } = statSync(attachment.path);
-        if (size > MAX_BYTES)
-          return err(`Attachment "${attachmentName}" is too large to return inline (${size} bytes).`);
-        return ok({ testTitle, attachmentName, content: readFileSync(attachment.path, 'utf8') });
-      }
+    const result = test.results.at(-1);
+    if (!result) continue;
+    const attachment = result.attachments.find((a) => a.name === attachmentName);
+    if (attachment?.path && existsSync(attachment.path)) {
+      if (!attachment.contentType.startsWith('text/'))
+        return err(`Attachment "${attachmentName}" is binary (${attachment.contentType}) and cannot be returned as text.`);
+      const MAX_BYTES = 1_000_000;
+      const { size } = statSync(attachment.path);
+      if (size > MAX_BYTES)
+        return err(`Attachment "${attachmentName}" is too large to return inline (${size} bytes).`);
+      return ok({ testTitle, attachmentName, content: readFileSync(attachment.path, 'utf8') });
     }
   }
   return err(`Attachment "${attachmentName}" not found for test "${testTitle}".`);
@@ -205,6 +208,7 @@ server.registerTool('list_tests', {
     cwd: PW_DIR,
     encoding: 'utf8',
     timeout: 30_000,
+    maxBuffer: 10 * 1024 * 1024,
   });
 
   if (result.error) return err(`Failed to spawn Playwright: ${result.error.message}`);
