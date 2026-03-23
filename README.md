@@ -246,10 +246,11 @@ An MCP server that runs the Playwright test suite and returns structured JSON re
 ```bash
 cd mcp/playwright-runner
 npm ci
-npm run build
 ```
 
-Restart Claude Code after building to pick up the `playwright-runner` entry from `.mcp.json`.
+`npm ci` automatically builds the server via the `prepare` script — no separate build step needed.
+
+Restart Claude Code after installing to pick up the `playwright-runner` entry from `.mcp.json`.
 
 > The path in `.mcp.json` (`mcp/playwright-runner/dist/index.js`) is relative to the working directory from which Claude Code is launched. Always open Claude Code from the **repo root**.
 
