@@ -40,6 +40,24 @@ When fixing a GitHub issue, follow the steps in `.claude/skills/fix-issue/SKILL.
 
 ---
 
+## Creating pull requests
+
+When creating a PR with `gh pr create`, always write the body to a temp file and use `--body-file`:
+
+```bash
+# Write body to temp file (via Write tool or Bash heredoc)
+cat > /tmp/pr_body.md << 'EOF'
+## Summary
+...
+EOF
+
+gh pr create --title "..." --body-file /tmp/pr_body.md
+```
+
+Never use `--body "..."` or a heredoc directly in the `gh pr create` call when the body contains backticks or code blocks — shell quoting causes backticks to render as `\`` in the GitHub description or produces an "unexpected EOF" error.
+
+---
+
 ## MCP servers
 
 This repository defines MCP (Model Context Protocol) servers in `.mcp.json` at the repo root. Any MCP-compatible AI assistant should load this file and use the declared servers when they are the most appropriate tool for a task:
