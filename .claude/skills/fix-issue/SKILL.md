@@ -21,8 +21,11 @@ If it exists, inspect its recent commits (`git log origin/<branch> --oneline -5`
 **Step 3 — Make the code change**
 Implement the fix described in the issue. Follow all conventions in `CLAUDE.md` (POM, fixtures, path aliases, security, etc.).
 
-**Step 4 — Review against the code review checklist**
-Work through every item in the **Code review checklist** section of `CLAUDE.md` and explicitly state a finding for each (pass, fail, or N/A with reason).
+**Step 4 — Security review (mandatory, do this first)**
+Run `/security-review` (built-in Claude Code command). This must be done before the code review checklist — do not skip or defer it. If the command is unavailable, manually check: injection via untrusted input, path traversal in file I/O, unhandled parse errors, hardcoded secrets, overly broad permissions. Fix any findings before continuing.
+
+**Step 4b — Code review checklist**
+Work through `.claude/skills/review/SKILL.md` in full. State a finding for each checklist item (pass, fail, or N/A with reason).
 
 **Step 5 — Run the affected test(s)**
 Run only the tests touched by the change. They must all pass before proceeding.
@@ -32,7 +35,6 @@ Run `git diff` (staged + unstaged) and treat every changed file as unfamiliar co
 
 General checks (every diff):
 - Every non-obvious change: "Would I understand why this was done just from the diff?" If no, add a code comment or adjust the implementation.
-- No credentials, tokens, or secrets in committed files.
 - No dead code, commented-out blocks, or debug artifacts left in.
 - Docs updated: if a file documented in `README.md` changed, verify `README.md` reflects the change.
 

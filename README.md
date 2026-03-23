@@ -382,18 +382,50 @@ Use [`act`](https://github.com/nektos/act) to run workflows locally before pushi
 
 ```bash
 # Run the default push trigger
-act push --container-architecture linux/amd64
+act push
 
 # Run a specific workflow
-act push -W .github/workflows/playwright-typescript.yml --container-architecture linux/amd64
-act push -W .github/workflows/bruno.yml --container-architecture linux/amd64
+act push -W .github/workflows/playwright-typescript.yml
+act push -W .github/workflows/bruno.yml
 ```
 
 On first run, `act` will ask for a Docker image size — choose **Medium** (~500MB). The Playwright workflow installs browsers via `npx playwright install --with-deps`; the Bruno workflow only needs Node and `npm ci`.
 
-> **Note (macOS Apple Silicon):** The `--container-architecture linux/amd64` flag is required on Apple Silicon (M-series) Macs to avoid compatibility issues. Linux and Windows 11 users running on x86-64 hardware can omit this flag.
+> **Credentials and platform config:** The repo root contains `.actrc` which automatically passes `--secret-file .env`, `--var-file .vars`, and `--container-architecture linux/amd64` to every `act` invocation. The architecture flag is required on Apple Silicon (M-series) Macs and is a no-op on x86-64 hardware. `ORWELLSTAT_USER` and `ORWELLSTAT_PASSWORD` from `.env` are loaded as secrets with no extra flags needed. Copy `.vars.example` to `.vars` and set variables to `true` to enable the corresponding workflow jobs and features — without this, all gated jobs are skipped.
 
-> **Credentials:** The repo root contains `.actrc` which automatically passes `--secret-file .env` and `--var-file .vars` to every `act` invocation. `ORWELLSTAT_USER` and `ORWELLSTAT_PASSWORD` from `.env` are loaded as secrets with no extra flags needed. Copy `.vars.example` to `.vars` and set variables to `true` to enable the corresponding workflow jobs and features — without this, all gated jobs are skipped.
+### workflow_dispatch
+
+To trigger a workflow that uses `workflow_dispatch` inputs (e.g. run a single browser project):
+
+```bash
+# Single browser via workflow_dispatch project input
+act workflow_dispatch -W .github/workflows/playwright-typescript.yml \
+  --input project=chromium
+
+# With explicit matrix filter (alternative — skips the setup-matrix job)
+act push -W .github/workflows/playwright-typescript.yml --matrix id:chromium
+```
+
+> **Note:** `act workflow_dispatch` bypasses the `check-approval` gate (same as real `workflow_dispatch` on GitHub). Use `--input project=chromium|firefox|webkit` to limit which browser projects run.
+
+### Credential hygiene
+
+`act` containers are ephemeral but stopped containers persist on the host filesystem until pruned. Run after sensitive sessions:
+
+```bash
+docker container prune
+```
+
+### Workflow compatibility
+
+| Workflow | `act` support | Notes |
+|---|---|---|
+| `playwright-typescript.yml` | ✅ Full | `detect-act` step skips artifact upload |
+| `bruno.yml` | ✅ Full | No artifacts; credentials injected via `--secret-file` |
+| `test-coverage.yml` | ✅ Partial | Script runs; no push-back needed |
+| `quality-metrics.yml` | ⚠️ Partial | All steps run; `git push` fails — no `GITHUB_TOKEN` in `act` containers |
+| `update-visual-baselines.yml` | ⚠️ Partial | Baselines generated locally; `git push` fails |
+| `claude-code-review.yml` | ❌ Not supported | Requires real GitHub PR context (`gh pr review` cannot target a real PR) |
 
 ### Docker RAM requirements for the Playwright matrix
 
@@ -413,7 +445,7 @@ The matrix strategy runs 5 browser projects in parallel, each in its own contain
 With the default Docker Desktop memory limit (~8 GB), running all 5 matrix jobs simultaneously causes container OOM kills. Run Chromium only:
 
 ```bash
-act push -W .github/workflows/playwright-typescript.yml --matrix id:chromium --container-architecture linux/amd64
+act push -W .github/workflows/playwright-typescript.yml --matrix id:chromium
 ```
 
 **16 GB+ Docker RAM — full matrix run**
@@ -421,7 +453,7 @@ act push -W .github/workflows/playwright-typescript.yml --matrix id:chromium --c
 With 16 GB allocated to Docker, all 5 browser containers fit in memory and can run in parallel, matching CI exactly:
 
 ```bash
-act push -W .github/workflows/playwright-typescript.yml --container-architecture linux/amd64
+act push -W .github/workflows/playwright-typescript.yml
 ```
 
 **macOS** — quit Docker Desktop first, then run (requires `jq` — `brew install jq`, which itself requires [Homebrew](https://brew.sh)):

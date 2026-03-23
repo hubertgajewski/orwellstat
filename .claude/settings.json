@@ -16,7 +16,6 @@
       "Bash(npx playwright show-report*)",
       "Bash(npx playwright test*)",
       "Bash(npx tsc*)",
-      "mcp__MCP_DOCKER__mcp-exec",
       "mcp__MCP_DOCKER__mcp-find",
       "mcp__playwright__browser_click",
       "mcp__playwright__browser_evaluate",
