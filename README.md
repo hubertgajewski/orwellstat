@@ -19,7 +19,7 @@ Three project-scoped skills are available in Claude Code (stored in `.claude/ski
 .env.example                # template: ORWELLSTAT_USER, ORWELLSTAT_PASSWORD, ENV, BASIC_AUTH_USER, BASIC_AUTH_PASSWORD, ANTHROPIC_API_KEY
 .vars                       # CI repository variables (git-ignored); see .vars.example
 .vars.example               # template: CLAUDE_REVIEW, PLAYWRIGHT_TYPESCRIPT, BRUNO, QUALITY_METRICS, CLAUDE_DIAGNOSIS
-.mcp.json                   # MCP server definitions (MCP_DOCKER, playwright) — loaded by Claude Code and other MCP-compatible AI assistants
+.mcp.json                   # MCP server definitions (MCP_DOCKER, playwright, playwright-runner) — loaded by Claude Code and other MCP-compatible AI assistants
 .github/workflows/          # CI workflows (one per sub-project)
 CLAUDE.md                   # repository-specific behavioral guidance for Claude Code
 CODEX.md                    # Codex entrypoint; delegates shared repository guidance to CLAUDE.md
@@ -29,6 +29,8 @@ SECURITY.md                 # security policy and vulnerability reporting
 quality-metrics-history.json  # historical quality metrics data points (auto-committed by workflow)
 scripts/
   generate-quality-metrics.py  # generates QUALITY_METRICS.md and updates quality-metrics-history.json
+mcp/
+  playwright-runner/        # MCP server: run Playwright tests and retrieve structured results
 playwright/
   typescript/               # Playwright tests in TypeScript
 selenium/                   # Selenium tests (planned)
@@ -232,6 +234,31 @@ Bug issues must carry one of three discovery labels (in addition to `bug`) for t
 MTTR is calculated for all `bug`-labeled issues regardless of discovery method, and also broken down per discovery label for insight into resolution speed by source.
 
 After calculating metrics, the workflow runs `scripts/generate-quality-metrics.py` to generate `QUALITY_METRICS.md` (a persistent, unified view readable directly on GitHub) and update `quality-metrics-history.json` with a new data point. Both files are committed and pushed back to the current branch automatically.
+
+---
+
+## mcp/playwright-runner
+
+An MCP server that runs the Playwright test suite and returns structured JSON results, enabling agentic workflows (self-healing, test generation verification) to act on test outcomes without parsing shell output.
+
+### Setup
+
+```bash
+cd mcp/playwright-runner
+npm ci
+npm run build
+```
+
+Restart Claude Code after building to pick up the `playwright-runner` entry from `.mcp.json`.
+
+### Tools
+
+| Tool | Description |
+|---|---|
+| `run_tests` | Run the test suite (optional `spec`, `browser`, `tag` filters); returns per-test status, duration, and error messages |
+| `get_failed_tests` | Return failed tests from the last run with error messages and attachment paths |
+| `get_test_attachment` | Read the content of a named attachment (`dom.xhtml`, `diagnosis.md`) for a specific test |
+| `list_tests` | List all tests with their spec file and tags without running them |
 
 ---
 

@@ -25,7 +25,7 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? '100%' : undefined,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-  reporter: 'html',
+  reporter: [['html'], ['json', { outputFile: 'test-results/results.json' }]],
   expect: {
     toHaveScreenshot: { maxDiffPixelRatio: 0.01 },
   },
