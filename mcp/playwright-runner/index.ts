@@ -252,6 +252,8 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
       timeout: 30_000,
     });
 
+    if (result.error) return err(`Failed to spawn Playwright: ${result.error.message}`);
+
     // Output format: "  [Chromium] › tests/navigation.spec.ts:6:1 › home page @smoke"
     const lines = (result.stdout ?? '').split('\n');
     const seen = new Set<string>();
