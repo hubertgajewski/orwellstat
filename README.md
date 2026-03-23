@@ -251,6 +251,8 @@ npm run build
 
 Restart Claude Code after building to pick up the `playwright-runner` entry from `.mcp.json`.
 
+> The path in `.mcp.json` (`mcp/playwright-runner/dist/index.js`) is relative to the working directory from which Claude Code is launched. Always open Claude Code from the **repo root**.
+
 ### Tools
 
 | Tool | Description |

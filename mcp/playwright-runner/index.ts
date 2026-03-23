@@ -5,12 +5,13 @@ import {
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 import { spawnSync } from 'child_process';
-import { existsSync, readFileSync } from 'fs';
+import { existsSync, readFileSync, statSync } from 'fs';
 import { join, resolve } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
-const PW_DIR = resolve(__dirname, '../../playwright/typescript');
+// __dirname = <repo>/mcp/playwright-runner/dist/ — three levels up to reach repo root
+const PW_DIR = resolve(__dirname, '../../../playwright/typescript');
 const RESULTS_FILE = join(PW_DIR, 'test-results', 'results.json');
 
 // ---------- types (subset of Playwright JSON reporter output) ----------
@@ -160,19 +161,22 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
       timeout: 300_000,
     });
 
+    if (result.error) return err(`Failed to spawn Playwright: ${result.error.message}`);
+
     const report = readLastReport();
-    if (!report) return err('Test run completed but results.json was not found.');
+    if (!report) return err(`Test run completed but results.json was not found.\nstderr: ${result.stderr ?? ''}`);
 
     const specs = collectSpecs(report.suites);
     const summary = specs.map(({ spec, file }) => ({
       title:   spec.title,
       file,
       ok:      spec.ok,
+      // results.at(-1) = final retry attempt — authoritative status on CI with retries: 2
       results: spec.tests.map((t) => ({
         project:  t.projectName,
-        status:   t.results[0]?.status ?? 'unknown',
-        duration: t.results[0]?.duration ?? 0,
-        error:    t.results[0]?.error?.message ?? null,
+        status:   t.results.at(-1)?.status ?? 'unknown',
+        duration: t.results.at(-1)?.duration ?? 0,
+        error:    t.results.at(-1)?.error?.message ?? null,
       })),
     }));
 
@@ -194,12 +198,12 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
         title: spec.title,
         file,
         failures: spec.tests
-          .filter((t) => t.results[0]?.status !== 'passed')
+          .filter((t) => t.results.at(-1)?.status !== 'passed')
           .map((t) => ({
             project:     t.projectName,
-            status:      t.results[0]?.status,
-            error:       t.results[0]?.error?.message ?? null,
-            attachments: t.results[0]?.attachments.map((a) => ({
+            status:      t.results.at(-1)?.status,
+            error:       t.results.at(-1)?.error?.message ?? null,
+            attachments: t.results.at(-1)?.attachments.map((a) => ({
               name: a.name,
               path: a.path,
             })),
@@ -222,6 +226,10 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
       for (const result of test.results) {
         const attachment = result.attachments.find((a) => a.name === attachmentName);
         if (attachment?.path && existsSync(attachment.path)) {
+          const MAX_BYTES = 1_000_000;
+          const { size } = statSync(attachment.path);
+          if (size > MAX_BYTES)
+            return err(`Attachment "${attachmentName}" is too large to return inline (${size} bytes).`);
           return ok({
             testTitle,
             attachmentName,
@@ -261,6 +269,9 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
         tests.push({ title, file, tags });
       }
     }
+
+    if (tests.length === 0 && lines.some((l) => l.trim().length > 0))
+      return err('list_tests parsed 0 tests from non-empty output — Playwright --list format may have changed.');
 
     return ok({ count: tests.length, tests });
   }
