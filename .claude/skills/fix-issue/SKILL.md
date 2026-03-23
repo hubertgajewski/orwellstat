@@ -8,7 +8,11 @@ Issue number: $ARGUMENTS
 Run `gh issue view $ARGUMENTS` and read every section: User Story, Context, Acceptance Criteria, Implementation Hint, and Definition of Done. State what the issue requires before touching any code.
 
 **Step 2 — Create the branch**
-Before creating the branch, check whether the target name already exists on the remote:
+First, fetch the latest remote state so the branch is created from up-to-date main:
+```bash
+git fetch origin
+```
+Then check whether the target name already exists on the remote:
 ```bash
 git ls-remote --heads origin feature/$ARGUMENTS   # or bugfix/$ARGUMENTS
 ```
