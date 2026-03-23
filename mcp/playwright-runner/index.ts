@@ -63,7 +63,11 @@ interface PwReport {
 
 function readLastReport(): PwReport | null {
   if (!existsSync(RESULTS_FILE)) return null;
-  return JSON.parse(readFileSync(RESULTS_FILE, 'utf8')) as PwReport;
+  try {
+    return JSON.parse(readFileSync(RESULTS_FILE, 'utf8')) as PwReport;
+  } catch {
+    return null;
+  }
 }
 
 /** Flatten nested suites into a list of specs with their file paths. */
