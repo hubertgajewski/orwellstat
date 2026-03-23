@@ -19,6 +19,7 @@ Three project-scoped skills are available in Claude Code (stored in `.claude/ski
 .env.example                # template: ORWELLSTAT_USER, ORWELLSTAT_PASSWORD, ENV, BASIC_AUTH_USER, BASIC_AUTH_PASSWORD, ANTHROPIC_API_KEY
 .vars                       # CI repository variables (git-ignored); see .vars.example
 .vars.example               # template: CLAUDE_REVIEW, PLAYWRIGHT_TYPESCRIPT, BRUNO, QUALITY_METRICS, CLAUDE_DIAGNOSIS
+.mcp.json                   # MCP server definitions (MCP_DOCKER, playwright) — loaded by Claude Code and other MCP-compatible AI assistants
 .github/workflows/          # CI workflows (one per sub-project)
 CLAUDE.md                   # repository-specific behavioral guidance for Claude Code
 CODEX.md                    # Codex entrypoint; delegates shared repository guidance to CLAUDE.md

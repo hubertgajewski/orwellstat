@@ -37,3 +37,16 @@ The ticket prefix must come first so `git log --oneline` and GitHub cross-refere
 ## Issue fix workflow
 
 When fixing a GitHub issue, follow the steps in `.claude/skills/fix-issue/SKILL.md`.
+
+---
+
+## MCP servers
+
+This repository defines MCP (Model Context Protocol) servers in `.mcp.json` at the repo root. Any MCP-compatible AI assistant should load this file and use the declared servers when they are the most appropriate tool for a task:
+
+| Server | Purpose |
+|---|---|
+| `MCP_DOCKER` | Docker MCP gateway — manage containers, images, and services |
+| `playwright` | Browser automation — navigate pages, take screenshots, interact with UI elements |
+
+Use the `playwright` MCP for exploratory or diagnostic tasks that benefit from live browser interaction (e.g. inspecting the running application, verifying a UI fix, taking screenshots). Prefer it over describing what the page looks like from memory.
