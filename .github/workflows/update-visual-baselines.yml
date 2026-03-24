@@ -6,11 +6,16 @@ on:
         description: 'Branch to update baselines on'
         required: false
         default: 'main'
+      runner:
+        description: 'Runner override (leave empty to use the RUNNER repo variable)'
+        required: false
+        default: ''
 
 jobs:
   update:
+    if: github.repository == 'hubertgajewski/orwellstat'
     timeout-minutes: 30
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runner || vars.RUNNER || 'ubuntu-latest' }}
     permissions:
       contents: write
     steps:

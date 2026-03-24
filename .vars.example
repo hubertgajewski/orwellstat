@@ -8,3 +8,6 @@ BRUNO=
 QUALITY_METRICS=
 # Required alongside ANTHROPIC_API_KEY in .env to enable AI-powered test failure diagnosis.
 CLAUDE_DIAGNOSIS=
+# Default runner for all workflow jobs. Set to "self-hosted" to route all jobs to the local
+# self-hosted runner when the runner input is not explicitly set. Leave empty to use ubuntu-latest.
+RUNNER=

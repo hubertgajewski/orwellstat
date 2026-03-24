@@ -30,14 +30,18 @@ on:
         description: 'Branch to run on (defaults to triggering branch)'
         required: false
         default: ''
+      runner:
+        description: 'Runner override (leave empty to use the RUNNER repo variable)'
+        required: false
+        default: ''
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   setup-matrix:
     needs: check-approval
-    if: always() && (needs.check-approval.outputs.approved == 'true' || github.event_name == 'workflow_dispatch')
-    runs-on: ubuntu-latest
+    if: github.repository == 'hubertgajewski/orwellstat' && always() && (needs.check-approval.outputs.approved == 'true' || github.event_name == 'workflow_dispatch')
+    runs-on: ${{ inputs.runner || vars.RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 2
     outputs:
       matrix: ${{ steps.compute.outputs.matrix }}
@@ -67,8 +71,8 @@ jobs:
           fi
 
   check-approval:
-    if: vars.PLAYWRIGHT_TYPESCRIPT == 'true' && github.event_name != 'workflow_dispatch'
-    runs-on: ubuntu-latest
+    if: github.repository == 'hubertgajewski/orwellstat' && vars.PLAYWRIGHT_TYPESCRIPT == 'true' && github.event_name != 'workflow_dispatch'
+    runs-on: ${{ inputs.runner || vars.RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 2
     permissions:
       pull-requests: read
@@ -96,10 +100,10 @@ jobs:
 
   test:
     needs: [setup-matrix, check-approval]
-    if: always() && (needs.check-approval.outputs.approved == 'true' || github.event_name == 'workflow_dispatch')
+    if: github.repository == 'hubertgajewski/orwellstat' && always() && (needs.check-approval.outputs.approved == 'true' || github.event_name == 'workflow_dispatch')
     name: ${{ matrix.project }}
     timeout-minutes: 15
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runner || vars.RUNNER || 'ubuntu-latest' }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.setup-matrix.outputs.matrix) }}
@@ -160,9 +164,9 @@ jobs:
 
   commit-baselines:
     needs: test
-    if: ${{ always() && github.event.inputs.update_visual_baselines == 'true' && needs.test.result != 'cancelled' }}
+    if: ${{ github.repository == 'hubertgajewski/orwellstat' && always() && github.event.inputs.update_visual_baselines == 'true' && needs.test.result != 'cancelled' }}
     timeout-minutes: 5
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runner || vars.RUNNER || 'ubuntu-latest' }}
     permissions:
       contents: write
     steps:

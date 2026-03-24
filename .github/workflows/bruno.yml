@@ -1,6 +1,11 @@
 name: Bruno Tests
 on:
   workflow_dispatch:
+    inputs:
+      runner:
+        description: 'Runner override (leave empty to use the RUNNER repo variable)'
+        required: false
+        default: ''
   push:
     branches: [main, master]
   pull_request:
@@ -10,8 +15,8 @@ on:
     types: [submitted, dismissed]
 jobs:
   check-approval:
-    if: vars.BRUNO == 'true' && github.event_name != 'workflow_dispatch'
-    runs-on: ubuntu-latest
+    if: github.repository == 'hubertgajewski/orwellstat' && vars.BRUNO == 'true' && github.event_name != 'workflow_dispatch'
+    runs-on: ${{ inputs.runner || vars.RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 2
     permissions:
       pull-requests: read
@@ -39,8 +44,8 @@ jobs:
 
   test:
     needs: check-approval
-    if: always() && (needs.check-approval.outputs.approved == 'true' || github.event_name == 'workflow_dispatch')
-    runs-on: ubuntu-latest
+    if: github.repository == 'hubertgajewski/orwellstat' && always() && (needs.check-approval.outputs.approved == 'true' || github.event_name == 'workflow_dispatch')
+    runs-on: ${{ inputs.runner || vars.RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 10
     defaults:
       run:
@@ -66,3 +71,7 @@ jobs:
 
       - name: Run Bruno tests
         run: npx bru run --env production
+
+      - name: Cleanup credentials
+        if: always()
+        run: rm -f .env
