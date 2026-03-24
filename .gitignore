@@ -14,3 +14,6 @@ playwright/typescript/index.html
 playwright/typescript/playwright-report-ci/
 playwright/typescript/trace/
 test-results/
+# GitHub Actions self-hosted runner binaries and config (if downloaded inside repo)
+_work/
+runner/

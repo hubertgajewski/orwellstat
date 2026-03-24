@@ -3,11 +3,18 @@ on:
   schedule:
     - cron: '0 6 * * 1'  # Every Monday at 6 AM UTC
   workflow_dispatch:
+    inputs:
+      runner:
+        description: 'Runner to use'
+        required: false
+        default: 'self-hosted'
+        type: choice
+        options: [ubuntu-latest, self-hosted]
 
 jobs:
   calculate:
-    if: vars.QUALITY_METRICS == 'true'
-    runs-on: ubuntu-latest
+    if: github.repository == 'hubertgajewski/orwellstat' && vars.QUALITY_METRICS == 'true'
+    runs-on: ${{ inputs.runner || 'self-hosted' }}
     timeout-minutes: 10
     concurrency:
       group: quality-metrics

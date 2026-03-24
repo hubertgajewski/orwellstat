@@ -6,11 +6,18 @@ on:
         description: 'Branch to update baselines on'
         required: false
         default: 'main'
+      runner:
+        description: 'Runner to use'
+        required: false
+        default: 'self-hosted'
+        type: choice
+        options: [ubuntu-latest, self-hosted]
 
 jobs:
   update:
+    if: github.repository == 'hubertgajewski/orwellstat'
     timeout-minutes: 30
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runner || 'self-hosted' }}
     permissions:
       contents: write
     steps:
