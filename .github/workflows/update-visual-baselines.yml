@@ -7,17 +7,15 @@ on:
         required: false
         default: 'main'
       runner:
-        description: 'Runner to use'
+        description: 'Runner override (leave empty to use the RUNNER repo variable)'
         required: false
-        default: 'self-hosted'
-        type: choice
-        options: [ubuntu-latest, self-hosted]
+        default: ''
 
 jobs:
   update:
     if: github.repository == 'hubertgajewski/orwellstat'
     timeout-minutes: 30
-    runs-on: ${{ inputs.runner || 'self-hosted' }}
+    runs-on: ${{ inputs.runner || vars.RUNNER || 'ubuntu-latest' }}
     permissions:
       contents: write
     steps:

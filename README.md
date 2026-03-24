@@ -67,7 +67,7 @@ ANTHROPIC_API_KEY=<Anthropic API key>
 
 ### CI repository variables
 
-The following variables are set in **GitHub → Settings → Variables → Actions** (not secrets, not `.env`). Locally they live in `.vars` (loaded by Playwright via dotenv and by `act` via `--var-file`). Each is an opt-in gate: set to exactly `true` to enable; when absent or any other value the feature or workflow job is skipped. Exception: `workflow_dispatch` runs always bypass the approval gate and run tests regardless of the variable value.
+The following variables are set in **GitHub → Settings → Variables → Actions** (not secrets, not `.env`). Locally they live in `.vars` (loaded by Playwright via dotenv and by `act` via `--var-file`). Most are opt-in gates: set to exactly `true` to enable; when absent or any other value the feature or workflow job is skipped. Exception: `workflow_dispatch` runs always bypass the approval gate and run tests regardless of the variable value. `RUNNER` is not a boolean gate — set it to `self-hosted` to route all non-dispatch jobs to the local runner, or leave it unset to use `ubuntu-latest`.
 
 | Variable | Purpose | When it applies |
 |---|---|---|
@@ -76,6 +76,7 @@ The following variables are set in **GitHub → Settings → Variables → Actio
 | `PLAYWRIGHT_TYPESCRIPT` | `playwright-typescript.yml` | PR events, push to main, Sunday 03:00 UTC schedule, `workflow_dispatch` |
 | `BRUNO` | `bruno.yml` | PR events, push to main, `workflow_dispatch` |
 | `QUALITY_METRICS` | `quality-metrics.yml` | Monday 06:00 UTC schedule, `workflow_dispatch` |
+| `RUNNER` | Default runner for all workflow jobs | Push, PR, schedule, `workflow_dispatch` (dispatch dropdown overrides this) |
 
 ## Getting started
 
@@ -226,7 +227,7 @@ Use `--grep` to run a subset and `--grep-invert` to exclude it (see [Running tes
 - `expect.toHaveScreenshot: { maxDiffPixelRatio: 0.01 }` — global threshold for visual regression tests
 - `snapshotPathTemplate` includes `{platform}` so macOS (`-darwin`), Linux (`-linux`), and Windows (`-win32`) each have their own baselines; macOS baselines are committed from local runs, Linux baselines are generated via the CI workflow; Windows is not officially supported for local baseline generation — use the CI workflow instead
 
-**CI:** `.github/workflows/playwright-typescript.yml` — runs on push/PR to main/master and on `pull_request_review` (submitted/dismissed) with `working-directory: playwright/typescript`; a `check-approval` pre-check job queries the GitHub API for at least one `APPROVED` review before allowing test jobs to run — push, schedule, and `workflow_dispatch` events bypass the gate automatically; uses a matrix strategy (`fail-fast: false`) to run each of the 5 browser projects (Chromium, Firefox, Webkit, Mobile Chrome, Mobile Safari) in parallel, each in its own job; each matrix job installs only the browser it needs (`chromium`, `firefox`, or `webkit`) and uploads its report as `playwright-report-<id>` (retained 30 days); npm dependencies are cached via `actions/setup-node` `cache: 'npm'` keyed on `package-lock.json`; upload is skipped when running locally with `act`. Also supports `workflow_dispatch` with four inputs: `project` (choice: `all` / `chromium` / `firefox` / `webkit`; defaults to `all` — a `setup-matrix` job computes the matrix at runtime so only matching browser entries run; selecting `chromium` also runs Mobile Chrome, `webkit` also runs Mobile Safari), `update_visual_baselines` (boolean, regenerates Linux baselines for all 5 browser projects via `--update-snapshots` — each matrix job uploads `visual-baselines-linux-<id>` and the `commit-baselines` job downloads all five with `merge-multiple: true` before committing), `ref` (branch to run on; defaults to triggering branch), and `runner` (`ubuntu-latest` | `self-hosted` — routes the `test` job to the specified runner; push/PR/schedule always use `ubuntu-latest`). To generate Linux baselines for a feature branch: Actions → "Playwright Typescript Tests" → "Run workflow" → enter the branch name in `ref`, check `update_visual_baselines`.
+**CI:** `.github/workflows/playwright-typescript.yml` — runs on push/PR to main/master and on `pull_request_review` (submitted/dismissed) with `working-directory: playwright/typescript`; a `check-approval` pre-check job queries the GitHub API for at least one `APPROVED` review before allowing test jobs to run — push, schedule, and `workflow_dispatch` events bypass the gate automatically; uses a matrix strategy (`fail-fast: false`) to run each of the 5 browser projects (Chromium, Firefox, Webkit, Mobile Chrome, Mobile Safari) in parallel, each in its own job; each matrix job installs only the browser it needs (`chromium`, `firefox`, or `webkit`) and uploads its report as `playwright-report-<id>` (retained 30 days); npm dependencies are cached via `actions/setup-node` `cache: 'npm'` keyed on `package-lock.json`; upload is skipped when running locally with `act`. Also supports `workflow_dispatch` with four inputs: `project` (choice: `all` / `chromium` / `firefox` / `webkit`; defaults to `all` — a `setup-matrix` job computes the matrix at runtime so only matching browser entries run; selecting `chromium` also runs Mobile Chrome, `webkit` also runs Mobile Safari), `update_visual_baselines` (boolean, regenerates Linux baselines for all 5 browser projects via `--update-snapshots` — each matrix job uploads `visual-baselines-linux-<id>` and the `commit-baselines` job downloads all five with `merge-multiple: true` before committing), `ref` (branch to run on; defaults to triggering branch), and `runner` (free-text override — leave empty to use the `RUNNER` repo variable; push/PR/schedule always use `vars.RUNNER` or fall back to `ubuntu-latest`). To generate Linux baselines for a feature branch: Actions → "Playwright Typescript Tests" → "Run workflow" → enter the branch name in `ref`, check `update_visual_baselines`.
 
 **Standalone baseline update:** `.github/workflows/update-visual-baselines.yml` — `workflow_dispatch`-only workflow that regenerates Linux baselines for all 5 browser projects and commits them back directly; accepts a `branch` input (defaults to `main`) and a `runner` input (`ubuntu-latest` | `self-hosted`). Use this when you want to regenerate baselines without running the full test suite.
 
@@ -407,21 +408,36 @@ The script copies the package into `~/actions-runner-1` … `~/actions-runner-8`
 
 ### Routing jobs to the self-hosted runner
 
-`playwright-typescript.yml`, `bruno.yml`, `quality-metrics.yml`, and `update-visual-baselines.yml` each have a `runner` input on `workflow_dispatch`:
+All jobs resolve their runner via `${{ inputs.runner || vars.RUNNER || 'ubuntu-latest' }}`:
 
-| Option | Routes to |
-|---|---|
-| `self-hosted` (default) | Your local Mac |
-| `ubuntu-latest` | GitHub-hosted runner — use when the self-hosted runner is unavailable |
+| Priority | Source | How to set |
+|---|---|---|
+| 1 | `inputs.runner` (dispatch override) | Select in the "Run workflow" dropdown |
+| 2 | `vars.RUNNER` (repo-wide default) | GitHub → Settings → Variables → Actions → `RUNNER=self-hosted` |
+| 3 | `ubuntu-latest` (hardcoded fallback) | Automatic when `vars.RUNNER` is unset |
 
-All triggers (push, PR, schedule, `workflow_dispatch`) default to `self-hosted`. Select `ubuntu-latest` explicitly only when the local runner is unavailable:
+To activate the self-hosted runner for all push/PR/schedule jobs, set the repository variable once:
 
 ```bash
-# Dispatch quality-metrics to local runner
-gh workflow run quality-metrics.yml --field runner=self-hosted
+gh variable set RUNNER --body self-hosted
+```
 
-# Dispatch visual baseline update to local runner
-gh workflow run update-visual-baselines.yml --field runner=self-hosted --field branch=my-feature-branch
+To switch everything back to GitHub-hosted:
+
+```bash
+gh variable set RUNNER --body ubuntu-latest
+# or delete the variable entirely:
+gh variable delete RUNNER
+```
+
+Each workflow also exposes a `runner` text input on `workflow_dispatch` to override the repo variable for a single run — leave it empty (the default) to respect `vars.RUNNER`:
+
+```bash
+# Override to github-hosted for a single run even when RUNNER=self-hosted
+gh workflow run quality-metrics.yml --field runner=ubuntu-latest
+
+# Override to self-hosted for a single run when RUNNER is unset
+gh workflow run quality-metrics.yml --field runner=self-hosted
 ```
 
 ### Security model
@@ -432,7 +448,7 @@ Three hardening measures are in place regardless of repo visibility:
 - **Repo identity guard** — every self-hosted-routable job carries `if: github.repository == 'hubertgajewski/orwellstat'`, which prevents execution if the repo is ever forked on GitHub and the fork's workflow_dispatch tries to reach this runner.
 - **Write-access-only override** — the `runner` input is on `workflow_dispatch` only; only collaborators with write access can dispatch workflows, so only they can switch to `ubuntu-latest`. Non-GitHub forks (GitLab, Bitbucket, local clones) cannot reach the runner at all — it only accepts jobs dispatched by GitHub's own infrastructure.
 
-> **Runner offline:** If the self-hosted runner is unavailable, all jobs (push, PR, schedule, dispatch) will queue indefinitely. To unblock, dispatch the affected workflow with `runner: ubuntu-latest` or bring the runner back online.
+> **Runner offline:** When `vars.RUNNER=self-hosted` and the runner is unavailable, jobs queue indefinitely. To unblock: run `gh variable set RUNNER --body ubuntu-latest` (affects all future runs) or dispatch with `--field runner=ubuntu-latest` (single run only).
 
 ---
 

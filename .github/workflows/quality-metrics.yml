@@ -5,16 +5,14 @@ on:
   workflow_dispatch:
     inputs:
       runner:
-        description: 'Runner to use'
+        description: 'Runner override (leave empty to use the RUNNER repo variable)'
         required: false
-        default: 'self-hosted'
-        type: choice
-        options: [ubuntu-latest, self-hosted]
+        default: ''
 
 jobs:
   calculate:
     if: github.repository == 'hubertgajewski/orwellstat' && vars.QUALITY_METRICS == 'true'
-    runs-on: ${{ inputs.runner || 'self-hosted' }}
+    runs-on: ${{ inputs.runner || vars.RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 10
     concurrency:
       group: quality-metrics

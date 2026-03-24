@@ -3,11 +3,9 @@ on:
   workflow_dispatch:
     inputs:
       runner:
-        description: 'Runner to use'
+        description: 'Runner override (leave empty to use the RUNNER repo variable)'
         required: false
-        default: 'self-hosted'
-        type: choice
-        options: [ubuntu-latest, self-hosted]
+        default: ''
   push:
     branches: [main, master]
   pull_request:
@@ -18,7 +16,7 @@ on:
 jobs:
   check-approval:
     if: github.repository == 'hubertgajewski/orwellstat' && vars.BRUNO == 'true' && github.event_name != 'workflow_dispatch'
-    runs-on: ${{ inputs.runner || 'self-hosted' }}
+    runs-on: ${{ inputs.runner || vars.RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 2
     permissions:
       pull-requests: read
@@ -47,7 +45,7 @@ jobs:
   test:
     needs: check-approval
     if: github.repository == 'hubertgajewski/orwellstat' && always() && (needs.check-approval.outputs.approved == 'true' || github.event_name == 'workflow_dispatch')
-    runs-on: ${{ inputs.runner || 'self-hosted' }}
+    runs-on: ${{ inputs.runner || vars.RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 10
     defaults:
       run:
