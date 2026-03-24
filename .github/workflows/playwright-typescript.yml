@@ -164,7 +164,7 @@ jobs:
 
   commit-baselines:
     needs: test
-    if: ${{ always() && github.event.inputs.update_visual_baselines == 'true' && needs.test.result != 'cancelled' }}
+    if: ${{ github.repository == 'hubertgajewski/orwellstat' && always() && github.event.inputs.update_visual_baselines == 'true' && needs.test.result != 'cancelled' }}
     timeout-minutes: 5
     runs-on: ${{ inputs.runner || vars.RUNNER || 'ubuntu-latest' }}
     permissions:
