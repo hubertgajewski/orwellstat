@@ -17,8 +17,8 @@ on:
     types: [submitted, dismissed]
 jobs:
   check-approval:
-    if: vars.BRUNO == 'true' && github.event_name != 'workflow_dispatch'
-    runs-on: self-hosted
+    if: github.repository == 'hubertgajewski/orwellstat' && vars.BRUNO == 'true' && github.event_name != 'workflow_dispatch'
+    runs-on: ${{ inputs.runner || 'self-hosted' }}
     timeout-minutes: 2
     permissions:
       pull-requests: read

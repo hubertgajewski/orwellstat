@@ -430,7 +430,9 @@ Three hardening measures are in place regardless of repo visibility:
 
 - **Ephemeral mode** — `--ephemeral` de-registers the runner after each job so no state persists between runs.
 - **Repo identity guard** — every self-hosted-routable job carries `if: github.repository == 'hubertgajewski/orwellstat'`, which prevents execution if the repo is ever forked on GitHub and the fork's workflow_dispatch tries to reach this runner.
-- **`workflow_dispatch`-only routing** — push, PR, and schedule triggers always resolve to `ubuntu-latest`; only an authenticated `workflow_dispatch` (requiring write access) can select `self-hosted`. Non-GitHub forks (GitLab, Bitbucket, local clones) cannot reach the runner at all — it only accepts jobs dispatched by GitHub's own infrastructure.
+- **Write-access-only override** — the `runner` input is on `workflow_dispatch` only; only collaborators with write access can dispatch workflows, so only they can switch to `ubuntu-latest`. Non-GitHub forks (GitLab, Bitbucket, local clones) cannot reach the runner at all — it only accepts jobs dispatched by GitHub's own infrastructure.
+
+> **Runner offline:** If the self-hosted runner is unavailable, all jobs (push, PR, schedule, dispatch) will queue indefinitely. To unblock, dispatch the affected workflow with `runner: ubuntu-latest` or bring the runner back online.
 
 ---
 

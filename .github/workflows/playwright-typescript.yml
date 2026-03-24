@@ -42,8 +42,8 @@ env:
 jobs:
   setup-matrix:
     needs: check-approval
-    if: always() && (needs.check-approval.outputs.approved == 'true' || github.event_name == 'workflow_dispatch')
-    runs-on: self-hosted
+    if: github.repository == 'hubertgajewski/orwellstat' && always() && (needs.check-approval.outputs.approved == 'true' || github.event_name == 'workflow_dispatch')
+    runs-on: ${{ inputs.runner || 'self-hosted' }}
     timeout-minutes: 2
     outputs:
       matrix: ${{ steps.compute.outputs.matrix }}
@@ -73,8 +73,8 @@ jobs:
           fi
 
   check-approval:
-    if: vars.PLAYWRIGHT_TYPESCRIPT == 'true' && github.event_name != 'workflow_dispatch'
-    runs-on: self-hosted
+    if: github.repository == 'hubertgajewski/orwellstat' && vars.PLAYWRIGHT_TYPESCRIPT == 'true' && github.event_name != 'workflow_dispatch'
+    runs-on: ${{ inputs.runner || 'self-hosted' }}
     timeout-minutes: 2
     permissions:
       pull-requests: read
@@ -168,7 +168,7 @@ jobs:
     needs: test
     if: ${{ always() && github.event.inputs.update_visual_baselines == 'true' && needs.test.result != 'cancelled' }}
     timeout-minutes: 5
-    runs-on: self-hosted
+    runs-on: ${{ inputs.runner || 'self-hosted' }}
     permissions:
       contents: write
     steps:
