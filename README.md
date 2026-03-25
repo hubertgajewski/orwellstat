@@ -250,7 +250,7 @@ After calculating metrics, the workflow runs `scripts/generate-quality-metrics.p
 
 ## MCP servers
 
-Three MCP servers are declared in `.mcp.json` and loaded automatically by any MCP-compatible AI assistant opened from the repo root. All three are external — no local setup needed beyond having Node.js installed.
+Three MCP servers are declared in `.mcp.json` and loaded automatically by any MCP-compatible AI assistant opened from the repo root. All three are loaded automatically — no local setup needed beyond having Node.js and Docker installed.
 
 | Server | Key in `.mcp.json` | Purpose |
 |---|---|---|
@@ -262,9 +262,7 @@ Three MCP servers are declared in `.mcp.json` and loaded automatically by any MC
 
 An MCP server that runs the Playwright test suite and returns structured JSON results, enabling agentic workflows (self-healing, test generation verification) to act on test outcomes without parsing shell output.
 
-**Setup:** Clone [hubertgajewski/playwright-report](https://github.com/hubertgajewski/playwright-report) to `../playwright-report` (sibling of this repo), then `npm install && npm run build`. Restart your AI assistant after building.
-
-> The path in `.mcp.json` (`../playwright-report/dist/index.js`) is relative to the working directory from which the AI assistant is launched. Always open it from the **repo root**.
+**Setup:** No setup required — runs via `npx playwright-report-mcp@latest` from the official npm registry.
 
 | Tool | Description |
 |---|---|

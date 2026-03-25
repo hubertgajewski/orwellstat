@@ -11,8 +11,8 @@
       "type": "stdio"
     },
     "playwright-runner": {
-      "command": "node",
-      "args": ["../playwright-report/dist/index.js"],
+      "command": "npx",
+      "args": ["playwright-report-mcp@latest"],
       "type": "stdio"
     }
   }
