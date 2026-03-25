@@ -19,7 +19,7 @@ Three project-scoped skills are available in Claude Code (stored in `.claude/ski
 .env.example                # template: ORWELLSTAT_USER, ORWELLSTAT_PASSWORD, ENV, BASIC_AUTH_USER, BASIC_AUTH_PASSWORD, ANTHROPIC_API_KEY
 .vars                       # CI repository variables (git-ignored); see .vars.example
 .vars.example               # template: CLAUDE_REVIEW, PLAYWRIGHT_TYPESCRIPT, BRUNO, QUALITY_METRICS, CLAUDE_DIAGNOSIS
-.mcp.json                   # MCP server definitions (MCP_DOCKER, playwright, playwright-runner) — loaded by Claude Code and other MCP-compatible AI assistants
+.mcp.json                   # MCP server definitions (MCP_DOCKER, playwright, playwright-report-mcp) — loaded by Claude Code and other MCP-compatible AI assistants
 .github/workflows/          # CI workflows (one per sub-project)
 CLAUDE.md                   # repository-specific behavioral guidance for Claude Code
 CODEX.md                    # Codex entrypoint; delegates shared repository guidance to CLAUDE.md
@@ -254,11 +254,11 @@ Three MCP servers are declared in `.mcp.json` and loaded automatically by any MC
 
 | Server | Key in `.mcp.json` | Purpose |
 |---|---|---|
-| playwright-runner | `playwright-runner` | Run Playwright tests and retrieve structured results |
+| playwright-report-mcp | `playwright-report-mcp` | Run Playwright tests and retrieve structured results |
 | playwright (browser) | `playwright` | Live browser automation — navigate, click, screenshot, snapshot |
 | Docker MCP gateway | `MCP_DOCKER` | Interact with Docker containers (used with `act` for local CI) |
 
-### playwright-runner
+### playwright-report-mcp
 
 An MCP server that runs the Playwright test suite and returns structured JSON results, enabling agentic workflows (self-healing, test generation verification) to act on test outcomes without parsing shell output.
 

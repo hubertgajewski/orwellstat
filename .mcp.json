@@ -10,7 +10,7 @@
       "args": ["@playwright/mcp@0.0.68"],
       "type": "stdio"
     },
-    "playwright-runner": {
+    "playwright-report-mcp": {
       "command": "npx",
       "args": ["playwright-report-mcp@latest"],
       "type": "stdio"
