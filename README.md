@@ -264,6 +264,26 @@ An MCP server that runs the Playwright test suite and returns structured JSON re
 
 **Setup:** No setup required — runs via `npx playwright-report-mcp@latest` from the official npm registry.
 
+**Configuration:** The server is configured via environment variables in `.mcp.json`:
+
+| Variable | Default | Description |
+|---|---|---|
+| `PW_DIR` | `process.cwd()` | Root of the Playwright project. Relative paths are resolved against the directory from which the AI assistant is launched (the repo root). |
+| `PW_RESULTS_FILE` | `<PW_DIR>/test-results/results.json` | Path to the JSON reporter output file. Override if your `playwright.config.ts` writes results elsewhere. |
+
+This repo sets `PW_DIR` to `playwright/typescript` so the server targets the correct sub-project:
+
+```json
+"playwright-report-mcp": {
+  "command": "npx",
+  "args": ["playwright-report-mcp@latest"],
+  "type": "stdio",
+  "env": {
+    "PW_DIR": "playwright/typescript"
+  }
+}
+```
+
 | Tool | Description |
 |---|---|
 | `run_tests` | Run the test suite (optional `spec`, `browser`, `tag` filters); returns per-test status, duration, and error messages |
