@@ -12,7 +12,7 @@
     },
     "playwright-runner": {
       "command": "node",
-      "args": ["mcp/playwright-runner/dist/index.js"],
+      "args": ["../playwright-report/dist/index.js"],
       "type": "stdio"
     }
   }
