@@ -64,10 +64,10 @@ This repository defines MCP (Model Context Protocol) servers in `.mcp.json` at t
 
 | Server | Purpose |
 |---|---|
-| `playwright-runner` | Run the Playwright test suite and retrieve structured results (pass/fail, errors, attachments) |
+| `playwright-report-mcp` | Run the Playwright test suite and retrieve structured results (pass/fail, errors, attachments) |
 | `playwright` | Browser automation — navigate pages, take screenshots, interact with UI elements |
 | `MCP_DOCKER` | Docker MCP gateway — interact with containers (used with `act` for local CI) |
 
-- Use `playwright-runner` when you need to run or inspect test results programmatically — e.g. during self-healing workflows, verifying a fix, or checking which tests are failing. Prefer it over invoking `npx playwright test` via shell and parsing stdout.
+- Use `playwright-report-mcp` when you need to run or inspect test results programmatically — e.g. during self-healing workflows, verifying a fix, or checking which tests are failing. Prefer it over invoking `npx playwright test` via shell and parsing stdout.
 - Use `playwright` for exploratory or diagnostic tasks that benefit from live browser interaction — e.g. inspecting the running application, verifying a UI fix, taking screenshots. Prefer it over describing what the page looks like from memory.
 - Use `MCP_DOCKER` when interacting with Docker containers started by `act` — e.g. running a command inside a container or finding a container by name.

@@ -10,9 +10,9 @@
       "args": ["@playwright/mcp@0.0.68"],
       "type": "stdio"
     },
-    "playwright-runner": {
-      "command": "node",
-      "args": ["mcp/playwright-runner/dist/index.js"],
+    "playwright-report-mcp": {
+      "command": "npx",
+      "args": ["playwright-report-mcp@latest"],
       "type": "stdio"
     }
   }

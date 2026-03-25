@@ -19,7 +19,7 @@ Three project-scoped skills are available in Claude Code (stored in `.claude/ski
 .env.example                # template: ORWELLSTAT_USER, ORWELLSTAT_PASSWORD, ENV, BASIC_AUTH_USER, BASIC_AUTH_PASSWORD, ANTHROPIC_API_KEY
 .vars                       # CI repository variables (git-ignored); see .vars.example
 .vars.example               # template: CLAUDE_REVIEW, PLAYWRIGHT_TYPESCRIPT, BRUNO, QUALITY_METRICS, CLAUDE_DIAGNOSIS
-.mcp.json                   # MCP server definitions (MCP_DOCKER, playwright, playwright-runner) — loaded by Claude Code and other MCP-compatible AI assistants
+.mcp.json                   # MCP server definitions (MCP_DOCKER, playwright, playwright-report-mcp) — loaded by Claude Code and other MCP-compatible AI assistants
 .github/workflows/          # CI workflows (one per sub-project)
 CLAUDE.md                   # repository-specific behavioral guidance for Claude Code
 CODEX.md                    # Codex entrypoint; delegates shared repository guidance to CLAUDE.md
@@ -30,9 +30,6 @@ quality-metrics-history.json  # historical quality metrics data points (auto-com
 scripts/
   generate-quality-metrics.py  # generates QUALITY_METRICS.md and updates quality-metrics-history.json
   setup-runners.sh             # registers and starts 8 self-hosted runner instances as launchd services
-mcp/
-  playwright-runner/        # MCP server: run Playwright tests and retrieve structured results
-                            # (MCP_DOCKER and playwright servers are external — defined in .mcp.json, no local files)
 playwright/
   typescript/               # Playwright tests in TypeScript
 selenium/                   # Selenium tests (planned)
@@ -80,14 +77,11 @@ The following variables are set in **GitHub → Settings → Variables → Actio
 
 ## Getting started
 
-After cloning the repo and filling in `.env`, run these three setup steps:
+After cloning the repo and filling in `.env`, run the setup step:
 
 ```bash
-# 1. Playwright tests
+# Playwright tests
 cd playwright/typescript && npm ci && npx playwright install --with-deps && cd ../..
-
-# 2. MCP server (playwright-runner) — needed for agentic workflows
-cd mcp/playwright-runner && npm ci && cd ../..
 ```
 
 Then open your AI assistant from the **repo root** so `.mcp.json` is picked up and all MCP server tools are available.
@@ -256,21 +250,19 @@ After calculating metrics, the workflow runs `scripts/generate-quality-metrics.p
 
 ## MCP servers
 
-Three MCP servers are declared in `.mcp.json` and loaded automatically by any MCP-compatible AI assistant opened from the repo root. `mcp/playwright-runner` requires a one-time `npm ci` (see Getting started); the other two are external and need no local setup.
+Three MCP servers are declared in `.mcp.json` and loaded automatically by any MCP-compatible AI assistant opened from the repo root. All three are loaded automatically — no local setup needed beyond having Node.js and Docker installed.
 
 | Server | Key in `.mcp.json` | Purpose |
 |---|---|---|
-| playwright-runner | `playwright-runner` | Run Playwright tests and retrieve structured results |
+| playwright-report-mcp | `playwright-report-mcp` | Run Playwright tests and retrieve structured results |
 | playwright (browser) | `playwright` | Live browser automation — navigate, click, screenshot, snapshot |
 | Docker MCP gateway | `MCP_DOCKER` | Interact with Docker containers (used with `act` for local CI) |
 
-### playwright-runner
+### playwright-report-mcp
 
 An MCP server that runs the Playwright test suite and returns structured JSON results, enabling agentic workflows (self-healing, test generation verification) to act on test outcomes without parsing shell output.
 
-**Setup:** `cd mcp/playwright-runner && npm ci` — `npm ci` automatically builds the server via the `prepare` script; no separate build step needed. Restart your AI assistant after installing.
-
-> The path in `.mcp.json` (`mcp/playwright-runner/dist/index.js`) is relative to the working directory from which the AI assistant is launched. Always open it from the **repo root**.
+**Setup:** No setup required — runs via `npx playwright-report-mcp@latest` from the official npm registry.
 
 | Tool | Description |
 |---|---|
