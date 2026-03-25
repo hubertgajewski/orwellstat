@@ -264,7 +264,7 @@ An MCP server that runs the Playwright test suite and returns structured JSON re
 
 **Setup:** No setup required — runs via `npx playwright-report-mcp@latest` from the official npm registry.
 
-**Configuration:** The server is configured via environment variables in `.mcp.json`:
+**Configuration:** The following environment variables can be set in `.mcp.json` (unset variables use their defaults):
 
 | Variable | Default | Description |
 |---|---|---|
