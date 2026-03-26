@@ -25,7 +25,13 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? '100%' : undefined,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-  reporter: [['html'], ['json', { outputFile: 'test-results/results.json' }]],
+  reporter: [
+    ['html'],
+    ['json', { outputFile: 'test-results/results.json' }],
+    ['blob'],
+    // Emit GitHub check annotations on CI so failing tests surface inline in the PR Checks tab
+    ...(process.env.CI ? ([['github']] as ['github'][]) : []),
+  ],
   expect: {
     toHaveScreenshot: { maxDiffPixelRatio: 0.01 },
   },
