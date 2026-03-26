@@ -6,11 +6,11 @@ Multi-language, multi-framework end-to-end test suite for [Orwell Stat](https://
 
 Three project-scoped skills are available in Claude Code (stored in `.claude/skills/`) and appear in the VSCode extension `/` menu:
 
-| Skill | Usage | What it does |
-| --- | --- | --- |
-| `/fix-issue` | `/fix-issue <number>` | Fixes a GitHub issue end-to-end: fetch, implement, test, review, commit, and open a PR |
-| `/create-issue` | `/create-issue <description>` | Scaffolds a GitHub issue in the documented format (User Story / Context / AC / Implementation Hint / DoD / milestone) and creates it via `gh issue create` |
-| `/review` | `/review` | Works through every item on the code review checklist from `.claude/skills/review/SKILL.md`, applies general diff checks and CI workflow checks, and explicitly states a finding (pass / fail / N/A) for each item |
+| Skill           | Usage                         | What it does                                                                                                                                                                                                       |
+| --------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `/fix-issue`    | `/fix-issue <number>`         | Fixes a GitHub issue end-to-end: fetch, implement, test, review, commit, and open a PR                                                                                                                             |
+| `/create-issue` | `/create-issue <description>` | Scaffolds a GitHub issue in the documented format (User Story / Context / AC / Implementation Hint / DoD / milestone) and creates it via `gh issue create`                                                         |
+| `/review`       | `/review`                     | Works through every item on the code review checklist from `.claude/skills/review/SKILL.md`, applies general diff checks and CI workflow checks, and explicitly states a finding (pass / fail / N/A) for each item |
 
 ## Repository structure
 
@@ -38,11 +38,11 @@ bruno/                      # Bruno API request collection
 
 ## Prerequisites
 
-| Tool                                                              | Required for                   | Install                                                                                                          |
-| ----------------------------------------------------------------- | ------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
-| [Node.js](https://nodejs.org/) v18+                               | Playwright tests               | [nodejs.org](https://nodejs.org/)                                                                                |
-| [Bruno](https://www.usebruno.com/)                                | API request collection         | Standalone app or [VSCode extension](https://marketplace.visualstudio.com/items?itemName=bruno-api-client.bruno) |
-| [Docker Desktop](https://www.docker.com/products/docker-desktop/) | Running GitHub Actions locally | [docker.com](https://www.docker.com/products/docker-desktop/)                                                    |
+| Tool                                                              | Required for                   | Install                                                                                                                                           |
+| ----------------------------------------------------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Node.js](https://nodejs.org/) v18+                               | Playwright tests               | [nodejs.org](https://nodejs.org/)                                                                                                                 |
+| [Bruno](https://www.usebruno.com/)                                | API request collection         | Standalone app or [VSCode extension](https://marketplace.visualstudio.com/items?itemName=bruno-api-client.bruno)                                  |
+| [Docker Desktop](https://www.docker.com/products/docker-desktop/) | Running GitHub Actions locally | [docker.com](https://www.docker.com/products/docker-desktop/)                                                                                     |
 | [act](https://github.com/nektos/act)                              | Running GitHub Actions locally | macOS: `brew install act` (requires [Homebrew](https://brew.sh)); Linux/Windows 11: [nektos/act releases](https://github.com/nektos/act/releases) |
 
 Node.js includes `npm` — no separate installation needed. Docker and `act` are optional — only needed for local CI testing.
@@ -66,14 +66,14 @@ ANTHROPIC_API_KEY=<Anthropic API key>
 
 The following variables are set in **GitHub → Settings → Variables → Actions** (not secrets, not `.env`). Locally they live in `.vars` (loaded by Playwright via dotenv and by `act` via `--var-file`). Most are opt-in gates: set to exactly `true` to enable; when absent or any other value the feature or workflow job is skipped. Exception: `workflow_dispatch` runs always bypass the approval gate and run tests regardless of the variable value. `RUNNER` is not a boolean gate — set it to `self-hosted` to route all non-dispatch jobs to the local runner, or leave it unset to use `ubuntu-latest`.
 
-| Variable | Purpose | When it applies |
-|---|---|---|
-| `CLAUDE_DIAGNOSIS` | AI-powered test failure diagnosis attachment | Every Playwright run (local and CI) |
-| `CLAUDE_REVIEW` | `claude-code-review.yml` | PR events (opened, synchronize, ready_for_review, reopened) |
-| `PLAYWRIGHT_TYPESCRIPT` | `playwright-typescript.yml` | PR events, push to main, Sunday 03:00 UTC schedule, `workflow_dispatch` |
-| `BRUNO` | `bruno.yml` | PR events, push to main, `workflow_dispatch` |
-| `QUALITY_METRICS` | `quality-metrics.yml` | Monday 06:00 UTC schedule, `workflow_dispatch` |
-| `RUNNER` | Default runner for all workflow jobs | Push, PR, schedule, `workflow_dispatch` (dispatch dropdown overrides this) |
+| Variable                | Purpose                                      | When it applies                                                            |
+| ----------------------- | -------------------------------------------- | -------------------------------------------------------------------------- |
+| `CLAUDE_DIAGNOSIS`      | AI-powered test failure diagnosis attachment | Every Playwright run (local and CI)                                        |
+| `CLAUDE_REVIEW`         | `claude-code-review.yml`                     | PR events (opened, synchronize, ready_for_review, reopened)                |
+| `PLAYWRIGHT_TYPESCRIPT` | `playwright-typescript.yml`                  | PR events, push to main, Sunday 03:00 UTC schedule, `workflow_dispatch`    |
+| `BRUNO`                 | `bruno.yml`                                  | PR events, push to main, `workflow_dispatch`                               |
+| `QUALITY_METRICS`       | `quality-metrics.yml`                        | Monday 06:00 UTC schedule, `workflow_dispatch`                             |
+| `RUNNER`                | Default runner for all workflow jobs         | Push, PR, schedule, `workflow_dispatch` (dispatch dropdown overrides this) |
 
 ## Getting started
 
@@ -85,6 +85,123 @@ cd playwright/typescript && npm ci && npx playwright install --with-deps && cd .
 ```
 
 Then open your AI assistant from the **repo root** so `.mcp.json` is picked up and all MCP server tools are available.
+
+## Adapting to your own environment
+
+This repository is specific to Orwell Stat out of the box, but it can be adapted with moderate effort to a simple or moderately complex web application with similar page-driven flows. It is not intended as a drop-in framework for large, highly dynamic, or deeply domain-specific products.
+
+### What you will need to change first
+
+1. Base URLs
+
+Update the target environments in [playwright.config.ts](./playwright/typescript/playwright.config.ts) and the Bruno environment files:
+
+- [playwright.config.ts](./playwright/typescript/playwright.config.ts) — replace the `BASE_URLS` values
+- [production.bru](./bruno/environments/production.bru) — replace `baseUrl`
+- [staging.bru](./bruno/environments/staging.bru) — replace `baseUrl`
+
+2. Authentication flow
+
+If your app logs in differently, update:
+
+- [auth.setup.ts](./playwright/typescript/auth.setup.ts) — UI login flow and post-login assertion
+- [api.fixture.ts](./playwright/typescript/fixtures/api.fixture.ts) — API login request used by authenticated HTTP tests
+- [.env.example](./.env.example) — rename or replace credential variables if your app uses different secrets
+
+If your app does not require authentication, you can remove the authenticated fixtures, the setup project, and any tests that depend on `storageState`.
+
+3. Page objects and routes
+
+The fastest migration path is to keep the current Page Object Model structure and replace Orwell Stat pages one by one:
+
+- [public index](./playwright/typescript/pages/public/index.ts) — defines the public page list used by data-driven tests
+- [authenticated index](./playwright/typescript/pages/authenticated/index.ts) — defines the authenticated page list
+- files under [playwright/typescript/pages/public](./playwright/typescript/pages/public)
+- files under [playwright/typescript/pages/authenticated](./playwright/typescript/pages/authenticated)
+
+For each page class, update:
+
+- `url`
+- `title`
+- `heading`
+- page-specific locators and text constants
+
+4. Assertions tied to Orwell Stat content
+
+Most adaptation work is in the spec files, because many assertions check Orwell Stat-specific headings, links, tables, and chart behavior:
+
+- [tests/home.spec.ts](./playwright/typescript/tests/home.spec.ts)
+- [tests/about-system.spec.ts](./playwright/typescript/tests/about-system.spec.ts)
+- [tests/contact.spec.ts](./playwright/typescript/tests/contact.spec.ts)
+- [tests/statistics.spec.ts](./playwright/typescript/tests/statistics.spec.ts)
+- [tests/visual.spec.ts](./playwright/typescript/tests/visual.spec.ts)
+- [tests/validation.spec.ts](./playwright/typescript/tests/validation.spec.ts)
+
+The lowest-friction way to migrate is:
+
+1. Make `api.spec.ts` and `navigation.spec.ts` pass first.
+2. Update page objects until the smoke suite is green.
+3. Port deeper regression tests page by page.
+4. Regenerate visual baselines only after layout and selectors are stable.
+
+5. Coverage matrix
+
+Update [coverage-matrix.json](./playwright/typescript/coverage-matrix.json) so it reflects your pages and forms; otherwise the coverage workflow will report misleading results.
+
+### Features you may want to disable during migration
+
+These are useful for Orwell Stat, but optional for a fork:
+
+- AI diagnosis in [diagnosis.util.ts](./playwright/typescript/utils/diagnosis.util.ts) if you do not want failed DOM snapshots sent to Anthropic
+- visual regression snapshots in [tests/visual.spec.ts](./playwright/typescript/tests/visual.spec.ts) until your UI is stable
+- W3C validation checks in [tests/validation.spec.ts](./playwright/typescript/tests/validation.spec.ts) if your app is not XHTML/CSS-validator oriented
+- self-hosted runner automation in [setup-runners.sh](./scripts/setup-runners.sh) if you do not need push-back workflows
+- quality metrics and issue-label reporting if your repo does not use the same bug taxonomy
+
+### Workflow adjustments usually needed in a fork
+
+If you adapt this repository to another project, review the GitHub Actions files before relying on them unchanged.
+
+The most common adjustments are:
+
+- repository identity guards in files under [.github/workflows](./.github/workflows), such as `github.repository == 'hubertgajewski/orwellstat'`
+- secret names and repository variables if your environment does not use `ORWELLSTAT_*`, `BASIC_AUTH_*`, `PLAYWRIGHT_TYPESCRIPT`, `BRUNO`, or `QUALITY_METRICS`
+- push-back workflows that commit generated files or visual baselines back to the repository
+- self-hosted runner configuration in [setup-runners.sh](./scripts/setup-runners.sh), which is currently hardcoded to this GitHub repository
+- optional Anthropic-based integrations such as AI diagnosis and PR review if you do not want external AI services in your pipeline
+
+Review these files first:
+
+- [playwright-typescript.yml](./.github/workflows/playwright-typescript.yml)
+- [bruno.yml](./.github/workflows/bruno.yml)
+- [quality-metrics.yml](./.github/workflows/quality-metrics.yml)
+- [update-visual-baselines.yml](./.github/workflows/update-visual-baselines.yml)
+- [claude-code-review.yml](./.github/workflows/claude-code-review.yml)
+- [setup-runners.sh](./scripts/setup-runners.sh)
+
+### Recommended migration order
+
+1. Replace base URLs and credentials.
+2. Make the login flow work in `auth.setup.ts`.
+3. Replace page classes and page lists.
+4. Get smoke tests passing.
+5. Port API, accessibility, and regression assertions.
+6. Update `coverage-matrix.json`.
+7. Adjust GitHub Actions secrets, variables, repository guards, and optional workflows.
+8. Re-record visual baselines.
+
+### Reusable parts of this repo
+
+The most reusable pieces are:
+
+- Playwright project structure and POM conventions
+- failure attachments and debugging fixtures
+- data-driven page loops from `PUBLIC_PAGE_CLASSES` / `AUTHENTICATED_PAGE_CLASSES`
+- accessibility checks with Axe
+- CI workflow structure for browser matrix runs
+- Bruno collection layout for simple authenticated API checks
+
+The least reusable parts are the exact selectors, copy, URLs, visual baselines, and assumptions about a relatively straightforward page structure.
 
 ---
 
@@ -157,9 +274,9 @@ npm run format:check
 
 Tests are tagged `@smoke` or `@regression` using Playwright's test options syntax (`{ tag: '@smoke' }`).
 
-| Tag           | Purpose                                                                              | Files                                                                                                                                            |
-| ------------- | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `@smoke`      | Quick health check: HTTP status, page titles, heading visibility                     | `api.spec.ts`, `navigation.spec.ts`                                                                                                              |
+| Tag           | Purpose                                                                              | Files                                                                                                                                                                       |
+| ------------- | ------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@smoke`      | Quick health check: HTTP status, page titles, heading visibility                     | `api.spec.ts`, `navigation.spec.ts`                                                                                                                                         |
 | `@regression` | Deep checks: table content, SVG analysis, external link hrefs, accessibility, visual | `home.spec.ts`, `about-system.spec.ts`, `contact.spec.ts`, `statistics.spec.ts`, `accessibility.spec.ts`, `validation.spec.ts`, `visual.spec.ts`, `network-mocking.spec.ts` |
 
 Use `--grep` to run a subset and `--grep-invert` to exclude it (see [Running tests](#running-tests)).
@@ -236,11 +353,11 @@ Use `--grep` to run a subset and `--grep-invert` to exclude it (see [Running tes
 
 Bug issues must carry one of three discovery labels (in addition to `bug`) for the escape rate formula to work:
 
-| Label | Meaning | Color |
-|---|---|---|
-| `found-by-test` | Caught by automated Playwright (or other) tests | green |
-| `found-by-manual-testing` | Discovered manually during staging testing | yellow |
-| `found-in-production` | Reported by actual users on production | red |
+| Label                     | Meaning                                         | Color  |
+| ------------------------- | ----------------------------------------------- | ------ |
+| `found-by-test`           | Caught by automated Playwright (or other) tests | green  |
+| `found-by-manual-testing` | Discovered manually during staging testing      | yellow |
+| `found-in-production`     | Reported by actual users on production          | red    |
 
 MTTR is calculated for all `bug`-labeled issues regardless of discovery method, and also broken down per discovery label for insight into resolution speed by source.
 
@@ -252,11 +369,11 @@ After calculating metrics, the workflow runs `scripts/generate-quality-metrics.p
 
 Three MCP servers are declared in `.mcp.json` and loaded automatically by any MCP-compatible AI assistant opened from the repo root. All three are loaded automatically — no local setup needed beyond having Node.js and Docker installed.
 
-| Server | Key in `.mcp.json` | Purpose |
-|---|---|---|
-| playwright-report-mcp | `playwright-report-mcp` | Run Playwright tests and retrieve structured results |
-| playwright (browser) | `playwright` | Live browser automation — navigate, click, screenshot, snapshot |
-| Docker MCP gateway | `MCP_DOCKER` | Interact with Docker containers (used with `act` for local CI) |
+| Server                | Key in `.mcp.json`      | Purpose                                                         |
+| --------------------- | ----------------------- | --------------------------------------------------------------- |
+| playwright-report-mcp | `playwright-report-mcp` | Run Playwright tests and retrieve structured results            |
+| playwright (browser)  | `playwright`            | Live browser automation — navigate, click, screenshot, snapshot |
+| Docker MCP gateway    | `MCP_DOCKER`            | Interact with Docker containers (used with `act` for local CI)  |
 
 ### playwright-report-mcp
 
@@ -266,10 +383,10 @@ An MCP server that runs the Playwright test suite and returns structured JSON re
 
 **Configuration:** The following environment variables can be set in `.mcp.json` (unset variables use their defaults):
 
-| Variable | Default | Description |
-|---|---|---|
-| `PW_DIR` | `process.cwd()` | Root of the Playwright project. Relative paths are resolved against the directory from which the AI assistant is launched (the repo root). |
-| `PW_RESULTS_FILE` | `<PW_DIR>/test-results/results.json` | Path to the JSON reporter output file. Override if your `playwright.config.ts` writes results elsewhere. |
+| Variable          | Default                              | Description                                                                                                                                |
+| ----------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `PW_DIR`          | `process.cwd()`                      | Root of the Playwright project. Relative paths are resolved against the directory from which the AI assistant is launched (the repo root). |
+| `PW_RESULTS_FILE` | `<PW_DIR>/test-results/results.json` | Path to the JSON reporter output file. Override if your `playwright.config.ts` writes results elsewhere.                                   |
 
 This repo sets `PW_DIR` to `playwright/typescript` so the server targets the correct sub-project:
 
@@ -284,12 +401,12 @@ This repo sets `PW_DIR` to `playwright/typescript` so the server targets the cor
 }
 ```
 
-| Tool | Description |
-|---|---|
-| `run_tests` | Run the test suite (optional `spec`, `browser`, `tag` filters); returns per-test status, duration, and error messages |
-| `get_failed_tests` | Return failed tests from the last run with error messages and attachment paths |
-| `get_test_attachment` | Read the content of a named attachment (`dom.xhtml`, `diagnosis.md`) for a specific test |
-| `list_tests` | List all tests with their spec file and tags without running them |
+| Tool                  | Description                                                                                                           |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `run_tests`           | Run the test suite (optional `spec`, `browser`, `tag` filters); returns per-test status, duration, and error messages |
+| `get_failed_tests`    | Return failed tests from the last run with error messages and attachment paths                                        |
+| `get_test_attachment` | Read the content of a named attachment (`dom.xhtml`, `diagnosis.md`) for a specific test                              |
+| `list_tests`          | List all tests with their spec file and tags without running them                                                     |
 
 ### playwright (browser automation)
 
@@ -299,13 +416,13 @@ Browser automation server from `@playwright/mcp`. Allows MCP-compatible AI assis
 
 > Additional tools beyond those listed below are available but not pre-approved in `.claude/settings.json` — Claude Code will prompt for confirmation before using them; other AI assistants may handle this differently.
 
-| Tool | Description |
-|---|---|
-| `browser_navigate` | Navigate to a URL |
-| `browser_click` | Click an element |
-| `browser_evaluate` | Execute JavaScript in the page context |
-| `browser_snapshot` | Capture an accessibility snapshot of the current page |
-| `browser_take_screenshot` | Take a screenshot |
+| Tool                      | Description                                           |
+| ------------------------- | ----------------------------------------------------- |
+| `browser_navigate`        | Navigate to a URL                                     |
+| `browser_click`           | Click an element                                      |
+| `browser_evaluate`        | Execute JavaScript in the page context                |
+| `browser_snapshot`        | Capture an accessibility snapshot of the current page |
+| `browser_take_screenshot` | Take a screenshot                                     |
 
 ### MCP_DOCKER
 
@@ -313,10 +430,10 @@ Docker MCP gateway. Used for interacting with Docker containers when running Git
 
 **Setup:** Requires Docker Desktop (or Docker Engine) with the `docker mcp` plugin. No local setup — started on demand via `.mcp.json`.
 
-| Tool | Description |
-|---|---|
+| Tool       | Description                                  |
+| ---------- | -------------------------------------------- |
 | `mcp-exec` | Execute a command inside a running container |
-| `mcp-find` | Find containers by name or label |
+| `mcp-find` | Find containers by name or label             |
 
 ---
 
@@ -338,6 +455,8 @@ BASIC_AUTH_PASSWORD=<staging basic auth password>
 ```
 
 > `bruno/.env` must be at the collection root — Bruno CLI reads secrets from there, not from `environments/`.
+
+To adapt Bruno to another application, replace the `baseUrl` values in [production.bru](./bruno/environments/production.bru) and [staging.bru](./bruno/environments/staging.bru), then update the requests in [login-valid.bru](./bruno/login-valid.bru) and [login-invalid.bru](./bruno/login-invalid.bru) to match your login endpoint, request body, and expected status codes.
 
 ### Environments
 
@@ -422,11 +541,11 @@ The script copies the package into `~/actions-runner-1` … `~/actions-runner-8`
 
 All jobs resolve their runner via `${{ inputs.runner || vars.RUNNER || 'ubuntu-latest' }}`:
 
-| Priority | Source | How to set |
-|---|---|---|
-| 1 | `inputs.runner` (dispatch override) | Select in the "Run workflow" dropdown |
-| 2 | `vars.RUNNER` (repo-wide default) | GitHub → Settings → Variables → Actions → `RUNNER=self-hosted` |
-| 3 | `ubuntu-latest` (hardcoded fallback) | Automatic when `vars.RUNNER` is unset |
+| Priority | Source                               | How to set                                                     |
+| -------- | ------------------------------------ | -------------------------------------------------------------- |
+| 1        | `inputs.runner` (dispatch override)  | Select in the "Run workflow" dropdown                          |
+| 2        | `vars.RUNNER` (repo-wide default)    | GitHub → Settings → Variables → Actions → `RUNNER=self-hosted` |
+| 3        | `ubuntu-latest` (hardcoded fallback) | Automatic when `vars.RUNNER` is unset                          |
 
 To activate the self-hosted runner for all push/PR/schedule jobs, set the repository variable once:
 
@@ -520,27 +639,27 @@ docker container prune
 
 ### Workflow compatibility
 
-| Workflow | `act` support | Notes |
-|---|---|---|
-| `playwright-typescript.yml` | ✅ Full | `detect-act` step skips artifact upload |
-| `bruno.yml` | ✅ Full | No artifacts; credentials injected via `--secret-file` |
-| `test-coverage.yml` | ✅ Partial | Script runs; no push-back needed |
-| `quality-metrics.yml` | ⚠️ Partial | All steps run; `git push` fails — no `GITHUB_TOKEN` in `act` containers |
-| `update-visual-baselines.yml` | ⚠️ Partial | Baselines generated locally; `git push` fails |
-| `claude-code-review.yml` | ❌ Not supported | Requires real GitHub PR context (`gh pr review` cannot target a real PR) |
+| Workflow                      | `act` support    | Notes                                                                    |
+| ----------------------------- | ---------------- | ------------------------------------------------------------------------ |
+| `playwright-typescript.yml`   | ✅ Full          | `detect-act` step skips artifact upload                                  |
+| `bruno.yml`                   | ✅ Full          | No artifacts; credentials injected via `--secret-file`                   |
+| `test-coverage.yml`           | ✅ Partial       | Script runs; no push-back needed                                         |
+| `quality-metrics.yml`         | ⚠️ Partial       | All steps run; `git push` fails — no `GITHUB_TOKEN` in `act` containers  |
+| `update-visual-baselines.yml` | ⚠️ Partial       | Baselines generated locally; `git push` fails                            |
+| `claude-code-review.yml`      | ❌ Not supported | Requires real GitHub PR context (`gh pr review` cannot target a real PR) |
 
 ### Docker RAM requirements for the Playwright matrix
 
 The matrix strategy runs 5 browser projects in parallel, each in its own container. Every container installs Chromium (required by the auth setup project) plus its own browser:
 
-| Job | Browsers installed | RAM |
-|---|---|---|
-| Chromium | chromium | ~1.0 GB |
-| Mobile Chrome | chromium | ~1.0 GB |
-| Firefox | chromium + firefox | ~1.4 GB |
-| WebKit | chromium + webkit | ~1.2 GB |
-| Mobile Safari | chromium + webkit | ~1.2 GB |
-| **Total** | | **~5.8 GB active + ~2 GB Docker overhead** |
+| Job           | Browsers installed | RAM                                        |
+| ------------- | ------------------ | ------------------------------------------ |
+| Chromium      | chromium           | ~1.0 GB                                    |
+| Mobile Chrome | chromium           | ~1.0 GB                                    |
+| Firefox       | chromium + firefox | ~1.4 GB                                    |
+| WebKit        | chromium + webkit  | ~1.2 GB                                    |
+| Mobile Safari | chromium + webkit  | ~1.2 GB                                    |
+| **Total**     |                    | **~5.8 GB active + ~2 GB Docker overhead** |
 
 **8 GB Docker RAM (default) — run a single browser only**
 
