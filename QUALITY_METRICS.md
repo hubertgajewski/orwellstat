@@ -1,15 +1,15 @@
 # Quality Metrics
 
-> Last updated: 2026-03-19
+> Last updated: 2026-03-23
 
 ## Defect Escape Rate
 
 | Discovery method | Count |
 |-----------------|-------|
-| Found by automated tests | 3 |
+| Found by automated tests | 4 |
 | Found by manual testing (staging) | 1 |
 | Found in production | 0 |
-| **Total bugs** | **4** |
+| **Total bugs** | **5** |
 | **Escape rate** | **0%** |
 
 > All bugs were caught before production (escape rate: 0%).
@@ -18,8 +18,8 @@
 
 | Scope | MTTR |
 |-------|------|
-| All closed bugs | 1.8 days |
-| Found by automated tests | 2.9 days |
+| All closed bugs | 1.5 days |
+| Found by automated tests | 2.2 days |
 | Found by manual testing (staging) | 2.2 hours |
 | Found in production | N/A |
 
@@ -47,12 +47,13 @@
 | adminSettings | :x: |
 | hitsFilter | :x: |
 | login | :x: |
-| styleSelector | :x: |
+| styleSelector | :white_check_mark: |
 
-**Overall coverage: 62%** (40/64 items covered)
+**Overall coverage: 64%** (41/64 items covered)
 
 ## Trends
 
 | Date | Escape Rate | MTTR | Coverage |
 |------|-------------|------|----------|
 | 2026-03-19 | 0% | 1.8 days | 62% |
+| 2026-03-23 | 0% | 1.5 days | 64% |
