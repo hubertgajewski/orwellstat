@@ -161,6 +161,12 @@ jobs:
           name: playwright-report-${{ matrix.id }}
           path: playwright/typescript/playwright-report/
           retention-days: 30
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() && steps.detect-act.outputs.running != 'true' }}
+        with:
+          name: blob-report-${{ matrix.id }}
+          path: playwright/typescript/blob-report/
+          retention-days: 30
 
   commit-baselines:
     needs: test

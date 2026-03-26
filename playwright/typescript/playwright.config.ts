@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 import dotenv from 'dotenv';
 
-dotenv.config({ path: new URL('../../.env', import.meta.url).pathname });
+dotenv.config({ path: new URL('../../.env', import.meta.url).pathname, quiet: true });
 
 const BASE_URLS: Record<string, string> = {
   production: 'https://orwellstat.hubertgajewski.com',
@@ -25,7 +25,13 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? '100%' : undefined,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-  reporter: [['html'], ['json', { outputFile: 'test-results/results.json' }]],
+  reporter: [
+    ['html'],
+    ['json', { outputFile: 'test-results/results.json' }],
+    ['blob'],
+    // Emit GitHub check annotations on CI so failing tests surface inline in the PR Checks tab
+    ...(process.env.CI ? ([['github'], ['list']] as (['github'] | ['list'])[]) : []),
+  ],
   expect: {
     toHaveScreenshot: { maxDiffPixelRatio: 0.01 },
   },
