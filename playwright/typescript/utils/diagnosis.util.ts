@@ -8,7 +8,7 @@ const SELECTOR_ERROR_PATTERN =
   /strict mode violation|waiting for locator|waiting for getBy|locator\.\w+:.*timeout/i;
 
 const SELECTOR_EXTRACT_PATTERN =
-  /((?:locator|getByRole|getByText|getByLabel|getByTestId|getByPlaceholder|getByAltText|getByTitle)\([^)]*(?:\)[^)]*)*\))/;
+  /((?:locator|getByRole|getByText|getByLabel|getByTestId|getByPlaceholder|getByAltText|getByTitle)\([^)\n]*(?:\)[^)\n]*)*\))/;
 
 interface SelectorFixResponse {
   confidence: 'high' | 'medium' | 'low';
@@ -179,7 +179,8 @@ export async function attachAiDiagnosis(
     const errorMessages = testInfo.errors
       .map((e) => e.message ?? '')
       .filter(Boolean)
-      .join('\n');
+      .join('\n')
+      .replace(/\x1b\[[0-9;]*m/g, '');
 
     const [diagnosisText, selectorNote] = await Promise.all([
       requestHaikuDiagnosis(anthropic, testInfo, logs, errorMessages, domSnippet),
