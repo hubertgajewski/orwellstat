@@ -1,7 +1,7 @@
 name: Quality Metrics Dashboard
 on:
   schedule:
-    - cron: '0 6 * * 1'  # Every Monday at 6 AM UTC
+    - cron: '0 6 1 * *'  # 1st of every month at 6 AM UTC
   workflow_dispatch:
     inputs:
       runner:
@@ -20,6 +20,7 @@ jobs:
     permissions:
       issues: read
       contents: write
+      pull-requests: write
 
     steps:
       - uses: actions/checkout@v6
@@ -33,10 +34,20 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: python3 scripts/generate-quality-metrics.py
 
-      - name: Commit and push metrics
+      - name: Open metrics pull request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add QUALITY_METRICS.md quality-metrics-history.json
-          git diff --staged --quiet || git commit -m "Update quality metrics report"
-          git push origin HEAD
+          if git diff --staged --quiet; then
+            echo "No changes to report"
+            exit 0
+          fi
+          REPORT_DATE=$(date +%Y-%m-%d)
+          BRANCH="chore/quality-metrics-${REPORT_DATE}"
+          git checkout -b "$BRANCH"
+          git commit -m "Update quality metrics report ${REPORT_DATE}"
+          git push origin "$BRANCH"
+          gh pr create --title "Update quality metrics report ${REPORT_DATE}" --body "Automated monthly quality metrics update for ${REPORT_DATE}." --label "ci"

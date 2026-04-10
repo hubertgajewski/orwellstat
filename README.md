@@ -72,7 +72,7 @@ The following variables are set in **GitHub → Settings → Variables → Actio
 | `CLAUDE_REVIEW`         | `claude-code-review.yml`                     | PR events (opened, synchronize, ready_for_review, reopened)                |
 | `PLAYWRIGHT_TYPESCRIPT` | `playwright-typescript.yml`                  | PR events, push to main, Sunday 03:00 UTC schedule, `workflow_dispatch`    |
 | `BRUNO`                 | `bruno.yml`                                  | PR events, push to main, `workflow_dispatch`                               |
-| `QUALITY_METRICS`       | `quality-metrics.yml`                        | Monday 06:00 UTC schedule, `workflow_dispatch`                             |
+| `QUALITY_METRICS`       | `quality-metrics.yml`                        | 1st of every month 06:00 UTC schedule, `workflow_dispatch`                 |
 | `RUNNER`                | Default runner for all workflow jobs         | Push, PR, schedule, `workflow_dispatch` (dispatch dropdown overrides this) |
 
 ## Getting started
@@ -354,7 +354,7 @@ Use `--grep` to run a subset and `--grep-invert` to exclude it (see [Running tes
 
 **Test Coverage Trends:** `.github/workflows/test-coverage.yml` — runs on push to main when `coverage-matrix.json` or any file under `tests/` changes, and on `workflow_dispatch`; reads `playwright/typescript/coverage-matrix.json` and outputs a coverage percentage table to the GitHub Actions step summary. Coverage is measured as a **manual matrix** — not code coverage — because there is no access to the backend source. The matrix lists all known testable items (pages × categories: title, content, accessibility, visualRegression, api; plus interactive forms) and each entry is a boolean reflecting whether a spec currently exercises that combination. When a new test covers a previously uncovered item, flip the value in `coverage-matrix.json` from `false` to `true`; the next workflow run will show the improved percentage. When a new page or form is added to the application, add a new entry to the matrix so it appears as a gap (all `false`) until tests are written.
 
-**Quality Metrics Dashboard:** `.github/workflows/quality-metrics.yml` — runs on schedule (every Monday at 6 AM UTC) and on `workflow_dispatch` (with a `runner` text input — leave empty to use `vars.RUNNER`); queries all issues labeled `bug` to calculate two metrics and writes them to the GitHub Actions step summary:
+**Quality Metrics Dashboard:** `.github/workflows/quality-metrics.yml` — runs on schedule (1st of every month at 6 AM UTC) and on `workflow_dispatch` (with a `runner` text input — leave empty to use `vars.RUNNER`); queries all issues labeled `bug` to calculate two metrics and writes them to the GitHub Actions step summary:
 
 - **Defect escape rate** = `found-in-production / (found-by-test + found-by-manual-testing + found-in-production)` — measures how effective testing is at catching bugs before users hit them.
 - **MTTR (Mean Time To Resolve)** = average of `(closedAt − createdAt)` across all closed `bug` issues, displayed in days/hours; also broken down by discovery label.
@@ -369,7 +369,7 @@ Bug issues must carry one of three discovery labels (in addition to `bug`) for t
 
 MTTR is calculated for all `bug`-labeled issues regardless of discovery method, and also broken down per discovery label for insight into resolution speed by source.
 
-After calculating metrics, the workflow runs `scripts/generate-quality-metrics.py` to generate `QUALITY_METRICS.md` (a persistent, unified view readable directly on GitHub) and update `quality-metrics-history.json` with a new data point. Both files are committed and pushed back to the current branch automatically.
+After calculating metrics, the workflow runs `scripts/generate-quality-metrics.py` to generate `QUALITY_METRICS.md` (a persistent, unified view readable directly on GitHub) and update `quality-metrics-history.json` with a new data point. Both files are committed to a new branch and a pull request is opened automatically.
 
 ---
 
@@ -652,7 +652,7 @@ docker container prune
 | `playwright-typescript.yml`   | ✅ Full          | `detect-act` step skips artifact upload                                  |
 | `bruno.yml`                   | ✅ Full          | No artifacts; credentials injected via `--secret-file`                   |
 | `test-coverage.yml`           | ✅ Partial       | Script runs; no push-back needed                                         |
-| `quality-metrics.yml`         | ⚠️ Partial       | All steps run; `git push` fails — no `GITHUB_TOKEN` in `act` containers  |
+| `quality-metrics.yml`         | ⚠️ Partial       | All steps run; `gh pr create` fails — no `GITHUB_TOKEN` in `act` containers |
 | `update-visual-baselines.yml` | ⚠️ Partial       | Baselines generated locally; `git push` fails                            |
 | `claude-code-review.yml`      | ❌ Not supported | Requires real GitHub PR context (`gh pr review` cannot target a real PR) |
 
