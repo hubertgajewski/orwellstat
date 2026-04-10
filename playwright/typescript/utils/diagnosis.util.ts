@@ -5,10 +5,10 @@ import type { TestInfo } from '@playwright/test';
 const DOM_TRUNCATE_CHARS = 30_000;
 
 const SELECTOR_ERROR_PATTERN =
-  /strict mode violation|waiting for locator|waiting for getBy|locator\.\w+:.*[Tt]imeout/i;
+  /strict mode violation|waiting for locator|waiting for getBy|locator\.\w+:.*timeout/i;
 
 const SELECTOR_EXTRACT_PATTERN =
-  /((?:locator|getByRole|getByText|getByLabel|getByTestId|getByPlaceholder|getByAltText|getByTitle)\([^)]*\))/;
+  /((?:locator|getByRole|getByText|getByLabel|getByTestId|getByPlaceholder|getByAltText|getByTitle)\([^)]*(?:\)[^)]*)*\))/;
 
 interface SelectorFixResponse {
   confidence: 'high' | 'medium' | 'low';
@@ -20,6 +20,9 @@ interface SelectorFixResponse {
 function extractBrokenSelector(errorMessages: string): string | null {
   if (!SELECTOR_ERROR_PATTERN.test(errorMessages)) return null;
   const match = errorMessages.match(SELECTOR_EXTRACT_PATTERN);
+  if (!match) {
+    console.warn('[Selector fix] selector error detected but no locator pattern extracted');
+  }
   return match?.[1] ?? null;
 }
 
@@ -107,7 +110,15 @@ Confidence guidelines:
       .replace(/^```(?:json)?\s*/, '')
       .replace(/\s*```$/, '')
       .trim();
-    return JSON.parse(cleaned) as SelectorFixResponse;
+    const parsed = JSON.parse(cleaned) as SelectorFixResponse;
+    if (
+      typeof parsed.confidence !== 'string' ||
+      typeof parsed.suggestedSelector !== 'string' ||
+      typeof parsed.explanation !== 'string'
+    ) {
+      return null;
+    }
+    return parsed;
   } catch {
     return null;
   }
