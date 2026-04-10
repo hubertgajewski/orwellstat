@@ -45,8 +45,8 @@ jobs:
             echo "No changes to report"
             exit 0
           fi
-          REPORT_DATE=$(date +%Y-%m-%dT%H%M%S)
-          BRANCH="chore/quality-metrics-${REPORT_DATE}"
+          REPORT_DATE=$(date +%Y-%m-%d)
+          BRANCH="chore/quality-metrics-$(date +%Y-%m-%dT%H%M%S)"
           git checkout -b "$BRANCH"
           git commit -m "Update quality metrics report ${REPORT_DATE}"
           git push origin "$BRANCH"
