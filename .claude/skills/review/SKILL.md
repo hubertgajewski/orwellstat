@@ -4,6 +4,10 @@ description: Review staged and unstaged changes against the project's code revie
 
 First, run `/security-review` (built-in Claude Code command: "Complete a security review of the pending changes on the current branch"). If the command is unavailable, manually check for injection via untrusted input, path traversal in file I/O, unhandled parse errors, hardcoded secrets, and overly broad permissions. Fix any findings before proceeding.
 
+Next, run `/simplify` (built-in Claude Code command: "Review changed code for reuse, quality, and efficiency, then fix any issues found"). If the command is unavailable, manually check for code duplication, unnecessary complexity, missed reuse of existing utilities, and inefficient patterns. Fix any findings before proceeding.
+
+If `/simplify` made any changes, re-run `/security-review` and then `/simplify` again. Repeat this cycle until both pass with no findings. Stop after 3 cycles — if both have not converged by then, report the remaining findings to the user and ask how to proceed.
+
 Then run `git diff HEAD` to see all changes and work through every item in the checklist below. For each item, explicitly state a finding: **pass**, **fail** (with the specific problem), or **N/A** (with the reason it does not apply). Saying "no issues" without articulating what was checked is not acceptable.
 
 Also apply the general diff checks and (if `.github/workflows/*.yml` files changed) the CI workflow checks from the **"Review the diff as a fresh reviewer"** step in `.claude/skills/fix-issue/SKILL.md`.
