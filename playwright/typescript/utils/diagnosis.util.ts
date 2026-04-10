@@ -156,7 +156,8 @@ Confidence guidelines:
       .trim();
     const parsed = JSON.parse(cleaned) as SelectorFixResponse;
     if (
-      typeof parsed.confidence !== 'string' ||
+      !['high', 'medium', 'low'].includes(parsed.confidence) ||
+      typeof parsed.brokenSelector !== 'string' ||
       typeof parsed.suggestedSelector !== 'string' ||
       typeof parsed.explanation !== 'string'
     ) {
