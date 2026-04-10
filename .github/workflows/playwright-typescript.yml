@@ -170,6 +170,29 @@ jobs:
           name: blob-report-${{ matrix.id }}
           path: playwright/typescript/blob-report/
           retention-days: 30
+      - name: Collect self-healing data
+        if: ${{ failure() }}
+        working-directory: playwright/typescript
+        run: |
+          mkdir -p self-healing-data
+          cp test-results/results.json self-healing-data/ 2>/dev/null || true
+          find test-results -maxdepth 2 -name 'selector-fix.md' -not -path '*/attachments/*' | while IFS= read -r f; do
+            dir="self-healing-data/$(dirname "$f")"
+            mkdir -p "$dir"
+            cp "$f" "$dir/"
+          done
+          find test-results -maxdepth 2 -name 'dom.xhtml' -not -path '*/attachments/*' | while IFS= read -r f; do
+            dir="self-healing-data/$(dirname "$f")"
+            mkdir -p "$dir"
+            cp "$f" "$dir/"
+          done
+      - uses: actions/upload-artifact@v7
+        if: ${{ failure() && steps.detect-act.outputs.running != 'true' }}
+        with:
+          name: self-healing-data-${{ matrix.id }}
+          path: playwright/typescript/self-healing-data/
+          retention-days: 7
+          if-no-files-found: ignore
 
   commit-baselines:
     needs: test

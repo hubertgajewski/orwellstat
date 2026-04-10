@@ -19,7 +19,7 @@ Four project-scoped skills are available in Claude Code (stored in `.claude/skil
 .env                        # credentials (git-ignored); see .env.example
 .env.example                # template: ORWELLSTAT_USER, ORWELLSTAT_PASSWORD, ENV, BASIC_AUTH_USER, BASIC_AUTH_PASSWORD, ANTHROPIC_API_KEY, GEMINI_API_KEY
 .vars                       # CI repository variables (git-ignored); see .vars.example
-.vars.example               # template: CLAUDE_REVIEW, PLAYWRIGHT_TYPESCRIPT, BRUNO, QUALITY_METRICS, AI_DIAGNOSIS, AI_PROVIDER, CLAUDE_DIAGNOSIS
+.vars.example               # template: CLAUDE_REVIEW, PLAYWRIGHT_TYPESCRIPT, BRUNO, QUALITY_METRICS, AI_DIAGNOSIS, AI_PROVIDER, CLAUDE_DIAGNOSIS, SELF_HEALING
 .mcp.json                   # MCP server definitions (MCP_DOCKER, playwright, playwright-report-mcp) — loaded by Claude Code and other MCP-compatible AI assistants
 .github/workflows/          # CI workflows (one per sub-project)
 CLAUDE.md                   # repository-specific behavioral guidance for Claude Code
@@ -30,6 +30,8 @@ SECURITY.md                 # security policy and vulnerability reporting
 quality-metrics-history.json  # historical quality metrics data points (auto-committed by workflow)
 scripts/
   generate-quality-metrics.py  # generates QUALITY_METRICS.md and updates quality-metrics-history.json
+  self-healing.py              # self-healing selector fix: parses test artifacts, posts PR comments or creates draft PRs
+  test_self_healing.py         # unit tests for self-healing.py (all loop prevention and classification scenarios)
   setup-runners.sh             # registers and starts 8 self-hosted runner instances as launchd services
 playwright/
   typescript/               # Playwright tests in TypeScript
@@ -77,6 +79,7 @@ The following variables are set in **GitHub → Settings → Variables → Actio
 | `PLAYWRIGHT_TYPESCRIPT` | `playwright-typescript.yml`                  | PR events, push to main, Sunday 03:00 UTC schedule, `workflow_dispatch`    |
 | `BRUNO`                 | `bruno.yml`                                  | PR events, push to main, `workflow_dispatch`                               |
 | `QUALITY_METRICS`       | `quality-metrics.yml`                        | 1st of every month 06:00 UTC schedule, `workflow_dispatch`                 |
+| `SELF_HEALING`          | `self-healing.yml`                           | After any failed Playwright Typescript Tests workflow run                  |
 | `RUNNER`                | Default runner for all workflow jobs         | Push, PR, schedule, `workflow_dispatch` (dispatch dropdown overrides this) |
 
 ## Getting started
@@ -374,6 +377,8 @@ Bug issues must carry one of three discovery labels (in addition to `bug`) for t
 MTTR is calculated for all `bug`-labeled issues regardless of discovery method, and also broken down per discovery label for insight into resolution speed by source.
 
 After calculating metrics, the workflow runs `scripts/generate-quality-metrics.py` to generate `QUALITY_METRICS.md` (a persistent, unified view readable directly on GitHub) and update `quality-metrics-history.json` with a new data point. Both files are committed to a new branch and a pull request is opened automatically.
+
+**Self-Healing Selector Fix:** `.github/workflows/self-healing.yml` — triggers via `workflow_run` after "Playwright Typescript Tests" completes with a failure; detects selector/locator errors in the test results and proposes fixes. When a PR's tests fail due to a broken selector, posts a comment on the PR with the fix suggestion. When tests on `main` or a schedule run fail, creates a draft PR applying the fix. The workflow uses pre-computed `selector-fix.md` attachments when `AI_DIAGNOSIS` is enabled, or falls back to calling the AI provider (Anthropic/Gemini, configured via `AI_PROVIDER`) directly with the DOM snapshot. Requires `SELF_HEALING=true` in repository variables. Loop prevention is enforced via six layers: branch name guard (skips `fix/self-healing-*` branches), the existing approval gate (draft PRs have no approval so tests don't run on them), max 2 comments per PR, draft PR deduplication, per-branch concurrency groups, and failure-only triggering. The script (`scripts/self-healing.py`) has a comprehensive unit test suite (`scripts/test_self_healing.py`) covering all loop prevention scenarios.
 
 ---
 

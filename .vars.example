@@ -12,6 +12,11 @@ AI_DIAGNOSIS=
 AI_PROVIDER=
 # Deprecated: still works as a fallback for AI_DIAGNOSIS. Prefer AI_DIAGNOSIS above.
 CLAUDE_DIAGNOSIS=
+# Self-healing selector fix workflow. Set to "true" to enable automatic draft PRs / PR comments
+# when Playwright tests fail due to locator/selector errors. Uses the same AI_PROVIDER setting
+# and API key (ANTHROPIC_API_KEY or GEMINI_API_KEY) as AI_DIAGNOSIS for the fallback path
+# (when AI_DIAGNOSIS is disabled and no pre-computed selector-fix.md exists).
+SELF_HEALING=
 # Default runner for all workflow jobs. Set to "self-hosted" to route all jobs to the local
 # self-hosted runner when the runner input is not explicitly set. Leave empty to use ubuntu-latest.
 RUNNER=
