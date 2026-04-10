@@ -6,7 +6,11 @@ CLAUDE_REVIEW=
 PLAYWRIGHT_TYPESCRIPT=
 BRUNO=
 QUALITY_METRICS=
-# Required alongside ANTHROPIC_API_KEY in .env to enable AI-powered test failure diagnosis.
+# AI-powered test failure diagnosis. Set to "true" to enable.
+AI_DIAGNOSIS=
+# AI provider for test failure diagnosis. Accepted values: anthropic (default), gemini.
+AI_PROVIDER=
+# Deprecated: still works as a fallback for AI_DIAGNOSIS. Prefer AI_DIAGNOSIS above.
 CLAUDE_DIAGNOSIS=
 # Default runner for all workflow jobs. Set to "self-hosted" to route all jobs to the local
 # self-hosted runner when the runner input is not explicitly set. Leave empty to use ubuntu-latest.
