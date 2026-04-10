@@ -16,7 +16,7 @@ jobs:
     timeout-minutes: 10
     concurrency:
       group: quality-metrics
-      cancel-in-progress: false  # let the current run finish; don't race on git push
+      cancel-in-progress: false  # let the current run finish; don't run overlapping metrics jobs
     permissions:
       issues: read
       contents: write
@@ -50,4 +50,4 @@ jobs:
           git checkout -b "$BRANCH"
           git commit -m "Update quality metrics report ${REPORT_DATE}"
           git push origin "$BRANCH"
-          gh pr create --title "Update quality metrics report ${REPORT_DATE}" --body "Automated monthly quality metrics update for ${REPORT_DATE}." --label "ci"
+          gh pr create --title "Update quality metrics report ${REPORT_DATE}" --body "Automated monthly quality metrics update for ${REPORT_DATE}." --label "ci" --base main
