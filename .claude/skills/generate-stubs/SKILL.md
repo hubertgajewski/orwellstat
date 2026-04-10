@@ -51,7 +51,7 @@ For each accessibility gap NOT resolved by Step 5, add a `test.fixme()` inside t
 
 Format:
 ```typescript
-test.fixme('accessibility - {url}', async ({ page }) => {
+test.fixme('{url}', async ({ page }) => {
   // TODO: Add {ClassName} to {PUBLIC|AUTHENTICATED}_PAGE_CLASSES
   // or test accessibility for {url} directly here
 });
@@ -84,7 +84,7 @@ For each `content: false` gap, determine the target file:
    - `/statistics/` → `statistics.spec.ts`
    - `/contact/` → `contact.spec.ts`
 
-2. If an existing file exists, append the `test.fixme()` at the end.
+2. If an existing file exists, append the `test.fixme()` at the end. Also add the page class import at the top of the file if it is not already imported.
 
 3. If no file exists, create a new spec file:
    - `/register/` → `register.spec.ts`
