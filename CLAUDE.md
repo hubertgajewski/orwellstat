@@ -24,13 +24,13 @@ When creating GitHub issues for requirements, bugs, or code review findings, fol
 
 ## Commit message convention
 
-Commit messages are always a **short, single-line description** with no body and no `Co-Authored-By` trailer. When a commit relates to one or more GitHub issues, **prefix the message with the issue number(s)** separated by spaces, followed by the description:
+Commit messages are always a **short, single-line description** with no body and no `Co-Authored-By` trailer. When a commit relates to one or more GitHub issues, **prefix the message with `#` and the issue number(s)**, followed by the description:
 
-- Single issue: `63 Add network mocking tests`
-- Multiple issues: `63 64 Add network mocking tests and fixtures`
+- Single issue: `#63 Add network mocking tests`
+- Multiple issues: `#63 #64 Add network mocking tests and fixtures`
 - No issue: `Fix typo in README`
 
-The ticket prefix must come first so `git log --oneline` and GitHub cross-references work at a glance.
+The `#N` prefix must come first so `git log --oneline` and GitHub cross-references work at a glance.
 
 ---
 

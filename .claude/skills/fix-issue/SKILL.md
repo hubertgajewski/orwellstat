@@ -58,7 +58,7 @@ Scripts calling external APIs (e.g. `gh issue list`, REST calls):
 Read every Given/When/Then scenario and every DoD checkbox in the issue. For each item, explicitly confirm it is satisfied or identify what is missing. Do not proceed to commit until all criteria pass.
 
 **Step 8 — Commit**
-Stage changed files by name (never `git add -A`). Follow the **Commit message convention** in `CLAUDE.md`: prefix with the issue number, single line, no body, no `Co-Authored-By` trailer.
+Stage changed files by name (never `git add -A`). Follow the **Commit message convention** in `CLAUDE.md`: prefix with `#` and the issue number, single line, no body, no `Co-Authored-By` trailer.
 
 **Step 9 — Push and create a PR**
 Push the branch and run `gh pr create`. The PR body must include:
