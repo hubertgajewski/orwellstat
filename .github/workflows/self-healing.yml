@@ -29,8 +29,8 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
-          # Fetch full history so we can create and push a new branch from head_sha.
+          # Checkout the default branch to get the latest self-healing script.
+          # The script creates its own branch from HEAD_SHA for applying fixes.
           fetch-depth: 0
 
       - name: Download self-healing data
