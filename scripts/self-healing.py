@@ -161,9 +161,13 @@ def filter_by_confidence(fixes: list[SelectorFix]) -> list[SelectorFix]:
 
 
 def deduplicate_fixes(fixes: list[SelectorFix]) -> list[SelectorFix]:
-    """Remove duplicate fixes (same broken_selector from multiple browsers)."""
+    """Remove duplicate fixes and no-op fixes (same broken_selector from multiple browsers,
+    or suggested_selector identical to broken_selector)."""
     seen: dict[str, SelectorFix] = {}
     for fix in fixes:
+        # Skip no-op fixes where the AI suggested the exact same selector
+        if fix.broken_selector == fix.suggested_selector:
+            continue
         if fix.broken_selector not in seen:
             seen[fix.broken_selector] = fix
         elif fix.confidence == "high" and seen[fix.broken_selector].confidence != "high":
@@ -355,8 +359,15 @@ def request_selector_fix_from_ai(
     error_message: str,
     dom_content: str,
     provider: str = "anthropic",
+    error_context: str | None = None,
 ) -> SelectorFix | None:
-    """Call AI provider to get a selector fix proposal (fallback path)."""
+    """Call AI provider to get a selector fix proposal (fallback path).
+
+    When *error_context* is provided (the Playwright built-in error-context.md
+    attachment), it is used as the primary context because it bundles the
+    accessibility tree snapshot, test source, and error details in one document.
+    *dom_content* is still appended as a fallback DOM reference.
+    """
     broken = _extract_broken_selector(error_message)
     if not broken:
         return None
@@ -370,13 +381,24 @@ def request_selector_fix_from_ai(
     if len(dom_content) > DOM_TRUNCATE_CHARS:
         dom_snippet += "\n...[truncated]"
 
-    user_content = "\n".join([
-        f"Broken selector: {broken}",
-        f"Errors:\n{error_message}",
-        "",
-        "--- DOM snapshot (may be truncated) ---",
-        dom_snippet,
-    ])
+    if error_context:
+        user_content = "\n".join([
+            f"Broken selector: {broken}",
+            "",
+            "--- Playwright error context (includes test source and page snapshot) ---",
+            error_context[:DOM_TRUNCATE_CHARS],
+            "",
+            "--- DOM snapshot (may be truncated) ---",
+            dom_snippet,
+        ])
+    else:
+        user_content = "\n".join([
+            f"Broken selector: {broken}",
+            f"Errors:\n{error_message}",
+            "",
+            "--- DOM snapshot (may be truncated) ---",
+            dom_snippet,
+        ])
 
     callers = {"anthropic": _call_anthropic, "gemini": _call_gemini}
     caller = callers.get(provider)
@@ -613,13 +635,21 @@ def main(data_dir: str) -> None:
             failed_tests = extract_failed_tests(results_file)
             selector_failures = [t for t in failed_tests if is_selector_error(t.error_message)]
             for test in selector_failures:
-                # Find corresponding dom.xhtml
                 test_dir = results_file.parent
+                # Prefer error-context.md (Playwright built-in: includes test source
+                # and accessibility tree) over raw dom.xhtml
+                error_context = None
+                ec_files = list(test_dir.rglob("error-context.md"))
+                if ec_files:
+                    error_context = ec_files[0].read_text(encoding="utf-8", errors="replace")
                 dom_files = list(test_dir.rglob("dom.xhtml"))
-                if not dom_files:
+                if not dom_files and not error_context:
                     continue
-                dom_content = dom_files[0].read_text(encoding="utf-8", errors="replace")
-                fix = request_selector_fix_from_ai(test.error_message, dom_content, provider)
+                dom_content = dom_files[0].read_text(encoding="utf-8", errors="replace") if dom_files else ""
+                fix = request_selector_fix_from_ai(
+                    test.error_message, dom_content, provider,
+                    error_context=error_context,
+                )
                 if fix:
                     fixes.append(fix)
         fixes = filter_by_confidence(fixes)

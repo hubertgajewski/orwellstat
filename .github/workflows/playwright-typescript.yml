@@ -181,10 +181,12 @@ jobs:
             mkdir -p "$dir"
             cp "$f" "$dir/"
           done
-          find test-results -maxdepth 2 -name 'dom.xhtml' -not -path '*/attachments/*' | while IFS= read -r f; do
-            dir="self-healing-data/$(dirname "$f")"
-            mkdir -p "$dir"
-            cp "$f" "$dir/"
+          for name in dom.xhtml error-context.md; do
+            find test-results -maxdepth 2 -name "$name" -not -path '*/attachments/*' | while IFS= read -r f; do
+              dir="self-healing-data/$(dirname "$f")"
+              mkdir -p "$dir"
+              cp "$f" "$dir/"
+            done
           done
       - uses: actions/upload-artifact@v7
         if: ${{ failure() && steps.detect-act.outputs.running != 'true' }}

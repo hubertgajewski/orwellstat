@@ -46,6 +46,45 @@ SAMPLE_SELECTOR_FIX = textwrap.dedent("""\
     ## Explanation
     The original selector used 'Strona glowna' (without Polish diacritics) but the actual link text is 'Strona główna'.""")
 
+SAMPLE_ERROR_CONTEXT = textwrap.dedent("""\
+    # Instructions
+
+    - Following Playwright test failed.
+    - Explain why, be concise, respect Playwright best practices.
+    - Provide a snippet of code with the fix, if possible.
+
+    # Test info
+
+    - Name: navigation.spec.ts >> navigation >> home page
+    - Location: tests/navigation.spec.ts:31:3
+
+    # Error details
+
+    ```
+    TimeoutError: locator.click: Timeout 15000ms exceeded.
+    Call log:
+      - waiting for locator('#menubar').getByRole('link', { name: 'Strona glowna', exact: true })
+    ```
+
+    # Page snapshot
+
+    ```yaml
+    - list:
+        - listitem:
+            - link "Strona główna":
+                - /url: /
+    ```
+
+    # Test source
+
+    ```ts
+      31 |   test('home page', async ({ page }) => {
+      32 |     await page
+      33 |       .locator('#menubar')
+      34 |       .getByRole('link', { name: 'Strona glowna', exact: true })
+    > 35 |       .click();
+    ```""")
+
 SAMPLE_SELECTOR_FIX_LOW = SAMPLE_SELECTOR_FIX.replace(
     "**Confidence:** high", "**Confidence:** low"
 )
@@ -301,6 +340,12 @@ class TestDeduplication(unittest.TestCase):
         result = self_healing.deduplicate_fixes([fix1, fix2])
         self.assertEqual(len(result), 2)
 
+    def test_skips_noop_fix(self):
+        """AI suggested the exact same selector — must be filtered out."""
+        fix = self_healing.SelectorFix("high", "getByRole('link')", "getByRole('link')", "no change")
+        result = self_healing.deduplicate_fixes([fix])
+        self.assertEqual(len(result), 0)
+
     def test_empty_list(self):
         self.assertEqual(self_healing.deduplicate_fixes([]), [])
 
@@ -549,6 +594,65 @@ class TestParseAiResponse(unittest.TestCase):
             "explanation": "z",
         })
         self.assertIsNone(self_healing._parse_ai_response(text, "x"))
+
+
+# ===================================================================
+# Error-context.md support in AI fallback
+# ===================================================================
+
+
+class TestErrorContextSupport(unittest.TestCase):
+    @patch("self_healing._call_anthropic")
+    def test_includes_error_context_in_prompt(self, mock_call):
+        """When error-context.md is provided, it appears in the user_content."""
+        mock_call.return_value = json.dumps({
+            "confidence": "high",
+            "brokenSelector": "locator('#menubar').getByRole('link', { name: 'Strona glowna', exact: true })",
+            "suggestedSelector": "locator('#menubar').getByRole('link', { name: 'Strona główna', exact: true })",
+            "explanation": "diacritic fix",
+        })
+        os.environ["ANTHROPIC_API_KEY"] = "test-key"
+        try:
+            fix = self_healing.request_selector_fix_from_ai(
+                "waiting for locator('#menubar').getByRole('link', { name: 'Strona glowna', exact: true })",
+                "<html></html>",
+                "anthropic",
+                error_context=SAMPLE_ERROR_CONTEXT,
+            )
+            self.assertIsNotNone(fix)
+            # Verify error-context was included in the prompt sent to the AI
+            call_args = mock_call.call_args
+            user_content = call_args[0][1]  # second positional arg
+            self.assertIn("Playwright error context", user_content)
+            self.assertIn("Page snapshot", user_content)
+            self.assertIn("Test source", user_content)
+        finally:
+            del os.environ["ANTHROPIC_API_KEY"]
+
+    @patch("self_healing._call_anthropic")
+    def test_falls_back_to_dom_without_error_context(self, mock_call):
+        """When error_context is None, prompt uses the old format with DOM only."""
+        mock_call.return_value = json.dumps({
+            "confidence": "medium",
+            "brokenSelector": "locator('#foo')",
+            "suggestedSelector": "locator('#bar')",
+            "explanation": "changed",
+        })
+        os.environ["ANTHROPIC_API_KEY"] = "test-key"
+        try:
+            fix = self_healing.request_selector_fix_from_ai(
+                "waiting for locator('#foo')",
+                "<html><div id='bar'></div></html>",
+                "anthropic",
+                error_context=None,
+            )
+            self.assertIsNotNone(fix)
+            call_args = mock_call.call_args
+            user_content = call_args[0][1]
+            self.assertIn("DOM snapshot", user_content)
+            self.assertNotIn("Playwright error context", user_content)
+        finally:
+            del os.environ["ANTHROPIC_API_KEY"]
 
 
 # ===================================================================
