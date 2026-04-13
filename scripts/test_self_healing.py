@@ -554,6 +554,183 @@ class TestComposeComment(unittest.TestCase):
 # ===================================================================
 # Dry run
 # ===================================================================
+# Apply selector fix (multi-line matching)
+# ===================================================================
+
+
+class TestApplySelectorFix(unittest.TestCase):
+    MULTILINE_SOURCE = textwrap.dedent("""\
+        test('home page', async ({ page }) => {
+          await page
+            .locator('#menubar')
+            .getByRole('link', { name: 'Strona glowna', exact: true })
+            .click();
+        });""")
+
+    SINGLE_LINE_SOURCE = textwrap.dedent("""\
+        test('about', async ({ page }) => {
+          await page.locator('#menubar').getByRole('link', { name: 'O systemie', exact: true }).click();
+        });""")
+
+    def test_exact_match_single_line(self):
+        fix = self_healing.SelectorFix(
+            "high",
+            "locator('#menubar').getByRole('link', { name: 'O systemie', exact: true })",
+            "locator('#menubar').getByRole('link', { name: 'About', exact: true })",
+            "reason",
+        )
+        result = self_healing._apply_selector_fix(self.SINGLE_LINE_SOURCE, fix)
+        self.assertIsNotNone(result)
+        self.assertIn("About", result)
+        self.assertNotIn("O systemie", result)
+
+    def test_multiline_chained_selector(self):
+        fix = self_healing.SelectorFix(
+            "high",
+            "locator('#menubar').getByRole('link', { name: 'Strona glowna', exact: true })",
+            "locator('#menubar').getByRole('link', { name: 'Strona główna', exact: true })",
+            "reason",
+        )
+        result = self_healing._apply_selector_fix(self.MULTILINE_SOURCE, fix)
+        self.assertIsNotNone(result)
+        self.assertIn("Strona główna", result)
+        self.assertNotIn("Strona glowna", result)
+
+    def test_multiline_shorter_replacement(self):
+        """Gemini-style fix: drops locator('#menubar') scoping entirely."""
+        fix = self_healing.SelectorFix(
+            "high",
+            "locator('#menubar').getByRole('link', { name: 'Strona glowna', exact: true })",
+            "getByRole('link', { name: 'Strona główna', exact: true })",
+            "reason",
+        )
+        result = self_healing._apply_selector_fix(self.MULTILINE_SOURCE, fix)
+        self.assertIsNotNone(result)
+        self.assertIn("Strona główna", result)
+        self.assertNotIn("locator('#menubar')", result)
+        # The leading dot should chain page to getByRole
+        self.assertIn(".getByRole", result)
+        self.assertIn(".click()", result)
+
+    def test_three_part_chain_multiline(self):
+        """Three-part chain: locator.getByRole.getByText across three lines."""
+        source = textwrap.dedent("""\
+            await page
+              .locator('#sidebar')
+              .getByRole('listitem')
+              .getByText('Home')""")
+        fix = self_healing.SelectorFix(
+            "high",
+            "locator('#sidebar').getByRole('listitem').getByText('Home')",
+            "locator('#sidebar').getByRole('listitem').getByText('Dashboard')",
+            "reason",
+        )
+        result = self_healing._apply_selector_fix(source, fix)
+        self.assertIsNotNone(result)
+        self.assertIn("Dashboard", result)
+        self.assertNotIn("Home", result)
+
+    def test_filter_chain_multiline(self):
+        """Chain with .filter() across multiple lines."""
+        source = textwrap.dedent("""\
+            await page
+              .getByRole('listitem')
+              .filter({ hasText: 'Active' })
+              .getByRole('link')""")
+        fix = self_healing.SelectorFix(
+            "high",
+            "getByRole('listitem').filter({ hasText: 'Active' }).getByRole('link')",
+            "getByRole('listitem').filter({ hasText: 'Enabled' }).getByRole('link')",
+            "reason",
+        )
+        result = self_healing._apply_selector_fix(source, fix)
+        self.assertIsNotNone(result)
+        self.assertIn("Enabled", result)
+        self.assertNotIn("Active", result)
+
+    def test_nth_chain_multiline(self):
+        """Chain with .nth() across lines."""
+        source = textwrap.dedent("""\
+            await page
+              .getByRole('link')
+              .nth(0)""")
+        fix = self_healing.SelectorFix(
+            "high",
+            "getByRole('link').nth(0)",
+            "getByRole('link').nth(1)",
+            "reason",
+        )
+        result = self_healing._apply_selector_fix(source, fix)
+        self.assertIsNotNone(result)
+        self.assertIn("nth(1)", result)
+
+    def test_dot_in_string_arg_not_split(self):
+        """Dots inside string arguments (e.g. 'example.com') must not be split."""
+        source = "  await page.getByRole('link', { name: 'example.com' }).click();"
+        fix = self_healing.SelectorFix(
+            "high",
+            "getByRole('link', { name: 'example.com' })",
+            "getByRole('link', { name: 'example.org' })",
+            "reason",
+        )
+        result = self_healing._apply_selector_fix(source, fix)
+        self.assertIsNotNone(result)
+        self.assertIn("example.org", result)
+
+    def test_dot_in_string_arg_multiline_fallback(self):
+        """Dot in arg + multi-line chain: split must not break on string dots."""
+        source = textwrap.dedent("""\
+            await page
+              .locator('#nav')
+              .getByRole('link', { name: 'example.com' })""")
+        fix = self_healing.SelectorFix(
+            "high",
+            "locator('#nav').getByRole('link', { name: 'example.com' })",
+            "locator('#nav').getByRole('link', { name: 'example.org' })",
+            "reason",
+        )
+        result = self_healing._apply_selector_fix(source, fix)
+        self.assertIsNotNone(result)
+        self.assertIn("example.org", result)
+
+    def test_getbytext_with_version_dot(self):
+        """getByText('v2.0') — dot followed by digit, not a method name."""
+        source = "  await page.getByText('v2.0').click();"
+        fix = self_healing.SelectorFix(
+            "high",
+            "getByText('v2.0')",
+            "getByText('v3.0')",
+            "reason",
+        )
+        result = self_healing._apply_selector_fix(source, fix)
+        self.assertIsNotNone(result)
+        self.assertIn("v3.0", result)
+
+    def test_no_match_returns_none(self):
+        fix = self_healing.SelectorFix(
+            "high",
+            "getByRole('button', { name: 'nonexistent' })",
+            "getByRole('button', { name: 'fixed' })",
+            "reason",
+        )
+        result = self_healing._apply_selector_fix(self.MULTILINE_SOURCE, fix)
+        self.assertIsNone(result)
+
+    def test_single_part_selector_no_chain(self):
+        """Single method call — no dot splitting needed."""
+        source = "  await page.getByRole('link', { name: 'foo' }).click();"
+        fix = self_healing.SelectorFix(
+            "high",
+            "getByRole('link', { name: 'foo' })",
+            "getByRole('link', { name: 'bar' })",
+            "reason",
+        )
+        result = self_healing._apply_selector_fix(source, fix)
+        self.assertIsNotNone(result)
+        self.assertIn("bar", result)
+
+
+# ===================================================================
 
 
 class TestDryRun(unittest.TestCase):
