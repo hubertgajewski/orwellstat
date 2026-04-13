@@ -449,13 +449,21 @@ def request_selector_fix_from_ai(
 
 
 def gh(*args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
-    """Run a gh CLI command and return the result."""
-    return subprocess.run(
+    """Run a gh CLI command and return the result.
+
+    When *check* is True and the command fails, stderr is printed before
+    re-raising so the CI log always shows why.
+    """
+    result = subprocess.run(
         ["gh", *args],
         capture_output=True,
         text=True,
-        check=check,
     )
+    if check and result.returncode != 0:
+        print(f"[self-healing] gh {args[0]} failed (exit {result.returncode}): "
+              f"{result.stderr.strip()}", file=sys.stderr)
+        result.check_returncode()
+    return result
 
 
 def find_pr_for_branch(branch: str) -> int | None:
@@ -661,7 +669,7 @@ def create_draft_pr(
 
     body_file = Path("/tmp/self-healing-pr-body.md")
     body_file.write_text(comment_body, encoding="utf-8")
-    gh(
+    pr_args = (
         "pr", "create",
         "--draft",
         "--title", f"fix: self-healing selector repair ({short_sha})",
@@ -670,6 +678,13 @@ def create_draft_pr(
         "--head", fix_branch,
         "--base", _default_branch(),
     )
+    result = gh(*pr_args, check=False)
+    if result.returncode != 0:
+        import time
+        print(f"[self-healing] gh pr create failed, retrying in 5s: {result.stderr.strip()}",
+              file=sys.stderr)
+        time.sleep(5)
+        gh(*pr_args)  # check=True — fail loudly on second attempt
     print(f"[self-healing] Created draft PR on branch {fix_branch}")
 
 
