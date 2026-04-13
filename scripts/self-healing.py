@@ -307,6 +307,7 @@ def _call_anthropic(api_key: str, user_content: str) -> str | None:
 
 
 def _call_gemini(api_key: str, user_content: str) -> str | None:
+    # Same model as diagnosis.util.ts — chosen for its free-tier RPD quota (500 vs 20).
     model = "gemini-3.1-flash-lite-preview"
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
     body = json.dumps({
@@ -463,7 +464,11 @@ def find_pr_for_branch(branch: str) -> int | None:
 
 
 def count_self_healing_comments(pr_number: int) -> int:
-    """Count comments on a PR that contain the self-healing marker."""
+    """Count comments on a PR that contain the self-healing marker.
+
+    ``gh api --paginate`` applies ``--jq`` per page, so the output is one
+    number per page (e.g. ``"1\\n0\\n"``).  We sum them to get the total.
+    """
     result = gh(
         "api",
         f"repos/{{owner}}/{{repo}}/issues/{pr_number}/comments",
@@ -473,10 +478,13 @@ def count_self_healing_comments(pr_number: int) -> int:
     )
     if result.returncode != 0:
         return 0
-    try:
-        return int(result.stdout.strip())
-    except ValueError:
-        return 0
+    total = 0
+    for line in result.stdout.strip().splitlines():
+        try:
+            total += int(line)
+        except ValueError:
+            continue
+    return total
 
 
 def has_existing_self_healing_pr(base_branch: str = "main") -> bool:

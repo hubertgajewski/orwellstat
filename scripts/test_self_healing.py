@@ -473,6 +473,14 @@ class TestMaxAttempts(unittest.TestCase):
         self.assertFalse(count >= self_healing.MAX_ATTEMPTS)
 
     @patch("self_healing.gh")
+    def test_sums_across_paginated_pages(self, mock_gh):
+        """--paginate applies --jq per page; output is one number per line."""
+        mock_gh.return_value = MagicMock(returncode=0, stdout="1\n1\n0\n")
+        count = self_healing.count_self_healing_comments(42)
+        self.assertEqual(count, 2)
+        self.assertTrue(count >= self_healing.MAX_ATTEMPTS)
+
+    @patch("self_healing.gh")
     def test_handles_api_failure(self, mock_gh):
         mock_gh.return_value = MagicMock(returncode=1, stdout="")
         count = self_healing.count_self_healing_comments(42)
