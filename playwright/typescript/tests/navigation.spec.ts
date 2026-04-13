@@ -30,8 +30,7 @@ test.describe('navigation', { tag: '@smoke' }, () => {
 
   test('home page', async ({ page }) => {
     await page
-      .locator('#menubar')
-      .getByRole('link', { name: 'Strona glowna', exact: true })
+      .getByRole('link', { name: 'Strona główna', exact: true })
       .click();
 
     await expectHeadings(page, [
