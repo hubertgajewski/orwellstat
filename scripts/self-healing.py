@@ -589,22 +589,64 @@ _PW_METHODS = (
 _PW_SPLIT_PATTERN = r"\.(?=" + "|".join(_PW_METHODS) + r")"
 
 
+def _find_minimal_diff(old: str, new: str) -> tuple[str, str] | None:
+    """Return the minimal (old_part, new_part) that differ between two strings.
+
+    Trims the longest common prefix and suffix, then extends the remaining
+    diff to the nearest quote boundary so it's unique enough for safe
+    search-and-replace in source code.
+    """
+    prefix = 0
+    while prefix < len(old) and prefix < len(new) and old[prefix] == new[prefix]:
+        prefix += 1
+    suffix = 0
+    while (suffix < len(old) - prefix and suffix < len(new) - prefix
+           and old[-(suffix + 1)] == new[-(suffix + 1)]):
+        suffix += 1
+
+    # Walk prefix back to the nearest quote character so the extracted
+    # diff starts just inside a quoted string literal.  If there is no
+    # opening quote between the diff point and the start of the string
+    # (e.g. the diff is outside any quoted arg), prefix stays at 0.
+    # NOTE: this may land on a *closing* quote from a preceding argument;
+    # the resulting old_mid then won't be found in multi-line source and
+    # _apply_selector_fix will fall through to the regex path — that is
+    # the correct behaviour.
+    while prefix > 0 and old[prefix - 1] not in ("'", '"'):
+        prefix -= 1
+    end_old = len(old) - suffix
+    end_new = len(new) - suffix
+    while end_old < len(old) and old[end_old] not in ("'", '"'):
+        end_old += 1
+        end_new += 1
+
+    old_mid = old[prefix:end_old]
+    new_mid = new[prefix:end_new]
+    if not old_mid or old_mid == new_mid or len(old_mid) < 4:
+        return None
+    return old_mid, new_mid
+
+
 def _apply_selector_fix(content: str, fix: SelectorFix) -> str | None:
     """Replace a broken selector in source code, handling multi-line chains.
 
-    Playwright chained calls like ``locator('#x').getByRole(...)`` appear on
-    separate lines in source but as a single line in error messages.  When a
-    direct ``str.replace`` misses, we build a regex that allows optional
-    whitespace and dot-chaining between method calls.
+    Prefers a minimal replacement (only the changed substring, e.g. a string
+    argument) to preserve the original multi-line formatting.  Falls back to
+    full-span replacement when the minimal diff can't be located in the source.
     """
-    # Fast path: exact substring match
+    # Fast path: exact substring match (single-line source)
     if fix.broken_selector in content:
         return content.replace(fix.broken_selector, fix.suggested_selector, 1)
 
-    # Split on dots before known Playwright method names (not arbitrary alpha
-    # chars, which would break on dots inside string args like 'example.com').
-    split_pattern = _PW_SPLIT_PATTERN
-    parts = re.split(split_pattern, fix.broken_selector)
+    # Try minimal diff: replace only the changed part to preserve formatting
+    diff = _find_minimal_diff(fix.broken_selector, fix.suggested_selector)
+    if diff:
+        old_part, new_part = diff
+        if old_part in content:
+            return content.replace(old_part, new_part, 1)
+
+    # Fallback: full multi-line span replacement (may alter formatting)
+    parts = re.split(_PW_SPLIT_PATTERN, fix.broken_selector)
     if len(parts) < 2:
         return None
     pattern = r"\s*\.?\s*".join(re.escape(p) for p in parts)
