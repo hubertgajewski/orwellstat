@@ -573,6 +573,14 @@ def post_comment(pr_number: int, body: str, *, dry_run: bool = False) -> None:
     print(f"[self-healing] Posted comment on PR #{pr_number}")
 
 
+_PW_METHODS = (
+    "locator", "getByRole", "getByText", "getByLabel", "getByTestId",
+    "getByPlaceholder", "getByAltText", "getByTitle", "filter", "nth",
+    "first", "last",
+)
+_PW_SPLIT_PATTERN = r"\.(?=" + "|".join(_PW_METHODS) + r")"
+
+
 def _apply_selector_fix(content: str, fix: SelectorFix) -> str | None:
     """Replace a broken selector in source code, handling multi-line chains.
 
@@ -587,12 +595,7 @@ def _apply_selector_fix(content: str, fix: SelectorFix) -> str | None:
 
     # Split on dots before known Playwright method names (not arbitrary alpha
     # chars, which would break on dots inside string args like 'example.com').
-    _PW_METHODS = (
-        "locator", "getByRole", "getByText", "getByLabel", "getByTestId",
-        "getByPlaceholder", "getByAltText", "getByTitle", "filter", "nth",
-        "first", "last",
-    )
-    split_pattern = r"\.(?=" + "|".join(_PW_METHODS) + r")"
+    split_pattern = _PW_SPLIT_PATTERN
     parts = re.split(split_pattern, fix.broken_selector)
     if len(parts) < 2:
         return None
