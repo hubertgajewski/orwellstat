@@ -32,6 +32,9 @@ jobs:
           # Checkout the default branch to get the latest self-healing script.
           # The script creates its own branch from HEAD_SHA for applying fixes.
           fetch-depth: 0
+      - name: Fetch failing branch
+        run: git fetch origin ${{ github.event.workflow_run.head_sha }}
+        # head_sha may live on a non-merged branch that fetch-depth: 0 didn't cover.
 
       - name: Download self-healing data
         uses: actions/download-artifact@v8
