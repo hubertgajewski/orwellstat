@@ -570,7 +570,11 @@ class TestFindMinimalDiff(unittest.TestCase):
         self.assertEqual(new_part, "Strona główna")
 
     def test_structural_change(self):
-        """Gemini drops locator — diff is large, still returned."""
+        """Gemini drops locator — diff spans most of the selector.
+
+        The returned old_part won't appear verbatim in multi-line source,
+        so _apply_selector_fix correctly falls through to the regex path.
+        """
         old = "locator('#menubar').getByRole('link', { name: 'Strona glowna', exact: true })"
         new = "getByRole('link', { name: 'Strona główna', exact: true })"
         result = self_healing._find_minimal_diff(old, new)

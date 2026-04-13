@@ -604,7 +604,14 @@ def _find_minimal_diff(old: str, new: str) -> tuple[str, str] | None:
            and old[-(suffix + 1)] == new[-(suffix + 1)]):
         suffix += 1
 
-    # Extend to enclosing quote boundary for uniqueness
+    # Walk prefix back to the nearest quote character so the extracted
+    # diff starts just inside a quoted string literal.  If there is no
+    # opening quote between the diff point and the start of the string
+    # (e.g. the diff is outside any quoted arg), prefix stays at 0.
+    # NOTE: this may land on a *closing* quote from a preceding argument;
+    # the resulting old_mid then won't be found in multi-line source and
+    # _apply_selector_fix will fall through to the regex path — that is
+    # the correct behaviour.
     while prefix > 0 and old[prefix - 1] not in ("'", '"'):
         prefix -= 1
     end_old = len(old) - suffix
