@@ -50,6 +50,15 @@ SELECTOR_ERROR_PATTERN = re.compile(
 
 DOM_TRUNCATE_CHARS = 30_000
 
+
+def _run_url(run_id: str) -> str:
+    """Build a URL to the workflow run, absolute when GITHUB_REPOSITORY is set."""
+    repo = os.environ.get("GITHUB_REPOSITORY", "")
+    if repo:
+        return f"https://github.com/{repo}/actions/runs/{run_id}"
+    return f"../actions/runs/{run_id}"
+
+
 # ---------------------------------------------------------------------------
 # Data classes
 # ---------------------------------------------------------------------------
@@ -308,6 +317,7 @@ def _call_anthropic(api_key: str, user_content: str) -> str | None:
 
 def _call_gemini(api_key: str, user_content: str) -> str | None:
     # Same model as diagnosis.util.ts — chosen for its free-tier RPD quota (500 vs 20).
+    # Model override env vars are planned in #200 (AI_MODEL_FAST / AI_MODEL_STRONG).
     model = "gemini-3.1-flash-lite-preview"
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
     body = json.dumps({
@@ -487,13 +497,17 @@ def count_self_healing_comments(pr_number: int) -> int:
     return total
 
 
-def has_existing_self_healing_pr(base_branch: str = "main") -> bool:
+def _default_branch() -> str:
+    return os.environ.get("GITHUB_DEFAULT_BRANCH", "main")
+
+
+def has_existing_self_healing_pr(base_branch: str | None = None) -> bool:
     """Check if an open draft PR with the self-healing label already exists."""
     result = gh(
         "pr", "list",
         "--label", SELF_HEALING_LABEL,
         "--state", "open",
-        "--base", base_branch,
+        "--base", base_branch or _default_branch(),
         "--json", "number",
         check=False,
     )
@@ -514,7 +528,7 @@ def compose_comment(fixes: list[SelectorFix], run_id: str) -> str:
         COMMENT_MARKER,
         "## Self-Healing: Selector Fix Proposal",
         "",
-        f"Workflow run: [{run_id}](../actions/runs/{run_id})",
+        f"Workflow run: [{run_id}]({_run_url(run_id)})",
         "",
     ]
     for i, fix in enumerate(fixes, 1):
@@ -623,7 +637,7 @@ def create_draft_pr(
         "--body-file", str(body_file),
         "--label", SELF_HEALING_LABEL,
         "--head", fix_branch,
-        "--base", "main",
+        "--base", _default_branch(),
     )
     print(f"[self-healing] Created draft PR on branch {fix_branch}")
 
