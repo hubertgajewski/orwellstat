@@ -332,14 +332,30 @@ def _call_gemini(api_key: str, user_content: str) -> str | None:
     return None
 
 
+_JSON_BLOCK_RE = re.compile(r"```(?:json)?\s*\n(.*?)\n\s*```", re.DOTALL)
+
+
 def _parse_ai_response(text: str, broken_selector: str) -> SelectorFix | None:
-    """Parse JSON response from AI provider into a SelectorFix."""
-    cleaned = re.sub(r"^```(?:json)?\s*", "", text.strip())
-    cleaned = re.sub(r"\s*```$", "", cleaned).strip()
+    """Parse JSON response from AI provider into a SelectorFix.
+
+    Handles three response shapes: bare JSON, fenced JSON at the boundaries,
+    and JSON fenced somewhere in the middle of explanatory text.
+    """
+    stripped = text.strip()
+    # Try bare JSON first
+    candidate = re.sub(r"^```(?:json)?\s*", "", stripped)
+    candidate = re.sub(r"\s*```$", "", candidate).strip()
     try:
-        data = json.loads(cleaned)
+        data = json.loads(candidate)
     except json.JSONDecodeError:
-        return None
+        # Try extracting a fenced JSON block from anywhere in the response
+        m = _JSON_BLOCK_RE.search(stripped)
+        if not m:
+            return None
+        try:
+            data = json.loads(m.group(1).strip())
+        except json.JSONDecodeError:
+            return None
     conf = data.get("confidence", "")
     if conf not in ("high", "medium", "low"):
         return None
@@ -364,9 +380,9 @@ def request_selector_fix_from_ai(
     """Call AI provider to get a selector fix proposal (fallback path).
 
     When *error_context* is provided (the Playwright built-in error-context.md
-    attachment), it is used as the primary context because it bundles the
-    accessibility tree snapshot, test source, and error details in one document.
-    *dom_content* is still appended as a fallback DOM reference.
+    attachment), it replaces dom_content entirely — the accessibility tree
+    snapshot it contains is more useful for selector fixing than raw HTML,
+    and it also bundles the test source and error details.
     """
     broken = _extract_broken_selector(error_message)
     if not broken:
@@ -377,21 +393,25 @@ def request_selector_fix_from_ai(
     if not api_key:
         return None
 
-    dom_snippet = dom_content[:DOM_TRUNCATE_CHARS]
-    if len(dom_content) > DOM_TRUNCATE_CHARS:
-        dom_snippet += "\n...[truncated]"
-
     if error_context:
+        # error-context.md already contains the page snapshot (accessibility
+        # tree), test source, and error details — no need for dom.xhtml.
+        # Strip the "# Instructions" section to avoid conflicting with our
+        # system prompt (it tells the AI to "explain why", which causes it
+        # to add prose before the JSON we need).
+        ec_cleaned = re.sub(
+            r"^#\s*Instructions\b.*?(?=^#\s|\Z)", "", error_context,
+            count=1, flags=re.MULTILINE | re.DOTALL,
+        ).strip()
         user_content = "\n".join([
             f"Broken selector: {broken}",
             "",
-            "--- Playwright error context (includes test source and page snapshot) ---",
-            error_context[:DOM_TRUNCATE_CHARS],
-            "",
-            "--- DOM snapshot (may be truncated) ---",
-            dom_snippet,
+            ec_cleaned[:DOM_TRUNCATE_CHARS],
         ])
     else:
+        dom_snippet = dom_content[:DOM_TRUNCATE_CHARS]
+        if len(dom_content) > DOM_TRUNCATE_CHARS:
+            dom_snippet += "\n...[truncated]"
         user_content = "\n".join([
             f"Broken selector: {broken}",
             f"Errors:\n{error_message}",

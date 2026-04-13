@@ -583,6 +583,23 @@ class TestParseAiResponse(unittest.TestCase):
         fix = self_healing._parse_ai_response(text, "x")
         self.assertIsNotNone(fix)
 
+    def test_extracts_json_after_prose(self):
+        """AI adds explanatory text before the fenced JSON block."""
+        text = (
+            "The selector failed because of a typo.\n\n"
+            "```json\n"
+            + json.dumps({
+                "confidence": "high",
+                "brokenSelector": "x",
+                "suggestedSelector": "y",
+                "explanation": "z",
+            })
+            + "\n```"
+        )
+        fix = self_healing._parse_ai_response(text, "x")
+        self.assertIsNotNone(fix)
+        self.assertEqual(fix.confidence, "high")
+
     def test_returns_none_for_invalid_json(self):
         self.assertIsNone(self_healing._parse_ai_response("not json", "x"))
 
@@ -604,7 +621,7 @@ class TestParseAiResponse(unittest.TestCase):
 class TestErrorContextSupport(unittest.TestCase):
     @patch("self_healing._call_anthropic")
     def test_includes_error_context_in_prompt(self, mock_call):
-        """When error-context.md is provided, it appears in the user_content."""
+        """When error-context.md is provided, it replaces dom.xhtml in the prompt."""
         mock_call.return_value = json.dumps({
             "confidence": "high",
             "brokenSelector": "locator('#menubar').getByRole('link', { name: 'Strona glowna', exact: true })",
@@ -620,12 +637,16 @@ class TestErrorContextSupport(unittest.TestCase):
                 error_context=SAMPLE_ERROR_CONTEXT,
             )
             self.assertIsNotNone(fix)
-            # Verify error-context was included in the prompt sent to the AI
             call_args = mock_call.call_args
             user_content = call_args[0][1]  # second positional arg
-            self.assertIn("Playwright error context", user_content)
+            # Page snapshot and test source from error-context are included
             self.assertIn("Page snapshot", user_content)
             self.assertIn("Test source", user_content)
+            # Instructions section is stripped to avoid conflicting with system prompt
+            self.assertNotIn("# Instructions", user_content)
+            # dom.xhtml is NOT included — error-context replaces it
+            self.assertNotIn("DOM snapshot", user_content)
+            self.assertNotIn("<html></html>", user_content)
         finally:
             del os.environ["ANTHROPIC_API_KEY"]
 
