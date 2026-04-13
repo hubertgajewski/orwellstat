@@ -573,6 +573,36 @@ def post_comment(pr_number: int, body: str, *, dry_run: bool = False) -> None:
     print(f"[self-healing] Posted comment on PR #{pr_number}")
 
 
+def _apply_selector_fix(content: str, fix: SelectorFix) -> str | None:
+    """Replace a broken selector in source code, handling multi-line chains.
+
+    Playwright chained calls like ``locator('#x').getByRole(...)`` appear on
+    separate lines in source but as a single line in error messages.  When a
+    direct ``str.replace`` misses, we build a regex that allows optional
+    whitespace and dot-chaining between method calls.
+    """
+    # Fast path: exact substring match
+    if fix.broken_selector in content:
+        return content.replace(fix.broken_selector, fix.suggested_selector, 1)
+
+    # Split on dots before known Playwright method names (not arbitrary alpha
+    # chars, which would break on dots inside string args like 'example.com').
+    _PW_METHODS = (
+        "locator", "getByRole", "getByText", "getByLabel", "getByTestId",
+        "getByPlaceholder", "getByAltText", "getByTitle", "filter", "nth",
+        "first", "last",
+    )
+    split_pattern = r"\.(?=" + "|".join(_PW_METHODS) + r")"
+    parts = re.split(split_pattern, fix.broken_selector)
+    if len(parts) < 2:
+        return None
+    pattern = r"\s*\.?\s*".join(re.escape(p) for p in parts)
+    m = re.search(pattern, content)
+    if not m:
+        return None
+    return content[: m.start()] + fix.suggested_selector + content[m.end() :]
+
+
 def create_draft_pr(
     fixes: list[SelectorFix],
     head_sha: str,
@@ -609,10 +639,8 @@ def create_draft_pr(
     for fix in fixes:
         for ts_file in pw_dir.rglob("*.spec.ts"):
             content = ts_file.read_text(encoding="utf-8")
-            if fix.broken_selector in content:
-                new_content = content.replace(
-                    fix.broken_selector, fix.suggested_selector, 1
-                )
+            new_content = _apply_selector_fix(content, fix)
+            if new_content and new_content != content:
                 ts_file.write_text(new_content, encoding="utf-8")
                 git_run("git", "add", str(ts_file))
                 applied += 1
