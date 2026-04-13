@@ -554,6 +554,34 @@ class TestComposeComment(unittest.TestCase):
 # ===================================================================
 # Dry run
 # ===================================================================
+# Minimal diff extraction
+# ===================================================================
+
+
+class TestFindMinimalDiff(unittest.TestCase):
+    def test_diacritics_fix(self):
+        """Only the string content differs — diff extends to quote boundaries."""
+        old = "locator('#menubar').getByRole('link', { name: 'Strona glowna', exact: true })"
+        new = "locator('#menubar').getByRole('link', { name: 'Strona główna', exact: true })"
+        result = self_healing._find_minimal_diff(old, new)
+        self.assertIsNotNone(result)
+        old_part, new_part = result
+        self.assertEqual(old_part, "Strona glowna")
+        self.assertEqual(new_part, "Strona główna")
+
+    def test_structural_change(self):
+        """Gemini drops locator — diff is large, still returned."""
+        old = "locator('#menubar').getByRole('link', { name: 'Strona glowna', exact: true })"
+        new = "getByRole('link', { name: 'Strona główna', exact: true })"
+        result = self_healing._find_minimal_diff(old, new)
+        self.assertIsNotNone(result)
+
+    def test_identical_returns_none(self):
+        s = "getByRole('link', { name: 'foo' })"
+        self.assertIsNone(self_healing._find_minimal_diff(s, s))
+
+
+# ===================================================================
 # Apply selector fix (multi-line matching)
 # ===================================================================
 
@@ -595,6 +623,9 @@ class TestApplySelectorFix(unittest.TestCase):
         self.assertIsNotNone(result)
         self.assertIn("Strona główna", result)
         self.assertNotIn("Strona glowna", result)
+        # Formatting preserved: still two separate lines
+        self.assertIn(".locator('#menubar')\n", result)
+        self.assertIn(".getByRole('link',", result)
 
     def test_multiline_shorter_replacement(self):
         """Gemini-style fix: drops locator('#menubar') scoping entirely."""
