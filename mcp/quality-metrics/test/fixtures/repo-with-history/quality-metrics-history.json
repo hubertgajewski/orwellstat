@@ -1,0 +1,14 @@
+[
+  {
+    "date": "2026-01-01",
+    "escape_rate": "0%",
+    "mttr": "1.0 days",
+    "coverage": "50%"
+  },
+  {
+    "date": "2026-02-01",
+    "escape_rate": "10%",
+    "mttr": "1.5 days",
+    "coverage": "60%"
+  }
+]

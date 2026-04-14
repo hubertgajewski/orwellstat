@@ -20,7 +20,7 @@ Four project-scoped skills are available in Claude Code (stored in `.claude/skil
 .env.example                # template: ORWELLSTAT_USER, ORWELLSTAT_PASSWORD, ENV, BASIC_AUTH_USER, BASIC_AUTH_PASSWORD, ANTHROPIC_API_KEY, GEMINI_API_KEY, OPENROUTER_API_KEY
 .vars                       # CI repository variables (git-ignored); see .vars.example
 .vars.example               # template: AI_REVIEW, PLAYWRIGHT_TYPESCRIPT, BRUNO, QUALITY_METRICS, AI_DIAGNOSIS, AI_PROVIDER, AI_MODEL_FAST, AI_MODEL_STRONG, AI_REVIEW_PROVIDER, AI_REVIEW_MODEL, SELF_HEALING
-.mcp.json                   # MCP server definitions (MCP_DOCKER, playwright, playwright-report-mcp) — loaded by Claude Code and other MCP-compatible AI assistants
+.mcp.json                   # MCP server definitions (MCP_DOCKER, playwright, playwright-report-mcp, quality-metrics) — loaded by Claude Code and other MCP-compatible AI assistants
 .github/workflows/          # CI workflows (one per sub-project)
 CLAUDE.md                   # repository-specific behavioral guidance for Claude Code
 CODEX.md                    # Codex entrypoint; delegates shared repository guidance to CLAUDE.md
@@ -37,6 +37,8 @@ playwright/
   typescript/               # Playwright tests in TypeScript
 selenium/                   # Selenium tests (planned)
 bruno/                      # Bruno API request collection
+mcp/
+  quality-metrics/          # local MCP server exposing escape rate, MTTR, and metrics history
 ```
 
 ## Prerequisites
@@ -388,13 +390,14 @@ After calculating metrics, the workflow runs `scripts/generate-quality-metrics.p
 
 ## MCP servers
 
-Three MCP servers are declared in `.mcp.json` and loaded automatically by any MCP-compatible AI assistant opened from the repo root. All three are loaded automatically — no local setup needed beyond having Node.js and Docker installed.
+Four MCP servers are declared in `.mcp.json` and loaded automatically by any MCP-compatible AI assistant opened from the repo root. All four are loaded automatically — no local setup needed beyond having Node.js and Docker installed (and a one-off `npm run build` in `mcp/quality-metrics/` for the local server).
 
-| Server                | Key in `.mcp.json`      | Purpose                                                         |
-| --------------------- | ----------------------- | --------------------------------------------------------------- |
-| playwright-report-mcp | `playwright-report-mcp` | Run Playwright tests and retrieve structured results            |
-| playwright (browser)  | `playwright`            | Live browser automation — navigate, click, screenshot, snapshot |
-| Docker MCP gateway    | `MCP_DOCKER`            | Interact with Docker containers (used with `act` for local CI)  |
+| Server                | Key in `.mcp.json`      | Purpose                                                                    |
+| --------------------- | ----------------------- | -------------------------------------------------------------------------- |
+| playwright-report-mcp | `playwright-report-mcp` | Run Playwright tests and retrieve structured results                       |
+| playwright (browser)  | `playwright`            | Live browser automation — navigate, click, screenshot, snapshot            |
+| Docker MCP gateway    | `MCP_DOCKER`            | Interact with Docker containers (used with `act` for local CI)             |
+| quality-metrics       | `quality-metrics`       | Query defect escape rate, MTTR, and metrics history (local, no deployment) |
 
 ### playwright-report-mcp
 
@@ -455,6 +458,22 @@ Docker MCP gateway. Used for interacting with Docker containers when running Git
 | ---------- | -------------------------------------------- |
 | `mcp-exec` | Execute a command inside a running container |
 | `mcp-find` | Find containers by name or label             |
+
+### quality-metrics
+
+Local MCP server in `mcp/quality-metrics/` that exposes the same defect escape rate, MTTR, and metrics history data as `QUALITY_METRICS.md` — callable on demand from an AI assistant without waiting for the monthly `quality-metrics.yml` workflow run.
+
+**Setup:** Build once from the repo root — `(cd mcp/quality-metrics && npm install && npm run build)`. The server runs via `node mcp/quality-metrics/dist/index.js` as configured in `.mcp.json`.
+
+`get_defect_escape_rate` and `get_mttr` shell out to `scripts/generate-quality-metrics.py --json`, so the values returned are guaranteed to match `QUALITY_METRICS.md`. Requires `gh` to be authenticated locally (the default in a developer session).
+
+| Tool                     | Description                                                                                                      |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| `get_defect_escape_rate` | Return escape rate percentage and bug counts per discovery label (`found-by-test`, `found-by-manual-testing`, `found-in-production`) |
+| `get_mttr`               | Return mean time to resolve for all closed bug issues, and broken down per discovery label                       |
+| `get_metrics_history`    | Return all historical data points from `quality-metrics-history.json` as structured JSON                         |
+
+When no `bug`-labeled issues exist, all three tools return a clear `"No bug issues found"` message instead of dividing by zero or throwing.
 
 ---
 

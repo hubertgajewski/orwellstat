@@ -17,6 +17,11 @@
       "env": {
         "PW_DIR": "playwright/typescript"
       }
+    },
+    "quality-metrics": {
+      "command": "node",
+      "args": ["mcp/quality-metrics/dist/index.js"],
+      "type": "stdio"
     }
   }
 }
