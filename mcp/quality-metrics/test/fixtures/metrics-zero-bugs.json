@@ -1,0 +1,15 @@
+{
+  "total_bugs": 0,
+  "counts": {
+    "found-by-test": 0,
+    "found-by-manual-testing": 0,
+    "found-in-production": 0
+  },
+  "escape_rate": "N/A",
+  "mttr": {
+    "all": "N/A (no closed bugs)",
+    "found-by-test": "N/A",
+    "found-by-manual-testing": "N/A",
+    "found-in-production": "N/A"
+  }
+}

@@ -6,7 +6,8 @@ for today in quality-metrics-history.json, and regenerates QUALITY_METRICS.md.
 Also appends the step summary to GITHUB_STEP_SUMMARY when the env var is set.
 
 Usage (requires GH_TOKEN in environment):
-    python3 scripts/generate-quality-metrics.py
+    python3 scripts/generate-quality-metrics.py            # default: write files
+    python3 scripts/generate-quality-metrics.py --json     # print escape rate + MTTR as JSON; write no files
 """
 
 import json
@@ -90,32 +91,61 @@ def write_step_summary(lines):
         f.write("\n".join(lines) + "\n")
 
 
-def main():
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+def compute_escape_rate_and_mttr():
+    """Query gh for bug issues and return escape rate + MTTR data.
 
-    # --- Escape rate ---
+    Used by both the default markdown-writing flow and the --json flow so both
+    paths compute identical values.
+    """
     by_test = gh_issues("bug,found-by-test")
     by_manual = gh_issues("bug,found-by-manual-testing")
     in_prod = gh_issues("bug,found-in-production")
     n_test, n_manual, n_prod = len(by_test), len(by_manual), len(in_prod)
     total_bugs = n_test + n_manual + n_prod
 
-    if total_bugs == 0:
-        escape_rate_str = "N/A"
-    else:
-        escape_rate_str = f"{n_prod * 100 / total_bugs:.0f}%"
+    escape_rate_str = "N/A" if total_bugs == 0 else f"{n_prod * 100 / total_bugs:.0f}%"
 
-    # --- MTTR ---
     time_fields = ["createdAt", "closedAt"]
     all_closed = gh_issues("bug", state="closed", extra_fields=time_fields)
     closed_test = gh_issues("bug,found-by-test", state="closed", extra_fields=time_fields)
     closed_manual = gh_issues("bug,found-by-manual-testing", state="closed", extra_fields=time_fields)
     closed_prod = gh_issues("bug,found-in-production", state="closed", extra_fields=time_fields)
 
-    mttr_all = mttr(all_closed, "N/A (no closed bugs)")
-    mttr_test = mttr(closed_test)
-    mttr_manual = mttr(closed_manual)
-    mttr_prod = mttr(closed_prod)
+    return {
+        "total_bugs": total_bugs,
+        "counts": {
+            "found-by-test": n_test,
+            "found-by-manual-testing": n_manual,
+            "found-in-production": n_prod,
+        },
+        "escape_rate": escape_rate_str,
+        "mttr": {
+            "all": mttr(all_closed, "N/A (no closed bugs)"),
+            "found-by-test": mttr(closed_test),
+            "found-by-manual-testing": mttr(closed_manual),
+            "found-in-production": mttr(closed_prod),
+        },
+    }
+
+
+def main():
+    if "--json" in sys.argv[1:]:
+        json.dump(compute_escape_rate_and_mttr(), sys.stdout, indent=2)
+        sys.stdout.write("\n")
+        return
+
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+    metrics = compute_escape_rate_and_mttr()
+    n_test = metrics["counts"]["found-by-test"]
+    n_manual = metrics["counts"]["found-by-manual-testing"]
+    n_prod = metrics["counts"]["found-in-production"]
+    total_bugs = metrics["total_bugs"]
+    escape_rate_str = metrics["escape_rate"]
+    mttr_all = metrics["mttr"]["all"]
+    mttr_test = metrics["mttr"]["found-by-test"]
+    mttr_manual = metrics["mttr"]["found-by-manual-testing"]
+    mttr_prod = metrics["mttr"]["found-in-production"]
 
     # --- Coverage ---
     if COVERAGE_MATRIX.exists():

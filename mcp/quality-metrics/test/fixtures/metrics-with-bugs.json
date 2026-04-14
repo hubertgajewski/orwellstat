@@ -1,0 +1,15 @@
+{
+  "total_bugs": 7,
+  "counts": {
+    "found-by-test": 5,
+    "found-by-manual-testing": 1,
+    "found-in-production": 1
+  },
+  "escape_rate": "14%",
+  "mttr": {
+    "all": "1.4 days",
+    "found-by-test": "2.3 days",
+    "found-by-manual-testing": "2.2 hours",
+    "found-in-production": "0.4 hours"
+  }
+}
