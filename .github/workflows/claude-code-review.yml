@@ -52,23 +52,34 @@ jobs:
           anthropic_api_key: ${{ (vars.ANTHROPIC_BASE_URL != '' && secrets.OPENROUTER_API_KEY) || (vars.ANTHROPIC_BASE_URL == '' && secrets.ANTHROPIC_API_KEY) || '' }}
           track_progress: true
           prompt: |
-            REPO: ${{ github.repository }}
-            PR NUMBER: ${{ github.event.pull_request.number }}
+            You are executing a code review of pull request #${{ github.event.pull_request.number }}
+            in ${{ github.repository }}. This is an autonomous task: complete it using tool calls
+            only. Do not reply in prose. Do not say "I will analyze". Do not output review text
+            as a message.
 
-            Please review this pull request. The repo is a multi-framework E2E test suite for OrwellStat.
-            Focus on:
-            - Playwright test correctness (selectors, assertions, fixture usage)
-            - Page Object Model conventions (extending AbstractPage, static url/title/accessKey)
-            - TypeScript quality (types, imports, path aliases)
-            - Potential bugs or flaky test patterns
-            - Consistency with existing patterns in the codebase
+            MANDATORY final action — invoke `gh pr review ${{ github.event.pull_request.number }}`
+            exactly once, with one of:
+              - `--approve -b "..."`          if the PR is acceptable as-is
+              - `--request-changes -b "..."`  if changes are required
+              - `--comment -b "..."`          if you have observations but no verdict
 
-            Always finish by submitting a formal GitHub review using `gh pr review` — this is mandatory regardless of what other tools you used:
-            - `gh pr review <number> --approve -b "..."` if the PR looks good
-            - `gh pr review <number> --request-changes -b "..."` if changes are needed
-            - `gh pr review <number> --comment -b "..."` if you have feedback but no verdict
-            You may also use `mcp__github_inline_comment__create_inline_comment` to highlight specific code issues, but it does not replace the required `gh pr review` call.
-            Only post GitHub review/comments - don't submit review text as messages.
+            Task completion is measured by whether that call succeeds. If the final
+            `gh pr review` is not invoked, the task has failed.
+
+            Steps:
+              1. Fetch the diff with `gh pr diff ${{ github.event.pull_request.number }}`.
+              2. Read the diff and identify issues against these criteria:
+                 - Playwright test correctness (selectors, assertions, fixture usage)
+                 - Page Object Model conventions (extending AbstractPage, static
+                   url/title/accessKey)
+                 - TypeScript quality (types, imports, path aliases)
+                 - Potential bugs or flaky test patterns
+                 - Consistency with existing patterns in the codebase
+              3. (Optional) attach line-anchored comments via
+                 `mcp__github_inline_comment__create_inline_comment`.
+              4. Call `gh pr review` per the mandate above. The review body must summarise
+                 findings and must be under 2000 characters. Every claim must be verifiable
+                 in the diff — do not invent issues.
 
           claude_args: |
             --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr review:*),Bash(gh pr diff:*),Bash(gh pr view:*)"
