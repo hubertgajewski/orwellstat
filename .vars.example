@@ -2,7 +2,7 @@
 # In real GitHub Actions these are set under Settings → Variables → Actions.
 # Copy to .vars and set each variable to "true" to enable the corresponding workflow or feature.
 # When absent or any other value the workflow job or feature is skipped.
-CLAUDE_REVIEW=
+AI_REVIEW=
 PLAYWRIGHT_TYPESCRIPT=
 BRUNO=
 QUALITY_METRICS=
@@ -16,6 +16,13 @@ AI_MODEL_FAST=
 # Override the strong-tier model used for selector-fix proposals. Leave empty to use the provider default.
 # Defaults: anthropic -> claude-sonnet-4-6, gemini -> gemini-3.1-flash-lite-preview.
 AI_MODEL_STRONG=
+# Provider for the PR code review action (claude-code-review.yml).
+# Accepted values: openrouter (default), anthropic.
+# openrouter requires OPENROUTER_API_KEY secret; anthropic requires ANTHROPIC_API_KEY secret.
+AI_REVIEW_PROVIDER=
+# Override the model used by the PR reviewer. Leave empty to use the provider default.
+# Defaults: openrouter -> qwen/qwen3.6-plus, anthropic -> claude-sonnet-4-6.
+AI_REVIEW_MODEL=
 # Self-healing selector fix workflow. Set to "true" to enable automatic draft PRs / PR comments
 # when Playwright tests fail due to locator/selector errors. Uses the same AI_PROVIDER setting
 # and API key (ANTHROPIC_API_KEY or GEMINI_API_KEY) as AI_DIAGNOSIS for the fallback path
