@@ -19,7 +19,7 @@ Four project-scoped skills are available in Claude Code (stored in `.claude/skil
 .env                        # credentials (git-ignored); see .env.example
 .env.example                # template: ORWELLSTAT_USER, ORWELLSTAT_PASSWORD, ENV, BASIC_AUTH_USER, BASIC_AUTH_PASSWORD, ANTHROPIC_API_KEY, GEMINI_API_KEY, OPENROUTER_API_KEY
 .vars                       # CI repository variables (git-ignored); see .vars.example
-.vars.example               # template: AI_REVIEW, PLAYWRIGHT_TYPESCRIPT, BRUNO, QUALITY_METRICS, AI_DIAGNOSIS, AI_PROVIDER, AI_MODEL_FAST, AI_MODEL_STRONG, AI_REVIEW_PROVIDER, AI_REVIEW_MODEL, SELF_HEALING
+.vars.example               # template: AI_REVIEW, PLAYWRIGHT_TYPESCRIPT, BRUNO, QUALITY_METRICS, AI_DIAGNOSIS, AI_PROVIDER, AI_MODEL_FAST, AI_MODEL_STRONG, ANTHROPIC_BASE_URL, ANTHROPIC_DEFAULT_SONNET_MODEL, ANTHROPIC_DEFAULT_HAIKU_MODEL, SELF_HEALING
 .mcp.json                   # MCP server definitions (MCP_DOCKER, playwright, playwright-report-mcp, quality-metrics) — loaded by Claude Code and other MCP-compatible AI assistants
 .github/workflows/          # CI workflows (one per sub-project)
 CLAUDE.md                   # repository-specific behavioral guidance for Claude Code
@@ -64,10 +64,10 @@ BASIC_AUTH_USER=<staging basic auth user>
 BASIC_AUTH_PASSWORD=<staging basic auth password>
 ANTHROPIC_API_KEY=<Anthropic API key>
 GEMINI_API_KEY=<Gemini API key>
-OPENROUTER_API_KEY=<OpenRouter API key (required when AI_REVIEW_PROVIDER=openrouter)>
+OPENROUTER_API_KEY=<OpenRouter API key (required when ANTHROPIC_BASE_URL points to OpenRouter)>
 ```
 
-`ORWELLSTAT_USER` and `ORWELLSTAT_PASSWORD` are required for all environments. `BASIC_AUTH_USER` and `BASIC_AUTH_PASSWORD` are only needed when running against staging — Playwright passes them automatically as HTTP Basic Auth credentials when set. `ANTHROPIC_API_KEY` and `GEMINI_API_KEY` are optional — when the active provider's key is present alongside `AI_DIAGNOSIS=true` in `.vars`, failed tests receive an `AI diagnosis` attachment in the Playwright report; when either is absent the fixture behaves identically to without them. Set `AI_PROVIDER` in `.vars` to choose the provider (`anthropic` by default, or `gemini`). `OPENROUTER_API_KEY` is required when `AI_REVIEW_PROVIDER=openrouter` (the default for the PR reviewer); get one at https://openrouter.ai/keys. In CI, secrets are injected as GitHub Actions secrets and variables via GitHub Actions variables. Sub-projects load them via `dotenv` with a path pointing two levels up (`../../.env` and `../../.vars`).
+`ORWELLSTAT_USER` and `ORWELLSTAT_PASSWORD` are required for all environments. `BASIC_AUTH_USER` and `BASIC_AUTH_PASSWORD` are only needed when running against staging — Playwright passes them automatically as HTTP Basic Auth credentials when set. `ANTHROPIC_API_KEY` and `GEMINI_API_KEY` are optional — when the active provider's key is present alongside `AI_DIAGNOSIS=true` in `.vars`, failed tests receive an `AI diagnosis` attachment in the Playwright report; when either is absent the fixture behaves identically to without them. Set `AI_PROVIDER` in `.vars` to choose the provider (`anthropic` by default, or `gemini`). `OPENROUTER_API_KEY` is required when `ANTHROPIC_BASE_URL` in `.vars` points to OpenRouter (or any Anthropic-compat proxy); the PR reviewer uses it as the Bearer auth token. Get one at https://openrouter.ai/keys. In CI, secrets are injected as GitHub Actions secrets and variables via GitHub Actions variables. Sub-projects load them via `dotenv` with a path pointing two levels up (`../../.env` and `../../.vars`).
 
 ### CI repository variables
 
@@ -79,8 +79,9 @@ The following variables are set in **GitHub → Settings → Variables → Actio
 | `AI_PROVIDER`           | AI provider for diagnosis (`anthropic` or `gemini`; default: `anthropic`) | Every Playwright run (local and CI)           |
 | `AI_MODEL_FAST`         | Override fast-tier model (diagnosis); empty = provider default            | Every Playwright run (local and CI)           |
 | `AI_MODEL_STRONG`       | Override strong-tier model (selector fix); empty = provider default       | Every Playwright run (local and CI)           |
-| `AI_REVIEW_PROVIDER`    | Provider for PR reviewer (`openrouter` default or `anthropic`)            | PR events via `claude-code-review.yml`                                     |
-| `AI_REVIEW_MODEL`       | Override reviewer model; empty = provider default (openrouter: `qwen/qwen3.6-plus`, anthropic: `claude-sonnet-4-6`) | PR events via `claude-code-review.yml`                                     |
+| `ANTHROPIC_BASE_URL`    | Base URL for PR reviewer; empty = native Anthropic, `https://openrouter.ai/api/v1` = OpenRouter | PR events via `claude-code-review.yml`                                     |
+| `ANTHROPIC_DEFAULT_SONNET_MODEL` | Sonnet-tier model slug for PR reviewer; required when `ANTHROPIC_BASE_URL` is set | PR events via `claude-code-review.yml`                                     |
+| `ANTHROPIC_DEFAULT_HAIKU_MODEL`  | Haiku-tier model slug for PR reviewer; required when `ANTHROPIC_BASE_URL` is set | PR events via `claude-code-review.yml`                                     |
 | `AI_REVIEW`             | `claude-code-review.yml`                     | PR events (opened, synchronize, ready_for_review, reopened)                |
 | `PLAYWRIGHT_TYPESCRIPT` | `playwright-typescript.yml`                  | PR events, push to main, Sunday 03:00 UTC schedule, `workflow_dispatch`    |
 | `BRUNO`                 | `bruno.yml`                                  | PR events, push to main, `workflow_dispatch`                               |

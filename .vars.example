@@ -16,13 +16,19 @@ AI_MODEL_FAST=
 # Override the strong-tier model used for selector-fix proposals. Leave empty to use the provider default.
 # Defaults: anthropic -> claude-sonnet-4-6, gemini -> gemini-3.1-flash-lite-preview.
 AI_MODEL_STRONG=
-# Provider for the PR code review action (claude-code-review.yml).
-# Accepted values: openrouter (default), anthropic.
-# openrouter requires OPENROUTER_API_KEY secret; anthropic requires ANTHROPIC_API_KEY secret.
-AI_REVIEW_PROVIDER=
-# Override the model used by the PR reviewer. Leave empty to use the provider default.
-# Defaults: openrouter -> qwen/qwen3.6-plus, anthropic -> claude-sonnet-4-6.
-AI_REVIEW_MODEL=
+# Base URL for the PR code review action (claude-code-review.yml).
+# Leave empty to use Anthropic's native API (requires ANTHROPIC_API_KEY secret, x-api-key auth).
+# Set to an Anthropic-compatible proxy like https://openrouter.ai/api/v1 to route through it
+# (requires OPENROUTER_API_KEY secret, Bearer auth). When set, both
+# ANTHROPIC_DEFAULT_SONNET_MODEL and ANTHROPIC_DEFAULT_HAIKU_MODEL must also be set.
+ANTHROPIC_BASE_URL=
+# Override the sonnet-tier model used by the PR reviewer. Required when ANTHROPIC_BASE_URL is set.
+# Leave empty to use Claude Code's default (claude-sonnet-4-6). Example: qwen/qwen3.6-plus.
+ANTHROPIC_DEFAULT_SONNET_MODEL=
+# Override the haiku-tier model used by the PR reviewer (Claude Code invokes Haiku internally
+# for summarization and quick calls). Required when ANTHROPIC_BASE_URL is set.
+# Leave empty to use Claude Code's default (claude-haiku-4-5). Example: qwen/qwen3.6-plus.
+ANTHROPIC_DEFAULT_HAIKU_MODEL=
 # Self-healing selector fix workflow. Set to "true" to enable automatic draft PRs / PR comments
 # when Playwright tests fail due to locator/selector errors. Uses the same AI_PROVIDER setting
 # and API key (ANTHROPIC_API_KEY or GEMINI_API_KEY) as AI_DIAGNOSIS for the fallback path
