@@ -19,7 +19,7 @@ Four project-scoped skills are available in Claude Code (stored in `.claude/skil
 .env                        # credentials (git-ignored); see .env.example
 .env.example                # template: ORWELLSTAT_USER, ORWELLSTAT_PASSWORD, ENV, BASIC_AUTH_USER, BASIC_AUTH_PASSWORD, ANTHROPIC_API_KEY, GEMINI_API_KEY
 .vars                       # CI repository variables (git-ignored); see .vars.example
-.vars.example               # template: CLAUDE_REVIEW, PLAYWRIGHT_TYPESCRIPT, BRUNO, QUALITY_METRICS, AI_DIAGNOSIS, AI_PROVIDER, CLAUDE_DIAGNOSIS, SELF_HEALING
+.vars.example               # template: CLAUDE_REVIEW, PLAYWRIGHT_TYPESCRIPT, BRUNO, QUALITY_METRICS, AI_DIAGNOSIS, AI_PROVIDER, AI_MODEL_FAST, AI_MODEL_STRONG, SELF_HEALING
 .mcp.json                   # MCP server definitions (MCP_DOCKER, playwright, playwright-report-mcp) — loaded by Claude Code and other MCP-compatible AI assistants
 .github/workflows/          # CI workflows (one per sub-project)
 CLAUDE.md                   # repository-specific behavioral guidance for Claude Code
@@ -74,7 +74,8 @@ The following variables are set in **GitHub → Settings → Variables → Actio
 | ----------------------- | -------------------------------------------- | -------------------------------------------------------------------------- |
 | `AI_DIAGNOSIS`          | AI-powered test failure diagnosis attachment | Every Playwright run (local and CI)                                        |
 | `AI_PROVIDER`           | AI provider for diagnosis (`anthropic` or `gemini`; default: `anthropic`) | Every Playwright run (local and CI)           |
-| `CLAUDE_DIAGNOSIS`      | Deprecated alias for `AI_DIAGNOSIS` (still works as fallback) | Every Playwright run (local and CI)                          |
+| `AI_MODEL_FAST`         | Override fast-tier model (diagnosis); empty = provider default            | Every Playwright run (local and CI)           |
+| `AI_MODEL_STRONG`       | Override strong-tier model (selector fix); empty = provider default       | Every Playwright run (local and CI)           |
 | `CLAUDE_REVIEW`         | `claude-code-review.yml`                     | PR events (opened, synchronize, ready_for_review, reopened)                |
 | `PLAYWRIGHT_TYPESCRIPT` | `playwright-typescript.yml`                  | PR events, push to main, Sunday 03:00 UTC schedule, `workflow_dispatch`    |
 | `BRUNO`                 | `bruno.yml`                                  | PR events, push to main, `workflow_dispatch`                               |
@@ -324,7 +325,7 @@ Use `--grep` to run a subset and `--grep-invert` to exclude it (see [Running tes
 - `utils/string.util.ts` — `expectHeadings()` helper: asserts visibility of multiple headings on a page
 - `utils/validation.util.ts` — `expectValidXhtml(request, xhtml)` POSTs raw markup to the classic W3C Markup Validation Service (`validator.w3.org/check`) and asserts no errors (correct for XHTML 1.0 Strict; Nu is HTML5-only and gives false positives); `expectValidCss(request, cssUrl)` queries W3C CSS validator by URI and asserts zero errors
 - `utils/env.util.ts` — `loadEnv(importMetaUrl, levelsUp)` loads `.env` relative to the calling file; `requireCredentials()` validates and returns `ORWELLSTAT_USER`/`ORWELLSTAT_PASSWORD`, throwing a descriptive error if either is missing
-- `utils/diagnosis.util.ts` — `attachAiDiagnosis(testInfo, logs, domContent)`: calls the configured AI provider (Anthropic or Gemini, selected by `AI_PROVIDER`) to produce a diagnosis and optional selector-fix attachment on test failure; no-ops when `AI_DIAGNOSIS=true` is absent or the provider's API key is missing; errors are caught and warned so diagnosis never fails a test
+- `utils/diagnosis.util.ts` — `attachAiDiagnosis(testInfo, logs, domContent)`: calls the configured AI provider (Anthropic or Gemini, selected by `AI_PROVIDER`) to produce a diagnosis and optional selector-fix attachment on test failure; model names default to a per-provider map but can be overridden via `AI_MODEL_FAST` (diagnosis) and `AI_MODEL_STRONG` (selector fix); no-ops when `AI_DIAGNOSIS=true` is absent or the provider's API key is missing; errors are caught and warned so diagnosis never fails a test
 - `types/` — Shared TypeScript interfaces; exported via path alias `@types-local/*`
   - `svg-analysis.ts` — `SvgAnalysis` interface: shape of the object returned by `page.evaluate()` in `statistics.spec.ts`
   - `statistics-row.ts` — `StatisticsRow` interface: shape of each data row returned by the bulk `page.evaluate()` in `statistics.spec.ts`
