@@ -32,11 +32,16 @@ jobs:
             exit 1
           fi
 
-      # Auth convention: when ANTHROPIC_BASE_URL is set we're proxying through an
-      # Anthropic-compat provider (e.g. OpenRouter) which expects Bearer auth via
-      # ANTHROPIC_AUTH_TOKEN; when empty we use Anthropic's native API with x-api-key
-      # auth via the anthropic_api_key input. The two conditions below are inverse
-      # by design — exactly one path ever carries a credential.
+      # Auth convention:
+      # - Native Anthropic (ANTHROPIC_BASE_URL empty): anthropic_api_key input carries
+      #   ANTHROPIC_API_KEY (x-api-key header). ANTHROPIC_AUTH_TOKEN left empty.
+      # - Proxy (ANTHROPIC_BASE_URL set, e.g. OpenRouter): ANTHROPIC_AUTH_TOKEN carries
+      #   the proxy key (Bearer header, per OpenRouter docs). anthropic_api_key input
+      #   ALSO carries the same proxy key — required to satisfy claude-code-action@v1's
+      #   own pre-flight env validator which hard-requires a non-empty ANTHROPIC_API_KEY.
+      #   The Anthropic SDK sends both headers with the proxy key; OpenRouter accepts
+      #   either. No cross-provider leak: the Anthropic key is only ever emitted when
+      #   ANTHROPIC_BASE_URL is empty.
       - uses: anthropics/claude-code-action@v1
         env:
           ANTHROPIC_BASE_URL: ${{ vars.ANTHROPIC_BASE_URL }}
@@ -44,7 +49,7 @@ jobs:
           ANTHROPIC_DEFAULT_SONNET_MODEL: ${{ vars.ANTHROPIC_DEFAULT_SONNET_MODEL }}
           ANTHROPIC_DEFAULT_HAIKU_MODEL: ${{ vars.ANTHROPIC_DEFAULT_HAIKU_MODEL }}
         with:
-          anthropic_api_key: ${{ vars.ANTHROPIC_BASE_URL == '' && secrets.ANTHROPIC_API_KEY || '' }}
+          anthropic_api_key: ${{ (vars.ANTHROPIC_BASE_URL != '' && secrets.OPENROUTER_API_KEY) || (vars.ANTHROPIC_BASE_URL == '' && secrets.ANTHROPIC_API_KEY) || '' }}
           track_progress: true
           prompt: |
             REPO: ${{ github.repository }}
