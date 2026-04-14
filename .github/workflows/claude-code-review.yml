@@ -21,49 +21,30 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Resolve reviewer provider settings
-        id: reviewer
+      - name: Validate reviewer configuration
         env:
-          AI_REVIEW_PROVIDER: ${{ vars.AI_REVIEW_PROVIDER }}
-          AI_REVIEW_MODEL: ${{ vars.AI_REVIEW_MODEL }}
-          HAS_OPENROUTER_KEY: ${{ secrets.OPENROUTER_API_KEY != '' }}
-          HAS_ANTHROPIC_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' }}
+          BASE_URL: ${{ vars.ANTHROPIC_BASE_URL }}
+          SONNET: ${{ vars.ANTHROPIC_DEFAULT_SONNET_MODEL }}
+          HAIKU: ${{ vars.ANTHROPIC_DEFAULT_HAIKU_MODEL }}
         run: |
-          provider="${AI_REVIEW_PROVIDER:-openrouter}"
-          case "$provider" in
-            openrouter)
-              if [ "$HAS_OPENROUTER_KEY" != "true" ]; then
-                echo "::error::AI_REVIEW_PROVIDER=openrouter but OPENROUTER_API_KEY secret is not set"
-                exit 1
-              fi
-              default_model="qwen/qwen3.6-plus"
-              base_url="https://openrouter.ai/api/v1"
-              ;;
-            anthropic)
-              if [ "$HAS_ANTHROPIC_KEY" != "true" ]; then
-                echo "::error::AI_REVIEW_PROVIDER=anthropic but ANTHROPIC_API_KEY secret is not set"
-                exit 1
-              fi
-              default_model="claude-sonnet-4-6"
-              base_url=""
-              ;;
-            *)
-              echo "::error::Unknown AI_REVIEW_PROVIDER '$provider' (expected: openrouter | anthropic)"
-              exit 1
-              ;;
-          esac
-          model="${AI_REVIEW_MODEL:-$default_model}"
-          {
-            echo "provider=$provider"
-            echo "model=$model"
-            echo "base_url=$base_url"
-          } >> "$GITHUB_OUTPUT"
+          if [ -n "$BASE_URL" ] && { [ -z "$SONNET" ] || [ -z "$HAIKU" ]; }; then
+            echo "::error::ANTHROPIC_BASE_URL is set, so both ANTHROPIC_DEFAULT_SONNET_MODEL and ANTHROPIC_DEFAULT_HAIKU_MODEL must also be set. Claude Code's defaults (claude-sonnet-4-6, claude-haiku-4-5) don't exist on proxies like OpenRouter."
+            exit 1
+          fi
 
+      # Auth convention: when ANTHROPIC_BASE_URL is set we're proxying through an
+      # Anthropic-compat provider (e.g. OpenRouter) which expects Bearer auth via
+      # ANTHROPIC_AUTH_TOKEN; when empty we use Anthropic's native API with x-api-key
+      # auth via the anthropic_api_key input. The two conditions below are inverse
+      # by design — exactly one path ever carries a credential.
       - uses: anthropics/claude-code-action@v1
         env:
-          ANTHROPIC_BASE_URL: ${{ steps.reviewer.outputs.base_url }}
+          ANTHROPIC_BASE_URL: ${{ vars.ANTHROPIC_BASE_URL }}
+          ANTHROPIC_AUTH_TOKEN: ${{ vars.ANTHROPIC_BASE_URL != '' && secrets.OPENROUTER_API_KEY || '' }}
+          ANTHROPIC_DEFAULT_SONNET_MODEL: ${{ vars.ANTHROPIC_DEFAULT_SONNET_MODEL }}
+          ANTHROPIC_DEFAULT_HAIKU_MODEL: ${{ vars.ANTHROPIC_DEFAULT_HAIKU_MODEL }}
         with:
-          anthropic_api_key: ${{ steps.reviewer.outputs.provider == 'openrouter' && secrets.OPENROUTER_API_KEY || secrets.ANTHROPIC_API_KEY }}
+          anthropic_api_key: ${{ vars.ANTHROPIC_BASE_URL == '' && secrets.ANTHROPIC_API_KEY || '' }}
           track_progress: true
           prompt: |
             REPO: ${{ github.repository }}
@@ -85,4 +66,4 @@ jobs:
             Only post GitHub review/comments - don't submit review text as messages.
 
           claude_args: |
-            --model ${{ steps.reviewer.outputs.model }} --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr review:*),Bash(gh pr diff:*),Bash(gh pr view:*)"
+            --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr review:*),Bash(gh pr diff:*),Bash(gh pr view:*)"
