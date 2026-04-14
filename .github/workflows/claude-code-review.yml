@@ -58,10 +58,18 @@ jobs:
             as a message.
 
             MANDATORY final action — invoke `gh pr review ${{ github.event.pull_request.number }}`
-            exactly once, with one of:
-              - `--approve -b "..."`          if the PR is acceptable as-is
-              - `--request-changes -b "..."`  if changes are required
-              - `--comment -b "..."`          if you have observations but no verdict
+            exactly once with a BINARY verdict:
+              - `--approve -b "..."`          default — pick this when the PR meets the
+                                              criteria. Minor nits do not block approval.
+              - `--request-changes -b "..."`  pick this ONLY when the PR has a concrete
+                                              blocking issue that must be fixed before merge.
+              - `--comment -b "..."`          reserved for drafts / WIP PRs or PRs where the
+                                              diff is structurally unreviewable (mass renames,
+                                              generated files). Do not use as a fallback.
+
+            You are the reviewer; produce a verdict. Do not add disclaimers like
+            "As an AI, I cannot approve" — your role is to evaluate code quality
+            against the criteria, not defer to human judgment.
 
             Task completion is measured by whether that call succeeds. If the final
             `gh pr review` is not invoked, the task has failed.
