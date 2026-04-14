@@ -144,7 +144,8 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           AI_PROVIDER: ${{ vars.AI_PROVIDER }}
           AI_DIAGNOSIS: ${{ vars.AI_DIAGNOSIS }}
-          CLAUDE_DIAGNOSIS: ${{ vars.CLAUDE_DIAGNOSIS }}
+          AI_MODEL_FAST: ${{ vars.AI_MODEL_FAST }}
+          AI_MODEL_STRONG: ${{ vars.AI_MODEL_STRONG }}
       - name: Upload updated baselines
         if: ${{ github.event.inputs.update_visual_baselines == 'true' }}
         uses: actions/upload-artifact@v7

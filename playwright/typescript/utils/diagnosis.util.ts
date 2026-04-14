@@ -32,6 +32,11 @@ const MODEL_MAP = {
 
 type AiProvider = keyof typeof MODEL_MAP;
 
+interface Models {
+  fast: string;
+  strong: string;
+}
+
 function isAiProvider(value: string): value is AiProvider {
   return value in MODEL_MAP;
 }
@@ -84,7 +89,7 @@ function extractBrokenSelector(errorMessages: string): string | null {
 
 async function requestDiagnosis(
   complete: AiCompletionFn,
-  models: (typeof MODEL_MAP)[AiProvider],
+  models: Models,
   testInfo: TestInfo,
   logs: string[],
   errorMessages: string,
@@ -112,7 +117,7 @@ async function requestDiagnosis(
 
 async function requestSelectorFix(
   complete: AiCompletionFn,
-  models: (typeof MODEL_MAP)[AiProvider],
+  models: Models,
   brokenSelector: string,
   errorMessages: string,
   domSnippet: string
@@ -171,7 +176,7 @@ Confidence guidelines:
 
 async function attachSelectorFix(
   complete: AiCompletionFn,
-  models: (typeof MODEL_MAP)[AiProvider],
+  models: Models,
   testInfo: TestInfo,
   errorMessages: string,
   domSnippet: string
@@ -212,9 +217,7 @@ export async function attachAiDiagnosis(
   logs: string[],
   domContent: string
 ): Promise<void> {
-  const diagnosisEnabled =
-    process.env.AI_DIAGNOSIS === 'true' || process.env.CLAUDE_DIAGNOSIS === 'true';
-  if (!diagnosisEnabled) return;
+  if (process.env.AI_DIAGNOSIS !== 'true') return;
 
   const provider = process.env.AI_PROVIDER ?? 'anthropic';
   if (!isAiProvider(provider)) {
@@ -227,7 +230,10 @@ export async function attachAiDiagnosis(
 
   try {
     const complete = await PROVIDER_FACTORY[provider](apiKey);
-    const models = MODEL_MAP[provider];
+    const models = {
+      fast: process.env.AI_MODEL_FAST ?? MODEL_MAP[provider].fast,
+      strong: process.env.AI_MODEL_STRONG ?? MODEL_MAP[provider].strong,
+    };
 
     const domSnippet =
       domContent.length > DOM_TRUNCATE_CHARS

@@ -10,8 +10,12 @@ QUALITY_METRICS=
 AI_DIAGNOSIS=
 # AI provider for test failure diagnosis. Accepted values: anthropic (default), gemini.
 AI_PROVIDER=
-# Deprecated: still works as a fallback for AI_DIAGNOSIS. Prefer AI_DIAGNOSIS above.
-CLAUDE_DIAGNOSIS=
+# Override the fast-tier model used for diagnosis. Leave empty to use the provider default.
+# Defaults: anthropic -> claude-haiku-4-5, gemini -> gemini-3.1-flash-lite-preview.
+AI_MODEL_FAST=
+# Override the strong-tier model used for selector-fix proposals. Leave empty to use the provider default.
+# Defaults: anthropic -> claude-sonnet-4-6, gemini -> gemini-3.1-flash-lite-preview.
+AI_MODEL_STRONG=
 # Self-healing selector fix workflow. Set to "true" to enable automatic draft PRs / PR comments
 # when Playwright tests fail due to locator/selector errors. Uses the same AI_PROVIDER setting
 # and API key (ANTHROPIC_API_KEY or GEMINI_API_KEY) as AI_DIAGNOSIS for the fallback path

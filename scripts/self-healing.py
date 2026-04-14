@@ -317,7 +317,6 @@ def _call_anthropic(api_key: str, user_content: str) -> str | None:
 
 def _call_gemini(api_key: str, user_content: str) -> str | None:
     # Same model as diagnosis.util.ts — chosen for its free-tier RPD quota (500 vs 20).
-    # Model override env vars are planned in #200 (AI_MODEL_FAST / AI_MODEL_STRONG).
     model = "gemini-3.1-flash-lite-preview"
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
     body = json.dumps({
