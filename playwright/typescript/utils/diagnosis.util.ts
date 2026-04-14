@@ -231,8 +231,8 @@ export async function attachAiDiagnosis(
   try {
     const complete = await PROVIDER_FACTORY[provider](apiKey);
     const models = {
-      fast: process.env.AI_MODEL_FAST ?? MODEL_MAP[provider].fast,
-      strong: process.env.AI_MODEL_STRONG ?? MODEL_MAP[provider].strong,
+      fast: process.env.AI_MODEL_FAST || MODEL_MAP[provider].fast,
+      strong: process.env.AI_MODEL_STRONG || MODEL_MAP[provider].strong,
     };
 
     const domSnippet =
