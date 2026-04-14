@@ -18,6 +18,7 @@ Environment variables:
     ANTHROPIC_API_KEY — Anthropic API key (fallback path)
     GEMINI_API_KEY    — Gemini API key (fallback path)
     AI_PROVIDER       — "anthropic" (default) or "gemini"
+    AI_MODEL_STRONG   — override the selector-fix model (strong tier); defaults match diagnosis.util.ts
     DRY_RUN           — set to "true" to print actions without executing
 """
 
@@ -289,8 +290,9 @@ def _extract_broken_selector(error_message: str) -> str | None:
 
 
 def _call_anthropic(api_key: str, user_content: str) -> str | None:
+    model = os.environ.get("AI_MODEL_STRONG") or "claude-sonnet-4-6"
     body = json.dumps({
-        "model": "claude-sonnet-4-6",
+        "model": model,
         "max_tokens": 1024,
         "system": _SELECTOR_FIX_SYSTEM_PROMPT,
         "messages": [{"role": "user", "content": user_content}],
@@ -316,8 +318,8 @@ def _call_anthropic(api_key: str, user_content: str) -> str | None:
 
 
 def _call_gemini(api_key: str, user_content: str) -> str | None:
-    # Same model as diagnosis.util.ts — chosen for its free-tier RPD quota (500 vs 20).
-    model = "gemini-3.1-flash-lite-preview"
+    # Default matches diagnosis.util.ts — chosen for its free-tier RPD quota (500 vs 20).
+    model = os.environ.get("AI_MODEL_STRONG") or "gemini-3.1-flash-lite-preview"
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
     body = json.dumps({
         "systemInstruction": {"parts": [{"text": _SELECTOR_FIX_SYSTEM_PROMPT}]},
