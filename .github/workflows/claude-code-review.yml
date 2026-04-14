@@ -9,7 +9,7 @@ env:
 
 jobs:
   review:
-    if: github.actor != 'dependabot[bot]' && vars.CLAUDE_REVIEW == 'true'
+    if: github.actor != 'dependabot[bot]' && vars.AI_REVIEW == 'true'
     timeout-minutes: 10
     runs-on: ubuntu-latest
     permissions:
@@ -21,9 +21,49 @@ jobs:
         with:
           fetch-depth: 1
 
+      - name: Resolve reviewer provider settings
+        id: reviewer
+        env:
+          AI_REVIEW_PROVIDER: ${{ vars.AI_REVIEW_PROVIDER }}
+          AI_REVIEW_MODEL: ${{ vars.AI_REVIEW_MODEL }}
+          HAS_OPENROUTER_KEY: ${{ secrets.OPENROUTER_API_KEY != '' }}
+          HAS_ANTHROPIC_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' }}
+        run: |
+          provider="${AI_REVIEW_PROVIDER:-openrouter}"
+          case "$provider" in
+            openrouter)
+              if [ "$HAS_OPENROUTER_KEY" != "true" ]; then
+                echo "::error::AI_REVIEW_PROVIDER=openrouter but OPENROUTER_API_KEY secret is not set"
+                exit 1
+              fi
+              default_model="qwen/qwen3.6-plus"
+              base_url="https://openrouter.ai/api/v1"
+              ;;
+            anthropic)
+              if [ "$HAS_ANTHROPIC_KEY" != "true" ]; then
+                echo "::error::AI_REVIEW_PROVIDER=anthropic but ANTHROPIC_API_KEY secret is not set"
+                exit 1
+              fi
+              default_model="claude-sonnet-4-6"
+              base_url=""
+              ;;
+            *)
+              echo "::error::Unknown AI_REVIEW_PROVIDER '$provider' (expected: openrouter | anthropic)"
+              exit 1
+              ;;
+          esac
+          model="${AI_REVIEW_MODEL:-$default_model}"
+          {
+            echo "provider=$provider"
+            echo "model=$model"
+            echo "base_url=$base_url"
+          } >> "$GITHUB_OUTPUT"
+
       - uses: anthropics/claude-code-action@v1
+        env:
+          ANTHROPIC_BASE_URL: ${{ steps.reviewer.outputs.base_url }}
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          anthropic_api_key: ${{ steps.reviewer.outputs.provider == 'openrouter' && secrets.OPENROUTER_API_KEY || secrets.ANTHROPIC_API_KEY }}
           track_progress: true
           prompt: |
             REPO: ${{ github.repository }}
@@ -45,4 +85,4 @@ jobs:
             Only post GitHub review/comments - don't submit review text as messages.
 
           claude_args: |
-            --model claude-sonnet-4-6 --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr review:*),Bash(gh pr diff:*),Bash(gh pr view:*)"
+            --model ${{ steps.reviewer.outputs.model }} --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr review:*),Bash(gh pr diff:*),Bash(gh pr view:*)"
