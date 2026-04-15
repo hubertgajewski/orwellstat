@@ -17,7 +17,7 @@ AI_MODEL_FAST=
 # Defaults: anthropic -> claude-sonnet-4-6, gemini -> gemini-3.1-flash-lite-preview.
 AI_MODEL_STRONG=
 # Base URL for the PR code review action (claude-code-review.yml).
-# Leave empty to use Anthropic's native API (requires ANTHROPIC_API_KEY secret, x-api-key auth).
+# Leave empty (or unset) to use Anthropic's native API (requires ANTHROPIC_API_KEY secret, x-api-key auth).
 # Set to an Anthropic-compatible proxy like https://openrouter.ai/api to route through it
 # (requires OPENROUTER_API_KEY secret, Bearer auth). When set, both
 # ANTHROPIC_DEFAULT_SONNET_MODEL and ANTHROPIC_DEFAULT_HAIKU_MODEL must also be set.
