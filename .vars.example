@@ -28,7 +28,7 @@ ANTHROPIC_BASE_URL=
 # Leave empty to use Claude Code's default (claude-sonnet-4-6).
 # Use a non-thinking model slug — models that emit reasoning/thinking content blocks
 # (e.g. qwen/qwen3.6-plus, any qwen3.5-*) break Claude Code SDK's response parser.
-# Examples that work: openai/gpt-5.3-chat, qwen/qwen3-coder-plus.
+# Examples that work: @preset/minimax-minimax-m2-7-no-thinking, qwen/qwen3-coder-plus.
 ANTHROPIC_DEFAULT_SONNET_MODEL=
 # Override the haiku-tier model used by the PR reviewer (Claude Code invokes Haiku internally
 # for summarization and quick calls). Required when ANTHROPIC_BASE_URL is set.
