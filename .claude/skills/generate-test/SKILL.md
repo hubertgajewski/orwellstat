@@ -84,14 +84,14 @@ For each target file:
 
 All scaffolds are `test.fixme()` so unfinished scaffolds do not run in CI. The user replaces `fixme` with `test` once the assertions are filled in.
 
-**Content scaffold** — appended to or created in the content target file. Test title: `{page-name} page - content`, where `{page-name}` is the class name with `Page` stripped and converted to kebab-case (`RegisterPage` → `register`, `PasswordResetPage` → `password-reset`, `ServiceStatisticsPage` → `service-statistics`).
+**Content scaffold** — appended to or created in the content target file. Test title: `{pageName} page - content`, where `{pageName}` is the class name with `Page` stripped and split from camelCase into lowercase space-separated words (`RegisterPage` → `register`, `PasswordResetPage` → `password reset`, `ServiceStatisticsPage` → `service statistics`). This matches the title format produced by `/generate-stubs` so the Step 6 duplicate guard catches stubs planted by either skill.
 
 New file template:
 ```typescript
 import { test, expect } from '@fixtures/base.fixture';
 import { {ClassName} } from '{importPath}';
 
-test.fixme('{page-name} page - content', { tag: '@regression' }, async ({ page }) => {
+test.fixme('{pageName} page - content', { tag: '@regression' }, async ({ page }) => {
   await page.goto({ClassName}.url);
   const pageObject = new {ClassName}(page);
   await expect(pageObject.heading).toBeVisible();
@@ -102,7 +102,7 @@ test.fixme('{page-name} page - content', { tag: '@regression' }, async ({ page }
 Append to existing file (import added separately if missing):
 ```typescript
 
-test.fixme('{page-name} page - content', { tag: '@regression' }, async ({ page }) => {
+test.fixme('{pageName} page - content', { tag: '@regression' }, async ({ page }) => {
   await page.goto({ClassName}.url);
   const pageObject = new {ClassName}(page);
   await expect(pageObject.heading).toBeVisible();
@@ -124,11 +124,11 @@ test.fixme('{page-name} page - content', { tag: '@regression' }, async ({ page }
 
 Add the page-class import at the top of `accessibility.spec.ts` if missing.
 
-**Visual regression scaffold** — appended at the bottom of `visual.spec.ts`. Test title: `{page-name} page visual regression`.
+**Visual regression scaffold** — appended at the bottom of `visual.spec.ts`. Test title: `{pageName} page visual regression`, using the same `{pageName}` derivation as the content scaffold.
 
 ```typescript
 
-test.fixme('{page-name} page visual regression', { tag: '@regression' }, async ({ page }) => {
+test.fixme('{pageName} page visual regression', { tag: '@regression' }, async ({ page }) => {
   await page.goto({ClassName}.url);
   // TODO: Add a toHaveScreenshot() assertion. Mask any dynamic content (live data tables,
   // SVG charts, #statsbar lists) so the baseline is deterministic.
