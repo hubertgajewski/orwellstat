@@ -4,6 +4,13 @@ description: Fix a GitHub issue end-to-end: fetch, implement, test, review, comm
 
 Issue number: $ARGUMENTS
 
+**Step 0 — Detect parent epic**
+Before anything else, check whether the issue is a child of an epic:
+```bash
+PARENT=$(gh api repos/hubertgajewski/orwellstat/issues/$ARGUMENTS/parent --jq '.number // empty' 2>/dev/null || true)
+```
+If non-empty, print a banner: **"Parent epic: #$PARENT — do not close it. Closing child only."**
+
 **Step 1 — Fetch the issue**
 Run `gh issue view $ARGUMENTS` and read every section: User Story, Context, Acceptance Criteria, Implementation Hint, and Definition of Done. State what the issue requires before touching any code.
 
@@ -63,7 +70,20 @@ Stage changed files by name (never `git add -A`). Follow the **Commit message co
 **Step 9 — Push and create a PR**
 Push the branch and run `gh pr create`. The PR body must include:
 - `Closes #$ARGUMENTS` so GitHub links and auto-closes the issue on merge
+- If `$PARENT` was detected in Step 0: also add a line `Contributes to #$PARENT` (not `Closes` — the epic stays open until all children are done)
 - A **Test plan** section with a checklist of observable, verifiable steps. Mark steps already verified during development as `[x]`. Steps that require a reviewer or CI to verify must be left as `[ ]`.
 
 **Step 10 — Verify the PR test plan**
 Re-read every test plan item. For each `[ ]` item that can be verified now, execute and confirm it, then update the PR body via `gh pr edit` to mark it `[x]`. For items that genuinely require a reviewer or CI, leave them as `[ ]` and note what is needed. If any item is found failing, implement a fix on the same branch: work through the code review checklist, run the affected tests, commit and push before considering the task done.
+
+**Step 11 — After merge: record Actual hours on the project item**
+See **Project board → Actual hours** in [README.md](../../../README.md) for how to derive the value.
+
+```bash
+PROJECT_ID=PVT_kwHOAG7eT84BRbty
+HOURS_FIELD_ID=PVTF_lAHOAG7eT84BRbtyzhC91mc
+ITEM_ID=$(gh project item-list 1 --owner hubertgajewski --format json --limit 200 \
+  | jq -r ".items[] | select(.content.number == $ARGUMENTS) | .id")
+gh project item-edit --project-id "$PROJECT_ID" --id "$ITEM_ID" \
+  --field-id "$HOURS_FIELD_ID" --number <hours>
+```
