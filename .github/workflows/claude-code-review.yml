@@ -89,8 +89,9 @@ jobs:
                  findings and must be under 2000 characters. Every claim must be verifiable
                  in the diff — do not invent issues.
 
-            Append this as the final line of the review body, verbatim:
-            `_Reviewed by ${{ vars.ANTHROPIC_BASE_URL != '' && 'proxy' || 'native Anthropic' }}/${{ vars.ANTHROPIC_DEFAULT_SONNET_MODEL || 'claude-sonnet-4-6' }}_`
+            At the end of the review body, append one blank line followed by this exact line:
+
+            _Reviewed by ${{ vars.ANTHROPIC_BASE_URL != '' && 'proxy' || 'native Anthropic' }}/${{ vars.ANTHROPIC_DEFAULT_SONNET_MODEL || 'claude-sonnet-4-6' }}_
 
           claude_args: |
             --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr review:*),Bash(gh pr diff:*),Bash(gh pr view:*)"
