@@ -14,6 +14,55 @@ Five project-scoped skills are available in Claude Code (stored in `.claude/skil
 | `/generate-stubs`  | `/generate-stubs`             | Reads `coverage-matrix.json`, finds uncovered page-category combinations (excluding `title` and `api`), and generates `test.fixme()` stubs in the appropriate spec files                                           |
 | `/generate-test`   | `/generate-test <page>`       | Scaffolds `test.fixme()` blocks for one page's content / accessibility / visual-regression gaps in `coverage-matrix.json`, appending to existing spec files (never overwriting) or creating new ones                |
 
+## Project board
+
+Planning and progress tracking for this repo live in [GitHub Project #1](https://github.com/users/hubertgajewski/projects/1). **T-shirt sizing on epics, Fibonacci story points on stories** — the two fields never overlap on a single item. The `/create-issue` skill is authoritative for how to populate the fields; see `.claude/skills/create-issue/SKILL.md`.
+
+### Point scale (stories only)
+
+Estimate is a relative-complexity judgment, not a time estimate. Pick by analogy to the reference story.
+
+| Points | Meaning | Examples |
+| ------ | ------- | -------- |
+| 1 | Trivial — single-line change, doc tweak, config swap | #191, #211, #215, #227 |
+| 2 | Small — single-file logic change, minor bug, understood scope | #198, #217, #232 |
+| 3 | **Reference ⚓** — new skill, new MCP server, moderate refactor across 3–5 files | #145 |
+| 5 | Complex — coordinated multi-file changes, visible uncertainty | #176 |
+| 8 | Big — many moving parts, significant unknowns |  |
+| 13 | **Warning zone** — review for splitting or promoting to an epic. Proceed at 13 only if a split would be artificial. |  |
+| 21+ | **Not allowed** — must become an epic and be broken into child stories. |  |
+
+### Size scale (epics only)
+
+Size is a coarse roadmap guess for epics, not a mechanical sum of children's points.
+
+| Size | Intuition |
+| ---- | --------- |
+| XS | Micro-epic: exactly 2 trivial (1-pt) stories, ≤ 2 pts total |
+| S | Small: 2–3 stories, narrow scope |
+| M | Moderate: 4–6 stories |
+| L | Large: 5–9 stories |
+| XL | Very large: 6+ stories and/or a major cross-cutting concern |
+
+### Epic / Story convention
+
+- Stories are regular issues; prefix like `[bug]`, `[ci]`, `[enhancement]`, etc. They carry Estimate (points), no Size.
+- Epics prefix with `[epic]` and apply the `epic` label. They carry Size (T-shirt), no Estimate.
+- A story joins an epic via GitHub's sub-issue relationship (surfaced on the board as `Parent issue` and auto-counted in `Sub-issues progress`).
+- Retrospective epics (groupings of already-closed stories) are allowed — they exist to organize history. Their children can be closed; the epic itself ships as `N/N complete`.
+
+### Dates
+
+- `Start date` — day work began. First commit day, or the day the story moved to `In progress`.
+- `Target date` — planned merge day while in flight, actual merge day once Done.
+- For retrospective epics: Start = earliest child `createdAt`, Target = latest child `closedAt`.
+
+### Actual hours
+
+- `Actual hours` is a **retrospective** numeric field, populated by the `/fix-issue` skill after a PR merges.
+- Value = sum of active-commit-day hours derived from `git log` timestamps.
+- Used as a scale-drift detector (e.g. if 3-pointers routinely take 5 h instead of ~1 h, the scale needs re-anchoring). Never used as an input to estimation — points are chosen by analogy, never by hours.
+
 ## Repository structure
 
 ```
