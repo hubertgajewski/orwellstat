@@ -16,6 +16,11 @@ jobs:
       contents: read
       pull-requests: write
       id-token: write
+    env:
+      # Single source of truth — referenced by the reviewer prompt mandate
+      # and by the Backfill review signature step. They must stay byte-identical
+      # or the post-step's string compare silently no-ops.
+      SIGNATURE: "_Reviewed by ${{ vars.ANTHROPIC_BASE_URL != '' && 'proxy' || 'native Anthropic' }}/${{ vars.ANTHROPIC_DEFAULT_SONNET_MODEL || 'claude-sonnet-4-6' }}_"
     steps:
       - uses: actions/checkout@v6
         with:
@@ -90,10 +95,53 @@ jobs:
                  in the diff — do not invent issues.
 
             Append this as the final line of the review body, verbatim:
-            `_Reviewed by ${{ vars.ANTHROPIC_BASE_URL != '' && 'proxy' || 'native Anthropic' }}/${{ vars.ANTHROPIC_DEFAULT_SONNET_MODEL || 'claude-sonnet-4-6' }}_`
+            `${{ env.SIGNATURE }}`
 
           claude_args: |
             --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr review:*),Bash(gh pr diff:*),Bash(gh pr view:*)"
+
+      # Backfills the signature line mandated by the prompt above (line ~93)
+      # when the model fails to append it. See issue #259.
+      - name: Backfill review signature
+        if: always()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.REVIEW_GUARD_PAT || secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          REPO: ${{ github.repository }}
+          # SIGNATURE inherited from job-level env (single source of truth)
+        run: |
+          set -u
+          reviews_json=$(gh api \
+            "repos/${REPO}/pulls/${PR_NUMBER}/reviews?per_page=100" \
+            --jq "[.[] | select(.user.login==\"claude[bot]\" and .commit_id==\"${HEAD_SHA}\")] | sort_by(.submitted_at) | reverse")
+          count=$(jq 'length' <<<"$reviews_json")
+          if [ "$count" = "0" ]; then
+            echo "No claude[bot] reviews at ${HEAD_SHA}; nothing to guard."
+            exit 0
+          fi
+          target=$(jq -c 'map(select(.body|length>0)) | .[0] // empty' <<<"$reviews_json")
+          if [ -z "$target" ]; then
+            echo "::warning::No non-empty claude[bot] review at ${HEAD_SHA}; skipping."
+            exit 0
+          fi
+          target_id=$(jq -r '.id' <<<"$target")
+          target_body=$(jq -r '.body' <<<"$target")
+          last_line=$(printf '%s' "$target_body" | awk 'NF{line=$0} END{print line}')
+          if [ "$last_line" = "$SIGNATURE" ]; then
+            echo "Signature present on review ${target_id}; no-op."
+            exit 0
+          fi
+          echo "::warning::Review ${target_id} missing signature; backfilling."
+          new_body="${target_body}"$'\n\n'"${SIGNATURE}"
+          if ! jq -n --arg b "$new_body" '{body:$b}' | gh api \
+              --method PUT \
+              -H "Accept: application/vnd.github+json" \
+              "repos/${REPO}/pulls/${PR_NUMBER}/reviews/${target_id}" \
+              --input - >/dev/null; then
+            echo "::error::PUT /reviews/${target_id} failed — GITHUB_TOKEN likely lacks cross-App edit rights. Create a fine-grained PAT with Pull requests: read & write, store as secret REVIEW_GUARD_PAT."
+          fi
 
       - name: Report reviewer configuration
         if: always()
