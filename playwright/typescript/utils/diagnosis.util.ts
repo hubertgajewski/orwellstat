@@ -234,6 +234,7 @@ export async function attachAiDiagnosis(
       fast: process.env.AI_MODEL_FAST || MODEL_MAP[provider].fast,
       strong: process.env.AI_MODEL_STRONG || MODEL_MAP[provider].strong,
     };
+    console.log(`[AI diagnosis] provider=${provider} fast=${models.fast} strong=${models.strong}`);
 
     const domSnippet =
       domContent.length > DOM_TRUNCATE_CHARS
