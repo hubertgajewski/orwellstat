@@ -4,7 +4,7 @@ Multi-language, multi-framework end-to-end test suite for [Orwell Stat](https://
 
 ## Claude skills
 
-Four project-scoped skills are available in Claude Code (stored in `.claude/skills/`) and appear in the VSCode extension `/` menu:
+Five project-scoped skills are available in Claude Code (stored in `.claude/skills/`) and appear in the VSCode extension `/` menu:
 
 | Skill              | Usage                         | What it does                                                                                                                                                                                                       |
 | ------------------ | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -12,6 +12,7 @@ Four project-scoped skills are available in Claude Code (stored in `.claude/skil
 | `/create-issue`    | `/create-issue <description>` | Scaffolds a GitHub issue in the documented format (User Story / Context / AC / Implementation Hint / DoD / milestone) and creates it via `gh issue create`                                                         |
 | `/code-review`     | `/code-review`                | Works through every item on the code review checklist from `.claude/skills/code-review/SKILL.md`, applies general diff checks and CI workflow checks, and explicitly states a finding (pass / fail / N/A) for each item |
 | `/generate-stubs`  | `/generate-stubs`             | Reads `coverage-matrix.json`, finds uncovered page-category combinations (excluding `title` and `api`), and generates `test.fixme()` stubs in the appropriate spec files                                           |
+| `/generate-test`   | `/generate-test <page>`       | Scaffolds `test.fixme()` blocks for one page's content / accessibility / visual-regression gaps in `coverage-matrix.json`, appending to existing spec files (never overwriting) or creating new ones                |
 
 ## Repository structure
 
