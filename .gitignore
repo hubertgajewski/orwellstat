@@ -3,6 +3,7 @@
 .auth/
 .idea/
 *.bak
+*.swp
 .DS_Store
 .claude/settings.local.json
 .playwright-mcp/
