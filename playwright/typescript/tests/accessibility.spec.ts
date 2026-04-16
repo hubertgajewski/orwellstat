@@ -6,7 +6,7 @@ import { AUTHENTICATED_PAGE_CLASSES } from '@pages/authenticated/index';
 test.describe('accessibility', { tag: '@regression' }, () => {
   test.skip(
     ({ browserName }) => browserName !== 'chromium',
-    'Accessibility tests run on Chromium only'
+    'Chromium-only: axe-core analyzes the DOM tree, so results are engine-independent. Running on other browsers burns CI minutes for zero added signal.'
   );
 
   for (const PageClass of PUBLIC_PAGE_CLASSES) {

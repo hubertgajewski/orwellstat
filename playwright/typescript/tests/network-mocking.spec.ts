@@ -14,7 +14,7 @@ type W3cResponse = {
 test.describe('network mocking with page.route()', { tag: '@regression' }, () => {
   test.skip(
     ({ browserName }) => browserName !== 'chromium',
-    'Network mocking tests run on Chromium only'
+    'Chromium-only: page.route() is a Playwright DevTools-protocol abstraction — behavior is uniform across supported browsers, and the assertion is on the mock hit, not rendering.'
   );
 
   test('SVG chart renders with mocked static response', async ({ page }) => {
