@@ -895,6 +895,196 @@ class TestErrorContextSupport(unittest.TestCase):
 
 
 # ===================================================================
+# Cross-check guard: drop stale fixes not referenced by any failed test
+# (issue #291 — PR #287 reproduction)
+# ===================================================================
+
+
+class TestCrossCheckDropsStaleFixes(unittest.TestCase):
+    """A stale selector-fix.md whose broken_selector is not present in any
+    failed-test error message (e.g. the file was left over from a prior run)
+    must be dropped; the script must log the drop, print "No actionable
+    selector fixes found", and never call post_comment or create_draft_pr.
+    """
+
+    STALE_FIX_MD = textwrap.dedent("""\
+        # Selector Fix Proposal
+
+        **Confidence:** high
+        **Broken selector:** `recentlyAddedLinks.nth(1)`
+        **Suggested selector:** `recentlyAddedLinks.nth(0)`
+
+        ## Explanation
+        Pre-computed fix from a prior run that no longer applies.""")
+
+    # results.json with only a visual-regression failure — no selector errors,
+    # and the error message does not mention `recentlyAddedLinks.nth(1)`.
+    VISUAL_ONLY_RESULTS = {
+        "suites": [
+            {
+                "title": "visual.spec.ts",
+                "file": "visual.spec.ts",
+                "specs": [
+                    {
+                        "title": "home page visual",
+                        "ok": False,
+                        "tests": [
+                            {
+                                "projectId": "webkit",
+                                "projectName": "webkit",
+                                "results": [
+                                    {
+                                        "status": "failed",
+                                        "errors": [
+                                            {
+                                                "message": (
+                                                    "Error: expect(page).toHaveScreenshot() failed\n"
+                                                    "  12345 pixels (ratio 0.01) are different."
+                                                )
+                                            }
+                                        ],
+                                        "attachments": [],
+                                    }
+                                ],
+                                "status": "unexpected",
+                            }
+                        ],
+                        "file": "visual.spec.ts",
+                        "line": 1,
+                        "column": 1,
+                    }
+                ],
+                "suites": [],
+            }
+        ]
+    }
+
+    # A fix whose broken_selector IS substring-present in the failed test's
+    # error message — must flow through to the comment stage.
+    VALID_FIX_MD = textwrap.dedent("""\
+        # Selector Fix Proposal
+
+        **Confidence:** high
+        **Broken selector:** `getByRole('link', { name: 'Home' })`
+        **Suggested selector:** `getByRole('link', { name: 'Start' })`
+
+        ## Explanation
+        Label changed from Home to Start.""")
+
+    SELECTOR_ERROR_RESULTS = {
+        "suites": [
+            {
+                "title": "nav.spec.ts",
+                "file": "nav.spec.ts",
+                "specs": [
+                    {
+                        "title": "nav",
+                        "ok": False,
+                        "tests": [
+                            {
+                                "projectId": "Chromium",
+                                "projectName": "Chromium",
+                                "results": [
+                                    {
+                                        "status": "failed",
+                                        "errors": [
+                                            {
+                                                "message": (
+                                                    "locator.click: Timeout 15000ms exceeded.\n"
+                                                    "Call log:\n"
+                                                    "  - waiting for getByRole('link', { name: 'Home' })\n"
+                                                )
+                                            }
+                                        ],
+                                        "attachments": [],
+                                    }
+                                ],
+                                "status": "unexpected",
+                            }
+                        ],
+                        "file": "nav.spec.ts",
+                        "line": 5,
+                        "column": 3,
+                    }
+                ],
+                "suites": [],
+            }
+        ]
+    }
+
+    @patch("self_healing.create_draft_pr")
+    @patch("self_healing.post_comment")
+    @patch("self_healing.find_pr_for_branch")
+    def test_drops_stale_fix_against_visual_only_failures(
+        self, mock_find_pr, mock_post_comment, mock_create_draft_pr
+    ):
+        import io
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            shard = tmp_path / "self-healing-data-webkit"
+            _write_file(shard / "selector-fix.md", self.STALE_FIX_MD)
+            _write_file(shard / "results.json", json.dumps(self.VISUAL_ONLY_RESULTS))
+
+            captured_stderr = io.StringIO()
+            captured_stdout = io.StringIO()
+            with patch("sys.stderr", captured_stderr), \
+                 patch("sys.stdout", captured_stdout):
+                self_healing.main(str(tmp_path))
+
+            stderr_text = captured_stderr.getvalue()
+            stdout_text = captured_stdout.getvalue()
+
+        # Guard fired with the drop count and the canonical message.
+        self.assertIn(
+            "Dropped 1 fix(es) whose broken selector is not referenced by any failed test",
+            stderr_text,
+        )
+        # Script took the "nothing to do" exit path.
+        self.assertIn("No actionable selector fixes found", stdout_text)
+        # No PR comment and no draft PR were created.
+        mock_post_comment.assert_not_called()
+        mock_create_draft_pr.assert_not_called()
+        # The script must not even look up a PR — it exits before Step 3.
+        mock_find_pr.assert_not_called()
+
+    @patch("self_healing.create_draft_pr")
+    @patch("self_healing.post_comment")
+    @patch("self_healing.count_self_healing_comments", return_value=0)
+    @patch("self_healing.find_pr_for_branch", return_value=42)
+    def test_valid_fix_flows_through_to_comment(
+        self, _mock_find_pr, _mock_count, mock_post_comment, mock_create_draft_pr
+    ):
+        """Happy path: a fix whose broken_selector appears in a failed test's
+        error message passes the cross-check guard and the defensive re-check,
+        reaching the PR-comment stage."""
+        import io
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            shard = tmp_path / "self-healing-data-chromium"
+            _write_file(shard / "selector-fix.md", self.VALID_FIX_MD)
+            _write_file(shard / "results.json", json.dumps(self.SELECTOR_ERROR_RESULTS))
+
+            captured_stderr = io.StringIO()
+            with patch("sys.stderr", captured_stderr):
+                self_healing.main(str(tmp_path))
+
+            stderr_text = captured_stderr.getvalue()
+
+        # Guard must NOT drop the valid fix.
+        self.assertNotIn("Dropped", stderr_text)
+        self.assertNotIn("Refusing to act", stderr_text)
+        # The comment is posted on the found PR.
+        mock_post_comment.assert_called_once()
+        posted_body = mock_post_comment.call_args[0][1]
+        self.assertIn("getByRole('link', { name: 'Home' })", posted_body)
+        self.assertIn("getByRole('link', { name: 'Start' })", posted_body)
+        # Draft PR path is not taken.
+        mock_create_draft_pr.assert_not_called()
+
+
+# ===================================================================
 # YAML-level guard verification (static analysis of workflow file)
 # ===================================================================
 
