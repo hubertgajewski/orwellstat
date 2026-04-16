@@ -56,6 +56,9 @@ jobs:
         with:
           anthropic_api_key: ${{ (vars.ANTHROPIC_BASE_URL != '' && secrets.OPENROUTER_API_KEY) || (vars.ANTHROPIC_BASE_URL == '' && secrets.ANTHROPIC_API_KEY) || '' }}
           track_progress: false
+          # Diagnostic — unmask the URL on connection failures so issue #262
+          # can root-cause the native-Anthropic auth path. Remove once resolved.
+          show_full_output: true
           prompt: |
             You are executing a code review of pull request #${{ github.event.pull_request.number }}
             in ${{ github.repository }}. This is an autonomous task: complete it using tool calls
