@@ -754,16 +754,42 @@ def main(data_dir: str) -> None:
         print(f"[self-healing] Skipping: self-healing branch ({head_branch})")
         return
 
+    # Walk results.json artifacts once so Step 2 and the cross-check guard
+    # below share the same parsed failed-test data.
+    all_failed_tests: list[tuple[Path, list[FailedTest]]] = [
+        (rf, extract_failed_tests(rf)) for rf in data_path.rglob("results.json")
+    ]
+    # Authoritative set of failed-test error messages.  Any fix whose
+    # broken_selector does not appear in at least one of these is stale (e.g.
+    # a selector-fix.md left over from a prior run that wasn't cleaned up)
+    # and must be dropped — see issue #291.
+    failed_error_messages: list[str] = [
+        t.error_message for _, tests in all_failed_tests for t in tests
+    ]
+
+    def _drop_unreferenced_fixes(candidates: list[SelectorFix]) -> list[SelectorFix]:
+        kept = [
+            f for f in candidates
+            if any(f.broken_selector in msg for msg in failed_error_messages)
+        ]
+        dropped = len(candidates) - len(kept)
+        if dropped:
+            print(
+                f"[self-healing] Dropped {dropped} fix(es) whose broken selector "
+                f"is not referenced by any failed test",
+                file=sys.stderr,
+            )
+        return kept
+
     # Step 1: Find pre-computed selector fixes
     fixes = find_selector_fixes(data_path)
     fixes = filter_by_confidence(fixes)
     fixes = deduplicate_fixes(fixes)
+    fixes = _drop_unreferenced_fixes(fixes)
 
     # Step 2: Fallback — check results.json for selector errors and call AI
     if not fixes:
-        results_files = list(data_path.rglob("results.json"))
-        for results_file in results_files:
-            failed_tests = extract_failed_tests(results_file)
+        for results_file, failed_tests in all_failed_tests:
             selector_failures = [t for t in failed_tests if is_selector_error(t.error_message)]
             for test in selector_failures:
                 test_dir = results_file.parent
@@ -785,10 +811,24 @@ def main(data_dir: str) -> None:
                     fixes.append(fix)
         fixes = filter_by_confidence(fixes)
         fixes = deduplicate_fixes(fixes)
+        fixes = _drop_unreferenced_fixes(fixes)
 
     if not fixes:
         print("[self-healing] No actionable selector fixes found")
         return
+
+    # Defensive re-check (issue #291): every fix reaching the output stage must
+    # reference a real failed test.  The cross-check guards in Steps 1 and 2
+    # already enforce this — this is a last-ditch safety net against future
+    # regressions in the filter pipeline.
+    for fix in fixes:
+        if not any(fix.broken_selector in msg for msg in failed_error_messages):
+            print(
+                f"[self-healing] Refusing to act: fix for {fix.broken_selector!r} "
+                "is not referenced by any failed-test error message",
+                file=sys.stderr,
+            )
+            return
 
     # Step 3: Determine output mode
     pr_number = find_pr_for_branch(head_branch)
