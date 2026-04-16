@@ -144,7 +144,7 @@ The following variables are set in **GitHub → Settings → Variables → Actio
 After cloning the repo and filling in `.env`, run the setup step:
 
 ```bash
-## Playwright tests
+# Playwright tests
 cd playwright/typescript && npm ci && npx playwright install --with-deps && cd ../..
 ```
 
