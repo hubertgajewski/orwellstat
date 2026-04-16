@@ -44,3 +44,8 @@ SELF_HEALING=
 # Default runner for all workflow jobs. Set to "self-hosted" to route all jobs to the local
 # self-hosted runner when the runner input is not explicitly set. Leave empty to use ubuntu-latest.
 RUNNER=
+# Cross-check XHTML validation against the classic W3C Markup Validator instead of the
+# default local xmllint path. Set to "true" only on a periodic schedule or before a release
+# — every run sends rendered pages (including authenticated zones) to validator.w3.org.
+VALIDATE_REMOTE=
+
