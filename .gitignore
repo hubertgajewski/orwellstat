@@ -19,3 +19,12 @@ test-results/
 # GitHub Actions self-hosted runner binaries and config (if downloaded inside repo)
 _work/
 runner/
+
+# Coverage
+.coverage
+
+# Claude Code runtime
+.claude/scheduled_tasks.lock
+
+# Python bytecode
+scripts/__pycache__/
