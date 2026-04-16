@@ -67,7 +67,7 @@ test.describe('navigation', { tag: '@smoke' }, () => {
   });
 
   test('contact', async ({ page }) => {
-    await page.locator('#menubar').getByRole('link', { name: 'Kontakt', exact: true }).click();
+    await page.getByRole('link', { name: 'Kontakt', exact: true }).first().click();
 
     await expectHeadings(page, [ContactPage.signIn, ContactPage.contact]);
   });
