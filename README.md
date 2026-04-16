@@ -281,6 +281,17 @@ npm ci
 npx playwright install --with-deps
 ```
 
+`npm ci` triggers the `prepare` script, which wires [husky](https://typicode.github.io/husky) hooks (see **Pre-commit hook** below). No manual setup is required.
+
+### Pre-commit hook
+
+[`playwright/typescript/.husky/pre-commit`](./playwright/typescript/.husky/pre-commit) runs on every local `git commit`:
+
+1. [`lint-staged`](https://github.com/lint-staged/lint-staged) auto-formats staged `*.{ts,tsx,js,json,md,yml,yaml}` files in `playwright/typescript/` with Prettier and re-stages them.
+2. `npx tsc --noEmit` fails the commit if any staged TypeScript has type errors.
+
+To intentionally bypass (e.g. for a WIP checkpoint), use `git commit --no-verify` — the same checks still run in CI and block the merge.
+
 ### Running tests
 
 ```bash

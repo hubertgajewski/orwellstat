@@ -1,0 +1,4 @@
+set -e
+cd playwright/typescript
+npx lint-staged
+npx tsc --noEmit
