@@ -48,6 +48,7 @@ jobs:
       #   either. No cross-provider leak: the Anthropic key is only ever emitted when
       #   ANTHROPIC_BASE_URL is empty.
       - uses: anthropics/claude-code-action@v1
+        id: claude_code_action
         env:
           ANTHROPIC_BASE_URL: ${{ vars.ANTHROPIC_BASE_URL }}
           ANTHROPIC_AUTH_TOKEN: ${{ vars.ANTHROPIC_BASE_URL != '' && secrets.OPENROUTER_API_KEY || '' }}
@@ -142,6 +143,29 @@ jobs:
               --input - >/dev/null; then
             echo "::error::PUT /reviews/${target_id} failed — GITHUB_TOKEN likely lacks cross-App edit rights. Create a fine-grained PAT with Pull requests: read & write, store as secret REVIEW_GUARD_PAT."
           fi
+
+      # Guards against the silent failure mode where claude-code-action@v1
+      # exits cleanly but the model skipped the mandated `gh pr review` call,
+      # leaving the PR with a green review job and zero reviewer verdicts.
+      # See issue #284. Skipped when the action itself failed (e.g. 401 on a
+      # self-workflow-edit PR) so the primary failure stays the single signal.
+      - name: Fail if no review was posted
+        if: steps.claude_code_action.conclusion == 'success'
+        env:
+          GH_TOKEN: ${{ secrets.REVIEW_GUARD_PAT || secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          count=$(gh api \
+            "repos/${REPO}/pulls/${PR_NUMBER}/reviews?per_page=100" \
+            --jq "[.[] | select(.user.login==\"claude[bot]\" and .commit_id==\"${HEAD_SHA}\")] | length")
+          if [ "$count" = "0" ]; then
+            echo "::error::reviewer succeeded but posted 0 reviews on PR ${PR_NUMBER} @ ${HEAD_SHA} — model ignored the gh pr review mandate"
+            exit 1
+          fi
+          echo "Found ${count} claude[bot] review(s) at ${HEAD_SHA}."
 
       - name: Report reviewer configuration
         if: always()
