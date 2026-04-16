@@ -7,7 +7,7 @@ import { HomePage } from '@pages/public/home.page';
 test.describe('markup and CSS validation', { tag: '@regression' }, () => {
   test.skip(
     ({ browserName }) => browserName !== 'chromium',
-    'Validation tests run on Chromium only'
+    'Chromium-only: the test is a pure HTTP POST to the XHTML validator; no browser engine involvement, so other browsers add no signal.'
   );
 
   const xhtmlHeaders = { Accept: 'application/xhtml+xml' };
