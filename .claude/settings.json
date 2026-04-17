@@ -146,6 +146,28 @@
             "statusMessage": "Checking types and formatting..."
           }
         ]
+      },
+      {
+        "matcher": "EnterWorktree",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "INPUT=$(cat); TARGET=$(echo \"$INPUT\" | jq -r '.tool_input.path // .tool_response.path // empty'); if [ -n \"$TARGET\" ] && [ -d \"$TARGET\" ]; then ROOT=$(git rev-parse --show-toplevel 2>/dev/null) && \"$ROOT/scripts/provision-worktree-env.sh\" \"$TARGET\" || true; fi",
+            "timeout": 10,
+            "statusMessage": "Provisioning env files for the new worktree..."
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "INPUT=$(cat); CMD=$(echo \"$INPUT\" | jq -r '.tool_input.command // empty'); if echo \"$CMD\" | grep -qE 'git[[:space:]]+worktree[[:space:]]+add[[:space:]]'; then TARGET=$(echo \"$CMD\" | awk '{a=0;s=0;for(i=1;i<=NF;i++){if($i==\"add\"){a=1;continue}if(!a)continue;if(s){s=0;continue}if($i==\"-b\"||$i==\"-B\"){s=1;continue}if(substr($i,1,1)==\"-\")continue;print $i;exit}}'); if [ -n \"$TARGET\" ] && [ -d \"$TARGET\" ]; then ROOT=$(git rev-parse --show-toplevel 2>/dev/null) && \"$ROOT/scripts/provision-worktree-env.sh\" \"$TARGET\" || true; fi; fi",
+            "timeout": 10,
+            "statusMessage": "Provisioning env files after git worktree add..."
+          }
+        ]
       }
     ],
     "PreToolUse": [

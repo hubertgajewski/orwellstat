@@ -153,6 +153,14 @@ cd playwright/typescript && npm ci && npx playwright install --with-deps && cd .
 
 Then open your AI assistant from the **repo root** so `.mcp.json` is picked up and all MCP server tools are available.
 
+## Working with git worktrees
+
+Per-issue worktrees under `.claude/worktrees/` let parallel Claude Code sessions avoid colliding on HEAD. Gitignored env files (`.env`, `.vars`, `bruno/.env`) are auto-symlinked into a new worktree by a `PostToolUse` hook on `git worktree add` and Claude Code's `EnterWorktree` tool — you do not need to copy anything by hand. If you create a worktree in a way the hook cannot see (a script spawned outside Claude Code, an editor plugin, etc.), run `./scripts/provision-worktree-env.sh <worktree-path>` once; the script is idempotent, so re-running is safe.
+
+The `Bash` hook parses the first non-flag positional argument after `add` (skipping `-b <branch>` / `-B <branch>`), matching the common `git worktree add <path> [<branch>]` and `git worktree add -b <branch> <path>` invocations.
+
+**Windows (best-effort, unverified):** run Claude Code inside Git Bash or WSL so the hooks (`jq` / `awk` / `bash`) can execute — the existing husky pre-commit hook already assumes this. Native NTFS symlinks need Windows 10/11 Developer Mode (Settings → Privacy & Security → For developers → Developer Mode) or an elevated PowerShell; without either, the provisioning script auto-falls back to copying the three env files and prints a stderr `WARN`. Copies drift from the main checkout — re-run `./scripts/provision-worktree-env.sh <path>` after any edit to `.env` / `.vars` / `bruno/.env` in the main checkout. This path is designed-for but not CI-verified; please open an issue if it breaks.
+
 ## Adapting to your own environment
 
 For adapting this repo to a different deployment target, see [FORK.md](FORK.md).
