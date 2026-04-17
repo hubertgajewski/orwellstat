@@ -61,6 +61,13 @@ If none of the existing milestones fit, **do not assign one silently** — propo
 - Target date field: `PVTF_lAHOAG7eT84BRbtyzg_QzzM`
 - Actual hours field: `PVTF_lAHOAG7eT84BRbtyzhC91mc` (populated by `fix-issue`)
 
+**Linking to Project #1 inside issue/PR bodies:** always write `[Project #1](https://github.com/users/hubertgajewski/projects/1)`, never bare `Project #1`. GitHub auto-links `#1` inside issue/PR body prose to issue #1, hijacking the reference. The markdown-link form is not auto-linked. In DoD boilerplate specifically:
+
+- `- [ ] Estimate = <N> set in [Project #1](https://github.com/users/hubertgajewski/projects/1).`
+- `- [ ] Actual hours recorded in [Project #1](https://github.com/users/hubertgajewski/projects/1).`
+
+This only applies to text that will be posted to GitHub. In-skill prose (headings like "Project #1 board fields" above) is fine as-is because it is read by Claude and never reaches an issue body.
+
 **Steps:**
 1. Decide story vs epic based on `$ARGUMENTS`. Draft the title and all required body sections (five for a story, three for an epic). Ask for clarification on any ambiguous section before proceeding.
 2. Select the appropriate milestone using the table above. If none fit, propose a new one and wait for approval.
