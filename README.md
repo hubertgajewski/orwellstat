@@ -6,13 +6,13 @@ Multi-language, multi-framework end-to-end test suite for [Orwell Stat](https://
 
 Five project-scoped skills are available in Claude Code (stored in `.claude/skills/`) and appear in the VSCode extension `/` menu:
 
-| Skill              | Usage                         | What it does                                                                                                                                                                                                       |
-| ------------------ | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `/fix-issue`       | `/fix-issue <number>`         | Fixes a GitHub issue end-to-end: fetch, implement, test, review, commit, and open a PR                                                                                                                             |
-| `/create-issue`    | `/create-issue <description>` | Scaffolds a GitHub issue in the documented format (User Story / Context / AC / Implementation Hint / DoD / milestone) and creates it via `gh issue create`                                                         |
-| `/deep-review`     | `/deep-review`                | Works through every item on the code review checklist from `.claude/skills/deep-review/SKILL.md`, applies general diff checks and CI workflow checks, and explicitly states a finding (pass / fail / N/A) for each item |
-| `/generate-stubs`  | `/generate-stubs`             | Reads `coverage-matrix.json`, finds uncovered page-category combinations (excluding `title` and `api`), and generates `test.fixme()` stubs in the appropriate spec files                                           |
-| `/generate-test`   | `/generate-test <page>`       | Scaffolds `test.fixme()` blocks for one page's content / accessibility / visual-regression gaps in `coverage-matrix.json`, appending to existing spec files (never overwriting) or creating new ones                |
+| Skill             | Usage                         | What it does                                                                                                                                                                                                            |
+| ----------------- | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/fix-issue`      | `/fix-issue <number>`         | Fixes a GitHub issue end-to-end: fetch, implement, test, review, commit, and open a PR                                                                                                                                  |
+| `/create-issue`   | `/create-issue <description>` | Scaffolds a GitHub issue in the documented format (User Story / Context / AC / Implementation Hint / DoD / milestone) and creates it via `gh issue create`                                                              |
+| `/deep-review`    | `/deep-review`                | Works through every item on the code review checklist from `.claude/skills/deep-review/SKILL.md`, applies general diff checks and CI workflow checks, and explicitly states a finding (pass / fail / N/A) for each item |
+| `/generate-stubs` | `/generate-stubs`             | Reads `coverage-matrix.json`, finds uncovered page-category combinations (excluding `title` and `api`), and generates `test.fixme()` stubs in the appropriate spec files                                                |
+| `/generate-test`  | `/generate-test <page>`       | Scaffolds `test.fixme()` blocks for one page's content / accessibility / visual-regression gaps in `coverage-matrix.json`, appending to existing spec files (never overwriting) or creating new ones                    |
 
 ## Project board
 
@@ -22,27 +22,27 @@ Planning and progress tracking for this repo live in [GitHub Project #1](https:/
 
 Estimate is a relative-complexity judgment, not a time estimate. Pick by analogy to the reference story.
 
-| Points | Meaning | Examples |
-| ------ | ------- | -------- |
-| 1 | Trivial — single-line change, doc tweak, config swap | #191, #211, #215, #227 |
-| 2 | Small — single-file logic change, minor bug, understood scope | #198, #217, #232 |
-| 3 | **Reference ⚓** — new skill, new MCP server, moderate refactor across 3–5 files | #145 |
-| 5 | Complex — coordinated multi-file changes, visible uncertainty | #176 |
-| 8 | Big — many moving parts, significant unknowns |  |
-| 13 | **Warning zone** — review for splitting or promoting to an epic. Proceed at 13 only if a split would be artificial. |  |
-| 21+ | **Not allowed** — must become an epic and be broken into child stories. |  |
+| Points | Meaning                                                                                                             | Examples               |
+| ------ | ------------------------------------------------------------------------------------------------------------------- | ---------------------- |
+| 1      | Trivial — single-line change, doc tweak, config swap                                                                | #191, #211, #215, #227 |
+| 2      | Small — single-file logic change, minor bug, understood scope                                                       | #198, #217, #232       |
+| 3      | **Reference ⚓** — new skill, new MCP server, moderate refactor across 3–5 files                                    | #145                   |
+| 5      | Complex — coordinated multi-file changes, visible uncertainty                                                       | #176                   |
+| 8      | Big — many moving parts, significant unknowns                                                                       |                        |
+| 13     | **Warning zone** — review for splitting or promoting to an epic. Proceed at 13 only if a split would be artificial. |                        |
+| 21+    | **Not allowed** — must become an epic and be broken into child stories.                                             |                        |
 
 ### Size scale (epics only)
 
 Size is a coarse roadmap guess for epics, not a mechanical sum of children's points.
 
-| Size | Intuition |
-| ---- | --------- |
-| XS | Micro-epic: exactly 2 trivial (1-pt) stories, ≤ 2 pts total |
-| S | Small: 2–3 stories, narrow scope |
-| M | Moderate: 4–6 stories |
-| L | Large: 5–9 stories |
-| XL | Very large: 6+ stories and/or a major cross-cutting concern |
+| Size | Intuition                                                   |
+| ---- | ----------------------------------------------------------- |
+| XS   | Micro-epic: exactly 2 trivial (1-pt) stories, ≤ 2 pts total |
+| S    | Small: 2–3 stories, narrow scope                            |
+| M    | Moderate: 4–6 stories                                       |
+| L    | Large: 5–9 stories                                          |
+| XL   | Very large: 6+ stories and/or a major cross-cutting concern |
 
 ### Epic / Story convention
 
@@ -125,22 +125,45 @@ OPENROUTER_API_KEY=<OpenRouter API key (required when ANTHROPIC_BASE_URL points 
 
 The following variables are set in **GitHub → Settings → Variables → Actions** (not secrets, not `.env`). Locally they live in `.vars` (loaded by Playwright via dotenv and by `act` via `--var-file`). Most are opt-in gates: set to exactly `true` to enable; when absent or any other value the feature or workflow job is skipped. Exception: `workflow_dispatch` runs always bypass the approval gate and run tests regardless of the variable value. `RUNNER` is not a boolean gate — set it to `self-hosted` to route all non-dispatch jobs to the local runner, or leave it unset to use `ubuntu-latest`.
 
-| Variable                | Purpose                                      | When it applies                                                            |
-| ----------------------- | -------------------------------------------- | -------------------------------------------------------------------------- |
-| `AI_DIAGNOSIS`          | AI-powered test failure diagnosis attachment | Every Playwright run (local and CI)                                        |
-| `AI_PROVIDER`           | AI provider for diagnosis (`anthropic` or `gemini`; default: `anthropic`) | Every Playwright run (local and CI)           |
-| `AI_MODEL_FAST`         | Override fast-tier model (diagnosis); empty = provider default            | Every Playwright run (local and CI)           |
-| `AI_MODEL_STRONG`       | Override strong-tier model (selector fix); empty = provider default       | Every Playwright run (local and CI)           |
-| `ANTHROPIC_BASE_URL`    | Base URL for PR reviewer; empty = native Anthropic, `https://openrouter.ai/api/v1` = OpenRouter | PR events via `claude-code-review.yml`                                     |
-| `ANTHROPIC_DEFAULT_SONNET_MODEL` | Sonnet-tier model slug for PR reviewer; required when `ANTHROPIC_BASE_URL` is set | PR events via `claude-code-review.yml`                                     |
-| `ANTHROPIC_DEFAULT_HAIKU_MODEL`  | Haiku-tier model slug for PR reviewer; required when `ANTHROPIC_BASE_URL` is set | PR events via `claude-code-review.yml`                                     |
-| `AI_REVIEW`             | `claude-code-review.yml`                     | PR events (opened, synchronize, ready_for_review, reopened)                |
-| `PLAYWRIGHT_TYPESCRIPT` | `playwright-typescript.yml`, `playwright-typescript-lint.yml` | PR events, push to main, Sunday 03:00 UTC schedule, `workflow_dispatch` (tests); PR and push to main on `playwright/typescript/**` changes (lint) |
-| `BRUNO`                 | `bruno.yml`                                  | PR events, push to main, `workflow_dispatch`                               |
-| `QUALITY_METRICS`       | `quality-metrics.yml`                        | 1st of every month 06:00 UTC schedule, `workflow_dispatch`                 |
-| `SELF_HEALING`          | `self-healing.yml`                           | After any failed Playwright Typescript Tests workflow run                  |
-| `RUNNER`                | Default runner for all workflow jobs         | Push, PR, schedule, `workflow_dispatch` (dispatch dropdown overrides this) |
-| `VALIDATE_REMOTE`       | Switches `validation.spec.ts` from local `xmllint` to the W3C Markup Validator (`validator.w3.org/check`). Default (absent/`false`) = local xmllint, no network traffic, no authenticated HTML leaves the runner. `true` = remote cross-check (every rendered page POSTed to W3C — use sparingly) | Every Playwright run (local and CI) |
+| Variable                         | Purpose                                                                                                                                                                                                                                                                                           | When it applies                                                                                                                                   |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AI_DIAGNOSIS`                   | AI-powered test failure diagnosis attachment                                                                                                                                                                                                                                                      | Every Playwright run (local and CI)                                                                                                               |
+| `AI_PROVIDER`                    | AI provider for diagnosis (`anthropic` or `gemini`; default: `anthropic`)                                                                                                                                                                                                                         | Every Playwright run (local and CI)                                                                                                               |
+| `AI_MODEL_FAST`                  | Override fast-tier model (diagnosis); empty = provider default                                                                                                                                                                                                                                    | Every Playwright run (local and CI)                                                                                                               |
+| `AI_MODEL_STRONG`                | Override strong-tier model (selector fix); empty = provider default                                                                                                                                                                                                                               | Every Playwright run (local and CI)                                                                                                               |
+| `ANTHROPIC_BASE_URL`             | Base URL for PR reviewer; empty = native Anthropic, `https://openrouter.ai/api/v1` = OpenRouter                                                                                                                                                                                                   | PR events via `claude-code-review.yml`                                                                                                            |
+| `ANTHROPIC_DEFAULT_SONNET_MODEL` | Sonnet-tier model slug for PR reviewer; required when `ANTHROPIC_BASE_URL` is set                                                                                                                                                                                                                 | PR events via `claude-code-review.yml`                                                                                                            |
+| `ANTHROPIC_DEFAULT_HAIKU_MODEL`  | Haiku-tier model slug for PR reviewer; required when `ANTHROPIC_BASE_URL` is set                                                                                                                                                                                                                  | PR events via `claude-code-review.yml`                                                                                                            |
+| `AI_REVIEW`                      | `claude-code-review.yml`                                                                                                                                                                                                                                                                          | PR events (opened, synchronize, ready_for_review, reopened)                                                                                       |
+| `PLAYWRIGHT_TYPESCRIPT`          | `playwright-typescript.yml`, `playwright-typescript-lint.yml`                                                                                                                                                                                                                                     | PR events, push to main, Sunday 03:00 UTC schedule, `workflow_dispatch` (tests); PR and push to main on `playwright/typescript/**` changes (lint) |
+| `BRUNO`                          | `bruno.yml`                                                                                                                                                                                                                                                                                       | PR events, push to main, `workflow_dispatch`                                                                                                      |
+| `QUALITY_METRICS`                | `quality-metrics.yml`                                                                                                                                                                                                                                                                             | 1st of every month 06:00 UTC schedule, `workflow_dispatch`                                                                                        |
+| `SELF_HEALING`                   | `self-healing.yml`                                                                                                                                                                                                                                                                                | After any failed Playwright Typescript Tests workflow run                                                                                         |
+| `RUNNER`                         | Default runner for all workflow jobs                                                                                                                                                                                                                                                              | Push, PR, schedule, `workflow_dispatch` (dispatch dropdown overrides this)                                                                        |
+| `VALIDATE_REMOTE`                | Switches `validation.spec.ts` from local `xmllint` to the W3C Markup Validator (`validator.w3.org/check`). Default (absent/`false`) = local xmllint, no network traffic, no authenticated HTML leaves the runner. `true` = remote cross-check (every rendered page POSTed to W3C — use sparingly) | Every Playwright run (local and CI)                                                                                                               |
+
+### AI diagnosis data egress
+
+When `AI_DIAGNOSIS=true`, every failed test POSTs its error messages, up to 30 000 chars of DOM, and its browser console logs to the configured provider (Anthropic or Gemini). Before transport, `redactSensitive()` in `utils/diagnosis.util.ts` masks the following well-known secrets:
+
+| Category                   | Pattern (case-insensitive)                                  | Replacement                        |
+| -------------------------- | ----------------------------------------------------------- | ---------------------------------- |
+| Cookie header value        | `Cookie: <name>=<value>` (value until `;"<>` or newline)    | `Cookie: <name>=[REDACTED]`        |
+| Bearer token (with header) | `Authorization: Bearer <token>`                             | `Authorization: Bearer [REDACTED]` |
+| Bearer token (standalone)  | `bearer <token>` where token is 12+ chars of `A-Za-z0-9._-` | `bearer [REDACTED]`                |
+| Email local-part           | `<local>@<domain>`                                          | `<first-char>***@<domain>`         |
+
+**What still crosses the provider boundary after redaction:**
+
+- Full XHTML DOM structure (tag names, attribute names, data-\* attributes, CSS class names), which can fingerprint the application.
+- Test metadata: test title, browser project name, status, expected status.
+- Error messages verbatim apart from the redactions above — assertion diffs, stack traces, and any locator strings are forwarded.
+- Base URL, request paths, and non-redacted query strings visible in the DOM or console logs.
+- Session IDs, CSRF tokens, or secrets that **do not** match one of the four patterns above (e.g. a JWT in a `data-token` attribute, a CSRF token in a hidden `<input>`, anything inside JSON without the `Cookie:`/`Authorization:` prefix).
+
+If a test can render data that falls outside those patterns, keep `AI_DIAGNOSIS` unset for that suite, or extend `REDACT_PATTERNS` before enabling it.
+
+The local `dom.xhtml` Playwright attachment is **not** redacted — it is only ever saved to the test's output directory (and any published Playwright report artifact). Redaction happens in memory on the copy sent to the AI provider.
 
 ## Getting started
 
@@ -262,15 +285,18 @@ npm run format
 
 # Check formatting without writing
 npm run format:check
+
+# Run unit tests (node:test suite for utility helpers such as diagnosis.util's redactSensitive)
+npm run test:unit
 ```
 
 ### Test tags
 
 Tests are tagged `@smoke` or `@regression` using Playwright's test options syntax (`{ tag: '@smoke' }`).
 
-| Tag           | Purpose                                                                              | Files                                                                                                                                                                       |
-| ------------- | ------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@smoke`      | Quick health check: HTTP status, page titles, heading visibility                     | `api.spec.ts`, `navigation.spec.ts`                                                                                                                                         |
+| Tag           | Purpose                                                                              | Files                                                                                                                                                                                                                                                                                                                                                           |
+| ------------- | ------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@smoke`      | Quick health check: HTTP status, page titles, heading visibility                     | `api.spec.ts`, `navigation.spec.ts`                                                                                                                                                                                                                                                                                                                             |
 | `@regression` | Deep checks: table content, SVG analysis, external link hrefs, accessibility, visual | `home.spec.ts`, `about-system.spec.ts`, `contact.spec.ts`, `statistics.spec.ts`, `accessibility.spec.ts`, `validation.spec.ts`, `visual.spec.ts`, `network-mocking.spec.ts`, `register.spec.ts`, `password-reset.spec.ts`, `zone-information.spec.ts`, `zone-stats.spec.ts`, `zone-hits.spec.ts`, `zone-scripts.spec.ts`, `zone-admin.spec.ts`, `forms.spec.ts` |
 
 Use `--grep` to run a subset and `--grep-invert` to exclude it (see [Running tests](#running-tests)).
@@ -311,7 +337,8 @@ Use `--grep` to run a subset and `--grep-invert` to exclude it (see [Running tes
 - `utils/string.util.ts` — `expectHeadings()` helper: asserts visibility of multiple headings on a page
 - `utils/validation.util.ts` — `expectValidXhtml(request, xhtml)` validates XHTML 1.0 Strict against the DTD. Default path shells out to local `xmllint --valid --noout` (libxml2, installed via `apt install libxml2-utils` in CI) — no network traffic, no authenticated HTML POSTed to a third party. Remote path (`VALIDATE_REMOTE=true`) POSTs to the classic W3C Markup Validation Service (`validator.w3.org/check`) and asserts no errors; kept available for a periodic official cross-check (the classic W3C validator is correct for XHTML 1.0 Strict; Nu is HTML5-only and gives false positives). `expectValidCss(request, cssUrl)` queries W3C CSS validator by URI and asserts zero errors
 - `utils/env.util.ts` — `loadEnv(importMetaUrl, levelsUp)` loads `.env` relative to the calling file; `requireCredentials()` validates and returns `ORWELLSTAT_USER`/`ORWELLSTAT_PASSWORD`, throwing a descriptive error if either is missing
-- `utils/diagnosis.util.ts` — `attachAiDiagnosis(testInfo, logs, domContent)`: calls the configured AI provider (Anthropic or Gemini, selected by `AI_PROVIDER`) to produce a diagnosis and optional selector-fix attachment on test failure; model names default to a per-provider map but can be overridden via `AI_MODEL_FAST` (diagnosis) and `AI_MODEL_STRONG` (selector fix); no-ops when `AI_DIAGNOSIS=true` is absent or the provider's API key is missing; errors are caught and warned so diagnosis never fails a test
+- `utils/diagnosis.util.ts` — `attachAiDiagnosis(testInfo, logs, domContent)`: calls the configured AI provider (Anthropic or Gemini, selected by `AI_PROVIDER`) to produce a diagnosis and optional selector-fix attachment on test failure; model names default to a per-provider map but can be overridden via `AI_MODEL_FAST` (diagnosis) and `AI_MODEL_STRONG` (selector fix); pipes the DOM snapshot, console logs, and error messages through `redactSensitive()` before they cross the provider boundary, replacing `Cookie: <name>=<value>` and `Authorization: Bearer <token>` with `[REDACTED]` and masking the local-part of email addresses (`alice@example.com` → `a***@example.com`); no-ops when `AI_DIAGNOSIS=true` is absent or the provider's API key is missing; errors are caught and warned so diagnosis never fails a test
+- `utils/diagnosis.util.test.ts` — `node:test` unit suite for `redactSensitive`, co-located with `diagnosis.util.ts`, exercising cookie / bearer / email / mixed / no-match / char-budget / XHTML-structure / multi-line cases; runs via `npm run test:unit` locally and on every PR through `playwright-typescript-lint.yml`
 - `types/` — Shared TypeScript interfaces; exported via path alias `@types-local/*`
   - `svg-analysis.ts` — `SvgAnalysis` interface: shape of the object returned by `page.evaluate()` in `statistics.spec.ts`
   - `statistics-row.ts` — `StatisticsRow` interface: shape of each data row returned by the bulk `page.evaluate()` in `statistics.spec.ts`
@@ -342,7 +369,7 @@ Use `--grep` to run a subset and `--grep-invert` to exclude it (see [Running tes
 
 **CI:** `.github/workflows/playwright-typescript.yml` — runs on push/PR to main/master and on `pull_request_review` (submitted/dismissed) with `working-directory: playwright/typescript`; a `check-approval` pre-check job queries the GitHub API for at least one `APPROVED` review before allowing test jobs to run — push, schedule, and `workflow_dispatch` events bypass the gate automatically; uses a matrix strategy (`fail-fast: false`) to run each of the 5 browser projects (Chromium, Firefox, Webkit, Mobile Chrome, Mobile Safari) in parallel, each in its own job; each matrix job installs only the browser it needs (`chromium`, `firefox`, or `webkit`) and uploads its HTML report as `playwright-report-<id>` and its blob report as `blob-report-<id>` (both retained 30 days); blob reports can be merged with `npx playwright merge-reports` to identify flaky tests across runs (see [Running tests](#running-tests)); npm dependencies are cached via `actions/setup-node` `cache: 'npm'` keyed on `package-lock.json`; upload is skipped when running locally with `act`. Also supports `workflow_dispatch` with four inputs: `project` (choice: `all` / `chromium` / `firefox` / `webkit`; defaults to `all` — a `setup-matrix` job computes the matrix at runtime so only matching browser entries run; selecting `chromium` also runs Mobile Chrome, `webkit` also runs Mobile Safari), `update_visual_baselines` (boolean, regenerates Linux baselines for all 5 browser projects via `--update-snapshots` — each matrix job uploads `visual-baselines-linux-<id>` and the `commit-baselines` job downloads all five with `merge-multiple: true` before committing), `ref` (branch to run on; defaults to triggering branch), and `runner` (free-text override — leave empty to use the `RUNNER` repo variable; push/PR/schedule always use `vars.RUNNER` or fall back to `ubuntu-latest`). To generate Linux baselines for a feature branch: Actions → "Playwright Typescript Tests" → "Run workflow" → enter the branch name in `ref`, check `update_visual_baselines`.
 
-**Lint and type-check backstop:** `.github/workflows/playwright-typescript-lint.yml` — runs on push/PR to main/master **only when the diff touches `playwright/typescript/**` or the workflow file itself** (workflow-level `paths` filter); a single `lint-and-types` job (`timeout-minutes: 5`) runs `actions/checkout@v6` → `actions/setup-node@v6` (`node-version: lts/*`, npm cache keyed on `playwright/typescript/package-lock.json`) → `npm ci` → `npm run format:check` → `npx tsc --noEmit`. Acts as the non-bypassable backstop to the local husky pre-commit hook (see the **Pre-commit hook** section under [playwright/typescript](#playwrighttypescript)) — `git commit --no-verify` cannot escape it. The job is gated by `github.repository == 'hubertgajewski/orwellstat' && vars.PLAYWRIGHT_TYPESCRIPT == 'true'`, matching the sibling test workflow's kill switch. **Branch protection note:** add `lint-and-types` to the required status checks on `main` (Settings → Branches → Branch protection rules → `main`) so failing lint/type runs block merge — the workflow runs automatically on every qualifying PR, but GitHub's merge block is configured separately.
+**Lint and type-check backstop:** `.github/workflows/playwright-typescript-lint.yml` — runs on push/PR to main/master **only when the diff touches `playwright/typescript/**`or the workflow file itself** (workflow-level`paths`filter); a single`lint-and-types` job (`timeout-minutes: 5`) runs `actions/checkout@v6`→`actions/setup-node@v6` (`node-version: lts/\*`, npm cache keyed on `playwright/typescript/package-lock.json`) → `npm ci`→`npm run format:check`→`npx tsc --noEmit`. Acts as the non-bypassable backstop to the local husky pre-commit hook (see the **Pre-commit hook** section under [playwright/typescript](#playwrighttypescript)) — `git commit --no-verify`cannot escape it. The job is gated by`github.repository == 'hubertgajewski/orwellstat' && vars.PLAYWRIGHT_TYPESCRIPT == 'true'`, matching the sibling test workflow's kill switch. **Branch protection note:** add `lint-and-types`to the required status checks on`main`(Settings → Branches → Branch protection rules →`main`) so failing lint/type runs block merge — the workflow runs automatically on every qualifying PR, but GitHub's merge block is configured separately.
 
 **Standalone baseline update:** `.github/workflows/update-visual-baselines.yml` — `workflow_dispatch`-only workflow that regenerates Linux baselines for all 5 browser projects and commits them back directly; accepts a `branch` input (defaults to `main`) and a `runner` text input (leave empty to use `vars.RUNNER`). Always dispatch against a feature branch (not `main`) — `GITHUB_TOKEN` can push to unprotected branches, so the updated snapshots land on your branch and the open PR picks them up automatically. Use this when you want to regenerate baselines without running the full test suite.
 
@@ -457,11 +484,11 @@ Local MCP server in `mcp/quality-metrics/` that exposes the same defect escape r
 
 `get_defect_escape_rate` and `get_mttr` shell out to `scripts/generate-quality-metrics.py --json`, so the values returned are guaranteed to match `QUALITY_METRICS.md`. Requires `gh` to be authenticated locally (the default in a developer session).
 
-| Tool                     | Description                                                                                                      |
-| ------------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| Tool                     | Description                                                                                                                          |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
 | `get_defect_escape_rate` | Return escape rate percentage and bug counts per discovery label (`found-by-test`, `found-by-manual-testing`, `found-in-production`) |
-| `get_mttr`               | Return mean time to resolve for all closed bug issues, and broken down per discovery label                       |
-| `get_metrics_history`    | Return all historical data points from `quality-metrics-history.json` as structured JSON                         |
+| `get_mttr`               | Return mean time to resolve for all closed bug issues, and broken down per discovery label                                           |
+| `get_metrics_history`    | Return all historical data points from `quality-metrics-history.json` as structured JSON                                             |
 
 When no `bug`-labeled issues exist, all three tools return a clear `"No bug issues found"` message instead of dividing by zero or throwing.
 
@@ -669,15 +696,15 @@ docker container prune
 
 ### Workflow compatibility
 
-| Workflow                      | `act` support    | Notes                                                                    |
-| ----------------------------- | ---------------- | ------------------------------------------------------------------------ |
-| `playwright-typescript.yml`   | ✅ Full          | `detect-act` step skips artifact upload                                  |
-| `playwright-typescript-lint.yml` | ✅ Full       | No artifacts; pass `-e PLAYWRIGHT_TYPESCRIPT=true` or `--var PLAYWRIGHT_TYPESCRIPT=true` so the job's `if:` guard opens |
-| `bruno.yml`                   | ✅ Full          | No artifacts; credentials injected via `--secret-file`                   |
-| `test-coverage.yml`           | ✅ Partial       | Script runs; no push-back needed                                         |
-| `quality-metrics.yml`         | ⚠️ Partial       | All steps run; `gh pr create` fails — no `GITHUB_TOKEN` in `act` containers |
-| `update-visual-baselines.yml` | ⚠️ Partial       | Baselines generated locally; `git push` fails                            |
-| `claude-code-review.yml`      | ❌ Not supported | Requires real GitHub PR context (`gh pr review` cannot target a real PR) |
+| Workflow                         | `act` support    | Notes                                                                                                                   |
+| -------------------------------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `playwright-typescript.yml`      | ✅ Full          | `detect-act` step skips artifact upload                                                                                 |
+| `playwright-typescript-lint.yml` | ✅ Full          | No artifacts; pass `-e PLAYWRIGHT_TYPESCRIPT=true` or `--var PLAYWRIGHT_TYPESCRIPT=true` so the job's `if:` guard opens |
+| `bruno.yml`                      | ✅ Full          | No artifacts; credentials injected via `--secret-file`                                                                  |
+| `test-coverage.yml`              | ✅ Partial       | Script runs; no push-back needed                                                                                        |
+| `quality-metrics.yml`            | ⚠️ Partial       | All steps run; `gh pr create` fails — no `GITHUB_TOKEN` in `act` containers                                             |
+| `update-visual-baselines.yml`    | ⚠️ Partial       | Baselines generated locally; `git push` fails                                                                           |
+| `claude-code-review.yml`         | ❌ Not supported | Requires real GitHub PR context (`gh pr review` cannot target a real PR)                                                |
 
 ### Docker RAM requirements for the Playwright matrix
 
