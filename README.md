@@ -91,6 +91,8 @@ mcp/
   quality-metrics/          # local MCP server exposing escape rate, MTTR, and metrics history
 ```
 
+> Each Playwright minor bump ships new Chromium/WebKit/Firefox engine builds; expect sub-pixel baseline drift in `tests/visual.spec.ts-snapshots/` (e.g. 1.58.2 → 1.59.1 shifted WebKit and Mobile Safari `-linux` baselines by ~2 px height, see #294) and refresh `-linux` snapshots via `update-visual-baselines.yml` before merging the dependency PR.
+
 ## Prerequisites
 
 | Tool                                                              | Required for                   | Install                                                                                                                                           |
