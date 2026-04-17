@@ -31,11 +31,11 @@ export async function expectValidXhtml(request: APIRequestContext, xhtml: string
   if (process.env.VALIDATE_REMOTE === 'true') {
     await expectValidXhtmlRemote(request, xhtml);
   } else {
-    expectValidXhtmlLocal(xhtml);
+    await expectValidXhtmlLocal(xhtml);
   }
 }
 
-export function expectValidXhtmlLocal(xhtml: string): void {
+export async function expectValidXhtmlLocal(xhtml: string): Promise<void> {
   const dir = mkdtempSync(join(tmpdir(), 'xhtml-'));
   const file = join(dir, 'page.xhtml');
   writeFileSync(file, xhtml);
