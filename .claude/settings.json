@@ -163,6 +163,14 @@
             "command": "INPUT=$(cat); CMD=$(echo \"$INPUT\" | jq -r '.tool_input.command // empty'); if echo \"$CMD\" | grep -qE '(^|[^a-zA-Z0-9_-])playwright[[:space:]]+test([^a-zA-Z0-9_-]|$)'; then echo 'BLOCKED: direct Playwright CLI is forbidden. Use mcp__playwright-report-mcp__run_tests instead (see CLAUDE.md MCP servers section). For multiple iterations, call the MCP tool repeatedly.' >&2; exit 2; fi",
             "timeout": 10,
             "statusMessage": "Checking for direct Playwright CLI..."
+          },
+          {
+            "type": "agent",
+            "if": "Bash(git commit*)",
+            "prompt": "A git commit is about to run in the orwellstat repo. Execute the project's deep code review by following .claude/skills/deep-review/SKILL.md exactly (run /security-review, /simplify, then the project checklist against `git diff HEAD`). If any blocking issues remain after the skill's 3-cycle loop, return decision 'block' with the prioritised failure list as the reason so the commit is aborted. If the skill finishes with no blocking failures, return decision 'allow'. Input: $ARGUMENTS",
+            "model": "claude-sonnet-4-6",
+            "timeout": 600,
+            "statusMessage": "Running /deep-review before commit..."
           }
         ]
       }

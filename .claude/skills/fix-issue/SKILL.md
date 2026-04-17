@@ -32,7 +32,7 @@ Implement the fix described in the issue. Follow all conventions in `CLAUDE.md` 
 Run `/security-review` (built-in Claude Code command). This must be done before the code review checklist — do not skip or defer it. If the command is unavailable, manually check: injection via untrusted input, path traversal in file I/O, unhandled parse errors, hardcoded secrets, overly broad permissions. Fix any findings before continuing.
 
 **Step 4b — Code review checklist**
-Work through `.claude/skills/code-review/SKILL.md` in full. State a finding for each checklist item (pass, fail, or N/A with reason).
+Work through `.claude/skills/deep-review/SKILL.md` in full. State a finding for each checklist item (pass, fail, or N/A with reason).
 
 **Step 5 — Run the affected test(s)**
 Run only the tests touched by the change. They must all pass before proceeding.
