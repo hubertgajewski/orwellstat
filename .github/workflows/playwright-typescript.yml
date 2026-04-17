@@ -139,6 +139,10 @@ jobs:
         # is idempotent and harmless.
         run: npx playwright install --with-deps chromium ${{ matrix.browser }}
         working-directory: playwright/typescript
+      - name: Install libxml2-utils (xmllint)
+        # xmllint provides local XHTML DTD validation used by validation.spec.ts — the default
+        # path; avoids POSTing authenticated pages to validator.w3.org on every CI run.
+        run: sudo apt-get install -y libxml2-utils
       - name: Run Playwright tests
         run: |
           if [ "${{ github.event.inputs.update_visual_baselines }}" = "true" ]; then
@@ -156,6 +160,7 @@ jobs:
           AI_DIAGNOSIS: ${{ vars.AI_DIAGNOSIS }}
           AI_MODEL_FAST: ${{ vars.AI_MODEL_FAST }}
           AI_MODEL_STRONG: ${{ vars.AI_MODEL_STRONG }}
+          VALIDATE_REMOTE: ${{ vars.VALIDATE_REMOTE }}
       - name: Upload updated baselines
         if: ${{ github.event.inputs.update_visual_baselines == 'true' }}
         uses: actions/upload-artifact@v7

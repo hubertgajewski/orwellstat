@@ -140,6 +140,7 @@ The following variables are set in **GitHub → Settings → Variables → Actio
 | `QUALITY_METRICS`       | `quality-metrics.yml`                        | 1st of every month 06:00 UTC schedule, `workflow_dispatch`                 |
 | `SELF_HEALING`          | `self-healing.yml`                           | After any failed Playwright Typescript Tests workflow run                  |
 | `RUNNER`                | Default runner for all workflow jobs         | Push, PR, schedule, `workflow_dispatch` (dispatch dropdown overrides this) |
+| `VALIDATE_REMOTE`       | Switches `validation.spec.ts` from local `xmllint` to the W3C Markup Validator (`validator.w3.org/check`). Default (absent/`false`) = local xmllint, no network traffic, no authenticated HTML leaves the runner. `true` = remote cross-check (every rendered page POSTed to W3C — use sparingly) | Every Playwright run (local and CI) |
 
 ## Getting started
 
@@ -224,6 +225,11 @@ npx playwright test --grep-invert @regression
 # HTML report
 npx playwright show-report
 
+# Cross-check XHTML validation against the classic W3C Markup Validator
+# (default is local `xmllint`; install it first with `brew install libxml2` on macOS or
+# `sudo apt install libxml2-utils` on Debian/Ubuntu)
+VALIDATE_REMOTE=true npx playwright test tests/validation.spec.ts
+
 # Detect flaky tests by merging blob reports from multiple CI runs
 # 1. Download blob artifacts for the last N runs (adjust --limit as needed)
 gh run list --workflow=playwright-typescript.yml --limit 10 --json databaseId \
@@ -265,7 +271,7 @@ Use `--grep` to run a subset and `--grep-invert` to exclude it (see [Running tes
   - `about-system.spec.ts` — About System page headings and statsbar content tests; tagged `@regression`
   - `contact.spec.ts` — Contact page headings and statsbar content tests; tagged `@regression`
   - `statistics.spec.ts` — Service statistics page: SVG chart rendering and statistics table tests; tagged `@regression`
-  - `validation.spec.ts` — W3C XHTML and CSS validation tests across all pages (classic W3C Markup Validator + CSS validator APIs); Chromium-only; tagged `@regression`
+  - `validation.spec.ts` — XHTML DTD and CSS validation tests across all pages. XHTML validation runs locally via `xmllint` by default (no network traffic, authenticated HTML never leaves the runner); set `VALIDATE_REMOTE=true` to switch to the classic W3C Markup Validator for a periodic official cross-check. CSS validation uses the W3C CSS validator API. Chromium-only; tagged `@regression`
   - `network-mocking.spec.ts` — Network mocking tests using `page.route()`: mocks the SVG chart endpoint with a static response (deterministic render, no animation timing) and mocks the W3C markup validator to return validation errors (negative test for error detection); Chromium-only; tagged `@regression`
   - `visual.spec.ts` — Full-page visual regression snapshots for home (default and Purple Rain style), about system, contact, and statistics pages using `toHaveScreenshot()` with `maxDiffPixelRatio: 0.01`; home page masks `#statsbar` lists (dynamic new-browser/OS list items) via `getByRole('list')`; statistics page masks `getByRole('table')` (live data) and `object[type="image/svg+xml"]` (dynamic SVG chart), removes all but the first 5 rows from the statistics table via `page.evaluate()` to keep the footer at a stable position regardless of how many browser/OS rows live data contains (CSS height/overflow tricks are ineffective here: Playwright's `fullPage` screenshot and mask both use the element's full bounding box, not the clipped visual; physically removing rows is the only reliable fix), waits for `<object>` to be visible before screenshotting to stabilise layout, and disables animations; baselines stored in `tests/visual.spec.ts-snapshots/` with per-platform suffixes (`-darwin`, `-linux`); tagged `@regression`
 - `auth.setup.ts` — Playwright auth setup: logs in via UI and saves storage state to `.auth/user.json`
@@ -279,7 +285,7 @@ Use `--grep` to run a subset and `--grep-invert` to exclude it (see [Running tes
 - `fixtures/api.fixture.ts` — Extends `base.fixture.ts` with HTTP request fixtures: `unauthenticatedRequest` (plain context) and `authenticatedRequest` (logs in via POST `/zone/`); import from here in tests that use either fixture
 - `utils/accessibility.util.ts` — `expectNoAccessibilityViolations()` using `@axe-core/playwright` (WCAG2AAA)
 - `utils/string.util.ts` — `expectHeadings()` helper: asserts visibility of multiple headings on a page
-- `utils/validation.util.ts` — `expectValidXhtml(request, xhtml)` POSTs raw markup to the classic W3C Markup Validation Service (`validator.w3.org/check`) and asserts no errors (correct for XHTML 1.0 Strict; Nu is HTML5-only and gives false positives); `expectValidCss(request, cssUrl)` queries W3C CSS validator by URI and asserts zero errors
+- `utils/validation.util.ts` — `expectValidXhtml(request, xhtml)` validates XHTML 1.0 Strict against the DTD. Default path shells out to local `xmllint --valid --noout` (libxml2, installed via `apt install libxml2-utils` in CI) — no network traffic, no authenticated HTML POSTed to a third party. Remote path (`VALIDATE_REMOTE=true`) POSTs to the classic W3C Markup Validation Service (`validator.w3.org/check`) and asserts no errors; kept available for a periodic official cross-check (the classic W3C validator is correct for XHTML 1.0 Strict; Nu is HTML5-only and gives false positives). `expectValidCss(request, cssUrl)` queries W3C CSS validator by URI and asserts zero errors
 - `utils/env.util.ts` — `loadEnv(importMetaUrl, levelsUp)` loads `.env` relative to the calling file; `requireCredentials()` validates and returns `ORWELLSTAT_USER`/`ORWELLSTAT_PASSWORD`, throwing a descriptive error if either is missing
 - `utils/diagnosis.util.ts` — `attachAiDiagnosis(testInfo, logs, domContent)`: calls the configured AI provider (Anthropic or Gemini, selected by `AI_PROVIDER`) to produce a diagnosis and optional selector-fix attachment on test failure; model names default to a per-provider map but can be overridden via `AI_MODEL_FAST` (diagnosis) and `AI_MODEL_STRONG` (selector fix); no-ops when `AI_DIAGNOSIS=true` is absent or the provider's API key is missing; errors are caught and warned so diagnosis never fails a test
 - `types/` — Shared TypeScript interfaces; exported via path alias `@types-local/*`

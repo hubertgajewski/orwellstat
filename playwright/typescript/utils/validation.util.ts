@@ -1,3 +1,7 @@
+import { execFileSync } from 'node:child_process';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { expect, type APIRequestContext } from '@fixtures/base.fixture';
 
 const W3C_MARKUP_VALIDATOR = 'https://validator.w3.org/check';
@@ -20,7 +24,35 @@ interface CssValidationResponse {
   };
 }
 
+// Default: local xmllint DTD validation. No network traffic, no authenticated HTML
+// crosses the trust boundary. Remote path stays available via VALIDATE_REMOTE=true
+// for a periodic "official" cross-check against validator.w3.org.
 export async function expectValidXhtml(request: APIRequestContext, xhtml: string): Promise<void> {
+  if (process.env.VALIDATE_REMOTE === 'true') {
+    await expectValidXhtmlRemote(request, xhtml);
+  } else {
+    await expectValidXhtmlLocal(xhtml);
+  }
+}
+
+export async function expectValidXhtmlLocal(xhtml: string): Promise<void> {
+  const dir = mkdtempSync(join(tmpdir(), 'xhtml-'));
+  const file = join(dir, 'page.xhtml');
+  writeFileSync(file, xhtml);
+  try {
+    execFileSync('xmllint', ['--valid', '--noout', file], { stdio: 'pipe' });
+  } catch (err) {
+    const stderr = (err as { stderr?: Buffer }).stderr?.toString() ?? '';
+    throw new Error(`XHTML DTD validation failed:\n${stderr}`);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+export async function expectValidXhtmlRemote(
+  request: APIRequestContext,
+  xhtml: string
+): Promise<void> {
   const response = await request.fetch(W3C_MARKUP_VALIDATOR, {
     method: 'POST',
     multipart: {
