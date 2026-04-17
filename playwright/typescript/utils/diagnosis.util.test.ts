@@ -1,7 +1,7 @@
 import { test, describe } from 'node:test';
 import { strict as assert } from 'node:assert';
 import { execFileSync } from 'node:child_process';
-import { redactSensitive } from '../diagnosis.util.ts';
+import { redactSensitive } from './diagnosis.util.ts';
 
 describe('redactSensitive', () => {
   test('redacts Cookie header value', () => {

@@ -18,7 +18,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "tsc": "tsc --noEmit",
-    "test:unit": "node --test --experimental-strip-types --disable-warning=ExperimentalWarning 'utils/__tests__/**/*.test.ts'",
+    "test:unit": "node --test --experimental-strip-types --disable-warning=ExperimentalWarning 'utils/**/*.test.ts'",
     "prepare": "cd ../.. && husky playwright/typescript/.husky"
   },
   "lint-staged": {
