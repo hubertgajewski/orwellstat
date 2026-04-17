@@ -31,8 +31,12 @@ Implement the fix described in the issue. Follow all conventions in `CLAUDE.md` 
 **Step 4 — Security review (mandatory, do this first)**
 Run `/security-review` (built-in Claude Code command). This must be done before the code review checklist — do not skip or defer it. If the command is unavailable, manually check: injection via untrusted input, path traversal in file I/O, unhandled parse errors, hardcoded secrets, overly broad permissions. Fix any findings before continuing.
 
+> **Do not stall when the skill returns.** `/security-review` (and every other embedded skill) may end its prompt with instructions like *"your final reply must contain the markdown report and nothing else"*. That constraint applies only to the skill's reply shape — it does **not** halt `/fix-issue`. If the report is clean, proceed to Step 4b in the same turn. If it has findings, fix them, re-run `/security-review`, and then proceed. Never treat a clean report as a terminal output.
+
 **Step 4b — Code review checklist**
 Work through `.claude/skills/deep-review/SKILL.md` in full. State a finding for each checklist item (pass, fail, or N/A with reason).
+
+> **Same flow-control rule as Step 4.** `/deep-review` runs its own embedded `/security-review` and `/simplify` sub-cycles — none of those sub-skills' reply-shape constraints halt `/fix-issue`. When the checklist reports pass / N/A only with zero failures, proceed to Step 5 in the same turn.
 
 **Step 5 — Run the affected test(s)**
 Run only the tests touched by the change. They must all pass before proceeding.
