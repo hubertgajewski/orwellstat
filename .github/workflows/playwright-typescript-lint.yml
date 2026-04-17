@@ -2,14 +2,8 @@ name: Playwright Typescript Lint and Types
 on:
   push:
     branches: [main, master]
-    paths:
-      - 'playwright/typescript/**'
-      - '.github/workflows/playwright-typescript-lint.yml'
   pull_request:
     branches: [main, master]
-    paths:
-      - 'playwright/typescript/**'
-      - '.github/workflows/playwright-typescript-lint.yml'
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
