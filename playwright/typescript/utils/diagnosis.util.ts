@@ -9,6 +9,28 @@ const SELECTOR_ERROR_PATTERN =
 const SELECTOR_EXTRACT_PATTERN =
   /((?:locator|getByRole|getByText|getByLabel|getByTestId|getByPlaceholder|getByAltText|getByTitle)\([^)\n]*(?:\)[^)\n]*)*\))/;
 
+// Each replacement preserves the header/tag name ($1) so the AI can still reason about
+// structure (e.g. "a Cookie header was present") without seeing the secret itself.
+// Terminator exclusions are deliberately broad: DOM snapshots embed tokens inside quoted
+// strings, XHTML tags, and script bodies, so stopping at `"`, `<`, `>`, `'`, `` ` ``
+// prevents the greedy value match from swallowing surrounding markup.
+const REDACT_PATTERNS: Array<[RegExp, string]> = [
+  // Cookie: <name>=<value> (case-insensitive). Value runs until a separator or quote/angle.
+  [/(Cookie:\s*[^;=\s]+=)[^;\n\r"<>]+/gi, '$1[REDACTED]'],
+  // Authorization: Bearer <token>
+  [/(Authorization:\s*Bearer\s+)[^\s<>"'`]+/gi, '$1[REDACTED]'],
+  // Standalone `bearer <token>` when it appears without the Authorization prefix.
+  // Requires 12+ chars so "[REDACTED]" from the prior pattern is not re-matched.
+  [/(bearer\s+)[A-Za-z0-9._\-]{12,}/gi, '$1[REDACTED]'],
+  // Email: keep first local-part char + domain, mask the rest of the local part.
+  // `a@b.co` → `a***@b.co`, `alice@example.com` → `a***@example.com`.
+  [/([A-Za-z0-9._%+-])[A-Za-z0-9._%+-]*(@[A-Za-z0-9.-]+\.[A-Za-z]{2,})/g, '$1***$2'],
+];
+
+export function redactSensitive(input: string): string {
+  return REDACT_PATTERNS.reduce((acc, [re, replacement]) => acc.replace(re, replacement), input);
+}
+
 interface SelectorFixResponse {
   confidence: 'high' | 'medium' | 'low';
   brokenSelector: string;
@@ -236,18 +258,23 @@ export async function attachAiDiagnosis(
     };
     console.log(`[AI diagnosis] provider=${provider} fast=${models.fast} strong=${models.strong}`);
 
+    // Redact before truncation so cut-off tokens cannot leak their prefix.
+    const redactedDom = redactSensitive(domContent);
     const domSnippet =
-      domContent.length > DOM_TRUNCATE_CHARS
-        ? domContent.slice(0, DOM_TRUNCATE_CHARS) + '\n...[truncated]'
-        : domContent;
-    const errorMessages = testInfo.errors
-      .map((e) => e.message ?? '')
-      .filter(Boolean)
-      .join('\n')
-      .replace(/\x1b\[[0-9;]*m/g, '');
+      redactedDom.length > DOM_TRUNCATE_CHARS
+        ? redactedDom.slice(0, DOM_TRUNCATE_CHARS) + '\n...[truncated]'
+        : redactedDom;
+    const redactedLogs = logs.map(redactSensitive);
+    const errorMessages = redactSensitive(
+      testInfo.errors
+        .map((e) => e.message ?? '')
+        .filter(Boolean)
+        .join('\n')
+        .replace(/\x1b\[[0-9;]*m/g, '')
+    );
 
     const [diagnosisText, selectorNote] = await Promise.all([
-      requestDiagnosis(complete, models, testInfo, logs, errorMessages, domSnippet),
+      requestDiagnosis(complete, models, testInfo, redactedLogs, errorMessages, domSnippet),
       attachSelectorFix(complete, models, testInfo, errorMessages, domSnippet).catch((err) => {
         console.warn('[Selector fix] skipped:', err);
         return null;
