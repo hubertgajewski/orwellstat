@@ -52,35 +52,35 @@
     "/zone/": {
       "title": true,
       "content": false,
-      "accessibility": false,
+      "accessibility": true,
       "visualRegression": false,
       "api": true
     },
     "/zone/stats/": {
       "title": true,
       "content": false,
-      "accessibility": false,
+      "accessibility": true,
       "visualRegression": false,
       "api": true
     },
     "/zone/hits/": {
       "title": true,
       "content": false,
-      "accessibility": false,
+      "accessibility": true,
       "visualRegression": false,
       "api": true
     },
     "/zone/scripts/": {
       "title": true,
       "content": false,
-      "accessibility": false,
+      "accessibility": true,
       "visualRegression": false,
       "api": true
     },
     "/zone/admin/": {
       "title": true,
       "content": false,
-      "accessibility": false,
+      "accessibility": true,
       "visualRegression": false,
       "api": true
     }

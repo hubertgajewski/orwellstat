@@ -3,6 +3,14 @@ import { HomePage } from '@pages/public/home.page';
 import { AboutSystemPage } from '@pages/public/about-system.page';
 import { ContactPage } from '@pages/public/contact.page';
 import { ServiceStatisticsPage } from '@pages/public/service-statistics.page';
+import { RegisterPage } from '@pages/public/register.page';
+import { PasswordResetPage } from '@pages/public/password-reset.page';
+import { PreviouslyAddedPage } from '@pages/public/previously-added.page';
+import { InformationPage } from '@pages/authenticated/information.page';
+import { StatsPage } from '@pages/authenticated/stats.page';
+import { HitsPage } from '@pages/authenticated/hits.page';
+import { ScriptsPage } from '@pages/authenticated/scripts.page';
+import { AdminPage } from '@pages/authenticated/admin.page';
 import {
   STYLE_SELECTOR,
   STYLE_IRISH_GREEN_SVG,
@@ -198,3 +206,45 @@ for (const style of [STYLE_PURPLE_RAIN, STYLE_HIGH_CONTRAST] as const) {
     }
   );
 }
+
+test.fixme('register page visual regression', { tag: '@regression' }, async ({ page }) => {
+  // TODO: Navigate to RegisterPage.url and add toHaveScreenshot() assertion.
+  await page.goto(RegisterPage.url);
+});
+
+test.fixme('password reset page visual regression', { tag: '@regression' }, async ({ page }) => {
+  // TODO: Navigate to PasswordResetPage.url and add toHaveScreenshot() assertion.
+  await page.goto(PasswordResetPage.url);
+});
+
+test.fixme('previously added page visual regression', { tag: '@regression' }, async ({ page }) => {
+  // TODO: Navigate to PreviouslyAddedPage.url and add toHaveScreenshot() assertion.
+  // The page renders dynamic browser/OS lists inside #statsbar; match the home page
+  // approach and mask both via getByRole('list') before capturing the baseline.
+  await page.goto(PreviouslyAddedPage.url);
+});
+
+test.fixme('information page visual regression', { tag: '@regression' }, async ({ page }) => {
+  // TODO: Navigate to InformationPage.url and add toHaveScreenshot() assertion.
+  await page.goto(InformationPage.url);
+});
+
+test.fixme('stats page visual regression', { tag: '@regression' }, async ({ page }) => {
+  // TODO: Navigate to StatsPage.url and add toHaveScreenshot() assertion.
+  await page.goto(StatsPage.url);
+});
+
+test.fixme('hits page visual regression', { tag: '@regression' }, async ({ page }) => {
+  // TODO: Navigate to HitsPage.url and add toHaveScreenshot() assertion.
+  await page.goto(HitsPage.url);
+});
+
+test.fixme('scripts page visual regression', { tag: '@regression' }, async ({ page }) => {
+  // TODO: Navigate to ScriptsPage.url and add toHaveScreenshot() assertion.
+  await page.goto(ScriptsPage.url);
+});
+
+test.fixme('admin page visual regression', { tag: '@regression' }, async ({ page }) => {
+  // TODO: Navigate to AdminPage.url and add toHaveScreenshot() assertion.
+  await page.goto(AdminPage.url);
+});
