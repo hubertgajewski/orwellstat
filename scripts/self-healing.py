@@ -86,7 +86,7 @@ class SelectorFix:
 class FailedTest:
     """A failed test extracted from results.json."""
 
-    __slots__ = ("title", "project", "file", "line", "error_message")
+    __slots__ = ("title", "project", "file", "line", "error_message", "output_dir")
 
     def __init__(
         self,
@@ -95,12 +95,18 @@ class FailedTest:
         file: str,
         line: int,
         error_message: str,
+        output_dir: str | None = None,
     ):
         self.title = title
         self.project = project
         self.file = file
         self.line = line
         self.error_message = error_message
+        # Path of the test's testInfo.outputDir relative to the shard root
+        # (e.g. "test-results/home-home-page-Webkit-retry1"), derived from the
+        # last result's attachments.  Used to pair error-context/dom artifacts
+        # with the test that produced them — see issue #275.
+        self.output_dir = output_dir
 
 
 # ---------------------------------------------------------------------------
@@ -224,6 +230,7 @@ def _walk_suite(suite: dict, failed: list[FailedTest]) -> None:
             # Extract file path (relative to playwright/typescript/)
             file_path = spec.get("file", "")
             line = spec.get("line", 0)
+            output_dir = _extract_output_dir(last.get("attachments", []))
             failed.append(
                 FailedTest(
                     title=spec.get("title", ""),
@@ -231,10 +238,38 @@ def _walk_suite(suite: dict, failed: list[FailedTest]) -> None:
                     file=file_path,
                     line=line,
                     error_message=error_msg,
+                    output_dir=output_dir,
                 )
             )
     for child in suite.get("suites", []):
         _walk_suite(child, failed)
+
+
+def _extract_output_dir(attachments: list[dict]) -> str | None:
+    """Derive the test's outputDir (relative to the shard root) from attachments.
+
+    The Playwright JSON reporter records attachment paths as absolute runner
+    paths like
+    ``/home/runner/.../playwright/typescript/test-results/<slug>/dom.xhtml``.
+    The self-healing workflow collects artifacts preserving the
+    ``test-results/<slug>/`` segment (see ``Collect self-healing data`` step in
+    ``playwright-typescript.yml``), so stripping everything before
+    ``test-results/`` yields a path that resolves under the shard root.
+
+    Returns ``None`` if no attachment carries a usable path — caller treats
+    that as "no artifacts, skip this test" (issue #275).
+    """
+    for att in attachments:
+        raw = att.get("path")
+        if not isinstance(raw, str) or not raw:
+            continue
+        parts = Path(raw).parent.parts
+        try:
+            idx = parts.index("test-results")
+        except ValueError:
+            continue
+        return str(Path(*parts[idx:]))
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -792,17 +827,36 @@ def main(data_dir: str) -> None:
         for results_file, failed_tests in all_failed_tests:
             selector_failures = [t for t in failed_tests if is_selector_error(t.error_message)]
             for test in selector_failures:
-                test_dir = results_file.parent
-                # Prefer error-context.md (Playwright built-in: includes test source
-                # and accessibility tree) over raw dom.xhtml
-                error_context = None
-                ec_files = list(test_dir.rglob("error-context.md"))
-                if ec_files:
-                    error_context = ec_files[0].read_text(encoding="utf-8", errors="replace")
-                dom_files = list(test_dir.rglob("dom.xhtml"))
-                if not dom_files and not error_context:
+                # Pair artifacts with the test that produced them by using the
+                # test's own testInfo.outputDir (issue #275).  A shard-wide
+                # rglob[0] would pick whichever error-context/dom appeared
+                # first in traversal order, which may belong to a different
+                # failing test.
+                if not test.output_dir:
+                    print(
+                        f"[self-healing] Skipping {test.title!r} ({test.project}): "
+                        "no attachments recorded in results.json",
+                        file=sys.stderr,
+                    )
                     continue
-                dom_content = dom_files[0].read_text(encoding="utf-8", errors="replace") if dom_files else ""
+                test_output_dir = results_file.parent / test.output_dir
+                ec_path = test_output_dir / "error-context.md"
+                dom_path = test_output_dir / "dom.xhtml"
+                error_context = (
+                    ec_path.read_text(encoding="utf-8", errors="replace")
+                    if ec_path.is_file() else None
+                )
+                dom_content = (
+                    dom_path.read_text(encoding="utf-8", errors="replace")
+                    if dom_path.is_file() else ""
+                )
+                if not error_context and not dom_content:
+                    print(
+                        f"[self-healing] Skipping {test.title!r} ({test.project}): "
+                        f"no error-context.md or dom.xhtml under {test_output_dir}",
+                        file=sys.stderr,
+                    )
+                    continue
                 fix = request_selector_fix_from_ai(
                     test.error_message, dom_content, provider,
                     error_context=error_context,
