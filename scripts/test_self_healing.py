@@ -895,6 +895,269 @@ class TestErrorContextSupport(unittest.TestCase):
 
 
 # ===================================================================
+# Per-test artifact pairing (issue #275)
+#
+# The earlier implementation paired each selector failure with the first
+# error-context.md / dom.xhtml found anywhere under the shard — when a shard
+# had 2+ failing tests, this silently fed one test's DOM into another test's
+# AI fix request.  The fix threads testInfo.outputDir through `FailedTest`
+# via the `attachments[].path` field of `results.json` and resolves artifacts
+# per-test under the shard root.
+# ===================================================================
+
+
+class TestExtractOutputDir(unittest.TestCase):
+    def test_returns_relative_segment_from_absolute_path(self):
+        # Mimic what the Playwright JSON reporter writes on a runner.
+        attachments = [
+            {
+                "name": "DOM",
+                "contentType": "text/html",
+                "path": "/home/runner/work/orwellstat/orwellstat/playwright/typescript/test-results/home-home-page-Webkit-retry1/dom.xhtml",
+            },
+        ]
+        self.assertEqual(
+            self_healing._extract_output_dir(attachments),
+            "test-results/home-home-page-Webkit-retry1",
+        )
+
+    def test_ignores_attachments_without_path(self):
+        attachments = [
+            {"name": "stdout", "contentType": "text/plain"},
+            {
+                "name": "error-context",
+                "contentType": "text/markdown",
+                "path": "/runner/test-results/foo/error-context.md",
+            },
+        ]
+        self.assertEqual(
+            self_healing._extract_output_dir(attachments),
+            "test-results/foo",
+        )
+
+    def test_returns_none_when_no_test_results_segment(self):
+        attachments = [
+            {"name": "DOM", "path": "/tmp/unrelated/dir/dom.xhtml"},
+        ]
+        self.assertIsNone(self_healing._extract_output_dir(attachments))
+
+    def test_returns_none_for_empty_attachments(self):
+        self.assertIsNone(self_healing._extract_output_dir([]))
+
+
+class TestPerTestArtifactPairing(unittest.TestCase):
+    """Two failing tests in the same shard with distinct error-context/dom
+    artifacts must each be paired with their OWN artifacts when calling the
+    AI — not whichever file rglob happened to pick first.  A test with no
+    artifacts under its outputDir must be skipped (not fall back to a
+    neighbor's data).
+    """
+
+    @staticmethod
+    def _results_json(tests: list[dict]) -> dict:
+        """Build a results.json skeleton with one spec per entry."""
+        specs = []
+        for t in tests:
+            specs.append({
+                "title": t["title"],
+                "ok": False,
+                "file": t.get("file", "home.spec.ts"),
+                "line": t.get("line", 1),
+                "column": 1,
+                "tests": [
+                    {
+                        "projectId": t["project"],
+                        "projectName": t["project"],
+                        "status": "unexpected",
+                        "results": [
+                            {
+                                "status": "failed",
+                                "errors": [{"message": t["error"]}],
+                                "attachments": t["attachments"],
+                            }
+                        ],
+                    }
+                ],
+            })
+        return {
+            "suites": [
+                {
+                    "title": "home.spec.ts",
+                    "file": "home.spec.ts",
+                    "specs": specs,
+                    "suites": [],
+                }
+            ]
+        }
+
+    @patch("self_healing.create_draft_pr")
+    @patch("self_healing.post_comment")
+    @patch("self_healing.count_self_healing_comments", return_value=0)
+    @patch("self_healing.find_pr_for_branch", return_value=99)
+    @patch("self_healing.request_selector_fix_from_ai")
+    def test_pairs_each_failure_with_its_own_artifacts(
+        self,
+        mock_ai,
+        _mock_find_pr,
+        _mock_count,
+        _mock_post,
+        _mock_draft,
+    ):
+        with tempfile.TemporaryDirectory() as tmp:
+            shard = Path(tmp) / "self-healing-data-chromium"
+            tr_a = shard / "test-results" / "home-home-page-Chromium"
+            tr_b = shard / "test-results" / "home-recent-links-Chromium"
+            _write_file(tr_a / "error-context.md", "ERROR-CONTEXT-A")
+            _write_file(tr_a / "dom.xhtml", "<html>DOM-A</html>")
+            _write_file(tr_b / "error-context.md", "ERROR-CONTEXT-B")
+            _write_file(tr_b / "dom.xhtml", "<html>DOM-B</html>")
+
+            # Absolute paths as Playwright would write them on a runner —
+            # the script is expected to resolve them relative to the shard.
+            results = self._results_json([
+                {
+                    "title": "home page",
+                    "project": "Chromium",
+                    "error": "waiting for locator('#menubar').getByRole('link', { name: 'Strona glowna', exact: true })",
+                    "attachments": [
+                        {
+                            "name": "DOM",
+                            "contentType": "text/html",
+                            "path": "/runner/work/orwellstat/playwright/typescript/test-results/home-home-page-Chromium/dom.xhtml",
+                        },
+                        {
+                            "name": "error-context",
+                            "contentType": "text/markdown",
+                            "path": "/runner/work/orwellstat/playwright/typescript/test-results/home-home-page-Chromium/error-context.md",
+                        },
+                    ],
+                },
+                {
+                    "title": "recent-links",
+                    "project": "Chromium",
+                    "error": "waiting for getByRole('link', { name: 'ostatnio dodanych' })",
+                    "attachments": [
+                        {
+                            "name": "DOM",
+                            "contentType": "text/html",
+                            "path": "/runner/work/orwellstat/playwright/typescript/test-results/home-recent-links-Chromium/dom.xhtml",
+                        },
+                        {
+                            "name": "error-context",
+                            "contentType": "text/markdown",
+                            "path": "/runner/work/orwellstat/playwright/typescript/test-results/home-recent-links-Chromium/error-context.md",
+                        },
+                    ],
+                },
+            ])
+            _write_file(shard / "results.json", json.dumps(results))
+
+            # AI returns a plausible fix keyed off the broken selector in the
+            # error message so the cross-check guard keeps the fix.
+            def _fake_fix(err_msg, dom, _provider, error_context=None):
+                if "Strona glowna" in err_msg:
+                    return self_healing.SelectorFix(
+                        confidence="high",
+                        broken_selector="locator('#menubar').getByRole('link', { name: 'Strona glowna', exact: true })",
+                        suggested_selector="locator('#menubar').getByRole('link', { name: 'Strona główna', exact: true })",
+                        explanation="diacritic fix",
+                    )
+                return self_healing.SelectorFix(
+                    confidence="high",
+                    broken_selector="getByRole('link', { name: 'ostatnio dodanych' })",
+                    suggested_selector="getByRole('link', { name: 'ostatnio dodanych' }).first()",
+                    explanation="nth(1) fix",
+                )
+            mock_ai.side_effect = _fake_fix
+
+            self_healing.main(str(Path(tmp)))
+
+            # Two AI calls — one per failing test — each paired with its own
+            # artifacts.
+            self.assertEqual(mock_ai.call_count, 2)
+            pairings = {}
+            for call in mock_ai.call_args_list:
+                err_msg = call.args[0]
+                dom = call.args[1]
+                ec = call.kwargs.get("error_context")
+                key = "A" if "Strona glowna" in err_msg else "B"
+                pairings[key] = (dom, ec)
+
+            self.assertIn("DOM-A", pairings["A"][0])
+            self.assertIn("ERROR-CONTEXT-A", pairings["A"][1])
+            self.assertNotIn("DOM-B", pairings["A"][0])
+            self.assertNotIn("ERROR-CONTEXT-B", pairings["A"][1])
+
+            self.assertIn("DOM-B", pairings["B"][0])
+            self.assertIn("ERROR-CONTEXT-B", pairings["B"][1])
+            self.assertNotIn("DOM-A", pairings["B"][0])
+            self.assertNotIn("ERROR-CONTEXT-A", pairings["B"][1])
+
+    @patch("self_healing.create_draft_pr")
+    @patch("self_healing.post_comment")
+    @patch("self_healing.find_pr_for_branch", return_value=None)
+    @patch("self_healing.request_selector_fix_from_ai")
+    def test_skips_test_with_no_artifacts_and_logs_reason(
+        self, mock_ai, _mock_find_pr, _mock_post, _mock_draft
+    ):
+        import io
+
+        with tempfile.TemporaryDirectory() as tmp:
+            shard = Path(tmp) / "self-healing-data-webkit"
+            # Only test B has artifacts; test A has attachments: [] → skip.
+            tr_b = shard / "test-results" / "home-recent-links-Webkit"
+            _write_file(tr_b / "error-context.md", "ERROR-CONTEXT-B")
+            _write_file(tr_b / "dom.xhtml", "<html>DOM-B</html>")
+
+            results = self._results_json([
+                {
+                    "title": "lonely test",
+                    "project": "Webkit",
+                    "error": "waiting for locator('#lonely')",
+                    "attachments": [],
+                },
+                {
+                    "title": "recent-links",
+                    "project": "Webkit",
+                    "error": "waiting for getByRole('link', { name: 'ostatnio dodanych' })",
+                    "attachments": [
+                        {
+                            "name": "DOM",
+                            "contentType": "text/html",
+                            "path": "/runner/test-results/home-recent-links-Webkit/dom.xhtml",
+                        },
+                        {
+                            "name": "error-context",
+                            "contentType": "text/markdown",
+                            "path": "/runner/test-results/home-recent-links-Webkit/error-context.md",
+                        },
+                    ],
+                },
+            ])
+            _write_file(shard / "results.json", json.dumps(results))
+
+            mock_ai.return_value = self_healing.SelectorFix(
+                confidence="high",
+                broken_selector="getByRole('link', { name: 'ostatnio dodanych' })",
+                suggested_selector="getByRole('link', { name: 'ostatnio dodanych' }).first()",
+                explanation="fix",
+            )
+
+            captured_stderr = io.StringIO()
+            with patch("sys.stderr", captured_stderr):
+                self_healing.main(str(Path(tmp)))
+            stderr_text = captured_stderr.getvalue()
+
+        # Only the test WITH artifacts reached the AI — the other was skipped.
+        self.assertEqual(mock_ai.call_count, 1)
+        self.assertIn("DOM-B", mock_ai.call_args.args[1])
+        self.assertIn("ERROR-CONTEXT-B", mock_ai.call_args.kwargs.get("error_context"))
+        # The skip was logged with a reason (so it's debuggable from CI logs).
+        self.assertIn("lonely test", stderr_text)
+        self.assertIn("no attachments recorded", stderr_text)
+
+
+# ===================================================================
 # Cross-check guard: drop stale fixes not referenced by any failed test
 # (issue #291 — PR #287 reproduction)
 # ===================================================================
