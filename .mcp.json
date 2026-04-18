@@ -12,7 +12,7 @@
     },
     "playwright-report-mcp": {
       "command": "npx",
-      "args": ["playwright-report-mcp@latest"],
+      "args": ["playwright-report-mcp@2.0.1"],
       "type": "stdio",
       "env": {
         "PW_DIR": "playwright/typescript"

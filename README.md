@@ -420,7 +420,7 @@ Four MCP servers are declared in `.mcp.json` and loaded automatically by any MCP
 
 An MCP server that runs the Playwright test suite and returns structured JSON results, enabling agentic workflows (self-healing, test generation verification) to act on test outcomes without parsing shell output.
 
-**Setup:** No setup required — runs via `npx playwright-report-mcp@latest` from the official npm registry.
+**Setup:** No setup required — runs via `npx playwright-report-mcp@2.0.1` from the official npm registry. The version is pinned in `.mcp.json` so upstream releases don't silently change behavior between runs.
 
 **Configuration:** The following environment variables can be set in `.mcp.json` (unset variables use their defaults):
 
@@ -434,7 +434,7 @@ This repo sets `PW_DIR` to `playwright/typescript` so the server targets the cor
 ```json
 "playwright-report-mcp": {
   "command": "npx",
-  "args": ["playwright-report-mcp@latest"],
+  "args": ["playwright-report-mcp@2.0.1"],
   "type": "stdio",
   "env": {
     "PW_DIR": "playwright/typescript"
