@@ -15,15 +15,17 @@ If non-empty, print a banner: **"Parent epic: #$PARENT — do not close it. Clos
 Run `gh issue view $ARGUMENTS` and read every section: User Story, Context, Acceptance Criteria, Implementation Hint, and Definition of Done. State what the issue requires before touching any code.
 
 **Step 2 — Create the branch**
-First, fetch the latest remote state so the branch is created from up-to-date main:
+First, derive the bare issue number `<N>` from `$ARGUMENTS` by stripping a single leading `#` if present (so both `/fix-issue 322` and `/fix-issue #322` resolve to `<N>=322`). Use `<N>` in every branch-name reference below; the `#<N>` form is reserved for commit messages and PR body prose per `CLAUDE.md`.
+
+Then fetch the latest remote state so the branch is created from up-to-date main:
 ```bash
 git fetch origin
 ```
 Then check whether the target name already exists on the remote:
 ```bash
-git ls-remote --heads origin feature/$ARGUMENTS   # or bugfix/$ARGUMENTS
+git ls-remote --heads origin feature/<N>   # or bugfix/<N>
 ```
-If it exists, inspect its recent commits (`git log origin/<branch> --oneline -5`) to decide whether those changes relate to this issue or to something different. If they appear unrelated, pick an alternative name by appending a suffix (e.g. `feature/$ARGUMENTS-2`, `feature/$ARGUMENTS-3`) and repeat the check until a free name is found. Then create the branch from remote `main` using the chosen name (e.g. `git checkout -b feature/$ARGUMENTS origin/main`).
+If it exists, inspect its recent commits (`git log origin/<branch> --oneline -5`) to decide whether those changes relate to this issue or to something different. If they appear unrelated, pick an alternative name by appending a suffix (e.g. `feature/<N>-2`, `feature/<N>-3`) and repeat the check until a free name is found. Then create the branch from remote `main` using the chosen name (e.g. `git checkout -b feature/<N> origin/main`).
 
 **Step 3 — Make the code change**
 Implement the fix described in the issue. Follow all conventions in `CLAUDE.md` (POM, fixtures, path aliases, security, etc.). When writing assertions against the product's DOM, sanity-check each literal string for upstream bugs before pinning it — see the **External-app text correctness** item in `.claude/skills/deep-review/SKILL.md`.
