@@ -22,6 +22,12 @@ When creating GitHub issues for requirements, bugs, or code review findings, fol
 
 ---
 
+## Authenticated-test account selection
+
+Authenticated Playwright specs default to the **populated** account (real hit data). Tests asserting empty-state UI opt in per file with `test.use({ storageState: EMPTY_STORAGE_STATE })` (from `@fixtures/storage-state`); API tests use `test.use({ authAccount: 'empty' })` (from `@fixtures/api.fixture`). Never branch at runtime on which account is logged in.
+
+---
+
 ## Commit message convention
 
 Commit messages are always a **short, single-line description** with no body and no `Co-Authored-By` trailer. When a commit relates to one or more GitHub issues, **prefix the message with `#` and the issue number(s)**, followed by the description:
@@ -62,11 +68,11 @@ Never use `--body "..."` or a heredoc directly in the `gh pr create` call when t
 
 This repository defines MCP (Model Context Protocol) servers in `.mcp.json` at the repo root. Any MCP-compatible AI assistant should load this file and use the declared servers when they are the most appropriate tool for a task:
 
-| Server | Purpose |
-|---|---|
+| Server                  | Purpose                                                                                        |
+| ----------------------- | ---------------------------------------------------------------------------------------------- |
 | `playwright-report-mcp` | Run the Playwright test suite and retrieve structured results (pass/fail, errors, attachments) |
-| `playwright` | Browser automation — navigate pages, take screenshots, interact with UI elements |
-| `MCP_DOCKER` | Docker MCP gateway — interact with containers (used with `act` for local CI) |
+| `playwright`            | Browser automation — navigate pages, take screenshots, interact with UI elements               |
+| `MCP_DOCKER`            | Docker MCP gateway — interact with containers (used with `act` for local CI)                   |
 
 - Use `playwright-report-mcp` when you need to run or inspect test results programmatically — e.g. during self-healing workflows, verifying a fix, or checking which tests are failing. Prefer it over invoking `npx playwright test` via shell and parsing stdout. Every tool call must include `workingDirectory`: `"playwright/typescript"` for the main worktree, or `"../<worktree-name>/playwright/typescript"` (e.g. `"../orwellstat-330/playwright/typescript"`) for a sibling worktree. Omitting it defaults to the repo root, which has no `playwright.config.*` and will fail. The allowlist (`PW_ALLOWED_DIRS=".."` in `.mcp.json`) authorizes the repo root's parent, covering every sibling worktree under the same directory.
 - Use `playwright` for exploratory or diagnostic tasks that benefit from live browser interaction — e.g. inspecting the running application, verifying a UI fix, taking screenshots. Prefer it over describing what the page looks like from memory.

@@ -14,6 +14,13 @@ if (!(env in BASE_URLS)) {
 }
 const baseURL = BASE_URLS[env];
 
+// Default browser-project storage state. The populated account has real hit data so
+// `/zone/`, `/zone/stats/`, `/zone/hits/`, etc. render populated content. Empty-state tests
+// opt into `.auth/empty.json` per file via `test.use({ storageState: EMPTY_STORAGE_STATE })`
+// from `@fixtures/storage-state`. This config cannot use path aliases — they're resolved by
+// tsconfig-paths after Playwright reads the config — so the URL is inlined here.
+const POPULATED_STORAGE_STATE = new URL('.auth/populated.json', import.meta.url).pathname;
+
 /**
  * See https://playwright.dev/docs/test-configuration.
  */
@@ -64,12 +71,14 @@ export default defineConfig({
       name: 'setup',
       testMatch: /.*\.setup\.ts/,
       testDir: '.',
+      // Serial so the two account logins do not race each other or trip login throttling.
+      fullyParallel: false,
     },
     {
       name: 'Chromium',
       use: {
         ...devices['Desktop Chrome'],
-        storageState: new URL('.auth/user.json', import.meta.url).pathname,
+        storageState: POPULATED_STORAGE_STATE,
       },
       dependencies: ['setup'],
     },
@@ -77,7 +86,7 @@ export default defineConfig({
       name: 'Firefox',
       use: {
         ...devices['Desktop Firefox'],
-        storageState: new URL('.auth/user.json', import.meta.url).pathname,
+        storageState: POPULATED_STORAGE_STATE,
       },
       dependencies: ['setup'],
     },
@@ -85,7 +94,7 @@ export default defineConfig({
       name: 'Webkit',
       use: {
         ...devices['Desktop Safari'],
-        storageState: new URL('.auth/user.json', import.meta.url).pathname,
+        storageState: POPULATED_STORAGE_STATE,
       },
       dependencies: ['setup'],
     },
@@ -93,7 +102,7 @@ export default defineConfig({
       name: 'Mobile Chrome',
       use: {
         ...devices['Galaxy S24'],
-        storageState: new URL('.auth/user.json', import.meta.url).pathname,
+        storageState: POPULATED_STORAGE_STATE,
       },
       dependencies: ['setup'],
     },
@@ -101,7 +110,7 @@ export default defineConfig({
       name: 'Mobile Safari',
       use: {
         ...devices['iPhone 15'],
-        storageState: new URL('.auth/user.json', import.meta.url).pathname,
+        storageState: POPULATED_STORAGE_STATE,
       },
       dependencies: ['setup'],
     },
