@@ -12,10 +12,10 @@
     },
     "playwright-report-mcp": {
       "command": "npx",
-      "args": ["--min-release-age=0", "playwright-report-mcp@2.0.2"],
+      "args": ["--min-release-age=0", "playwright-report-mcp@3.0.0"],
       "type": "stdio",
       "env": {
-        "PW_DIR": "playwright/typescript"
+        "PW_ALLOWED_DIRS": ".."
       }
     },
     "quality-metrics": {
