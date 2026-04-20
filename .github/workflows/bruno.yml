@@ -78,6 +78,8 @@ jobs:
         run: |
           echo "ORWELLSTAT_USER=${{ secrets.ORWELLSTAT_USER }}" >> .env
           echo "ORWELLSTAT_PASSWORD=${{ secrets.ORWELLSTAT_PASSWORD }}" >> .env
+          echo "ORWELLSTAT_USER_EMPTY=${{ secrets.ORWELLSTAT_USER_EMPTY }}" >> .env
+          echo "ORWELLSTAT_PASSWORD_EMPTY=${{ secrets.ORWELLSTAT_PASSWORD_EMPTY }}" >> .env
 
       - name: Run Bruno tests
         run: npx bru run --env production

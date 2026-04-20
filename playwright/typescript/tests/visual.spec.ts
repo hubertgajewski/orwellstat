@@ -49,7 +49,7 @@ for (const style of ALL_STYLES) {
       });
     } finally {
       // Delete the SelectedStyle cookie — it is stored server-side in the session shared by
-      // all tests via .auth/user.json, so not cleaning up would cause subsequent tests to
+      // all tests via .auth/filled.json, so not cleaning up would cause subsequent tests to
       // render in the selected style and fail their baselines.
       await page.context().clearCookies({ name: 'SelectedStyle' });
     }

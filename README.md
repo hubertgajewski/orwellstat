@@ -67,7 +67,7 @@ Size is a coarse roadmap guess for epics, not a mechanical sum of children's poi
 
 ```
 .env                        # credentials (git-ignored); see .env.example
-.env.example                # template: ORWELLSTAT_USER, ORWELLSTAT_PASSWORD, ENV, BASIC_AUTH_USER, BASIC_AUTH_PASSWORD, ANTHROPIC_API_KEY, GEMINI_API_KEY, OPENROUTER_API_KEY
+.env.example                # template: ORWELLSTAT_USER, ORWELLSTAT_PASSWORD, ORWELLSTAT_USER_EMPTY, ORWELLSTAT_PASSWORD_EMPTY, ENV, BASIC_AUTH_USER, BASIC_AUTH_PASSWORD, ANTHROPIC_API_KEY, GEMINI_API_KEY, OPENROUTER_API_KEY
 .vars                       # CI repository variables (git-ignored); see .vars.example
 .vars.example               # template: AI_REVIEW, PLAYWRIGHT_TYPESCRIPT, BRUNO, QUALITY_METRICS, AI_DIAGNOSIS, AI_PROVIDER, AI_MODEL_FAST, AI_MODEL_STRONG, ANTHROPIC_BASE_URL, ANTHROPIC_DEFAULT_SONNET_MODEL, ANTHROPIC_DEFAULT_HAIKU_MODEL, SELF_HEALING
 .mcp.json                   # MCP server definitions (MCP_DOCKER, playwright, playwright-report-mcp, quality-metrics) — loaded by Claude Code and other MCP-compatible AI assistants
@@ -109,8 +109,10 @@ Node.js includes `npm` — no separate installation needed. Docker and `act` are
 Copy `.env.example` to `.env` at the repo root and fill in your credentials:
 
 ```
-ORWELLSTAT_USER=<username>
-ORWELLSTAT_PASSWORD=<password>
+ORWELLSTAT_USER=<filled-account username>
+ORWELLSTAT_PASSWORD=<filled-account password>
+ORWELLSTAT_USER_EMPTY=<empty-account username>
+ORWELLSTAT_PASSWORD_EMPTY=<empty-account password>
 ENV=<production|staging>
 BASIC_AUTH_USER=<staging basic auth user>
 BASIC_AUTH_PASSWORD=<staging basic auth password>
@@ -119,7 +121,7 @@ GEMINI_API_KEY=<Gemini API key>
 OPENROUTER_API_KEY=<OpenRouter API key (required when ANTHROPIC_BASE_URL points to OpenRouter)>
 ```
 
-`ORWELLSTAT_USER` and `ORWELLSTAT_PASSWORD` are required for all environments. `BASIC_AUTH_USER` and `BASIC_AUTH_PASSWORD` are only needed when running against staging — Playwright passes them automatically as HTTP Basic Auth credentials when set. `ANTHROPIC_API_KEY` and `GEMINI_API_KEY` are optional — when the active provider's key is present alongside `AI_DIAGNOSIS=true` in `.vars`, failed tests receive an `AI diagnosis` attachment in the Playwright report; when either is absent the fixture behaves identically to without them. Set `AI_PROVIDER` in `.vars` to choose the provider (`anthropic` by default, or `gemini`). `OPENROUTER_API_KEY` is required when `ANTHROPIC_BASE_URL` in `.vars` points to OpenRouter (or any Anthropic-compat proxy); the PR reviewer uses it as the Bearer auth token. Get one at https://openrouter.ai/keys. In CI, secrets are injected as GitHub Actions secrets and variables via GitHub Actions variables. Sub-projects load them via `dotenv` with a path pointing two levels up (`../../.env` and `../../.vars`).
+`ORWELLSTAT_USER` / `ORWELLSTAT_PASSWORD` are the default (**filled**) account — populated with real hit data. `ORWELLSTAT_USER_EMPTY` / `ORWELLSTAT_PASSWORD_EMPTY` are the **empty** account — no hits in the last 30 days — used by tests asserting empty-state UI (see **Account fixtures** below). Both pairs are required for all environments. `BASIC_AUTH_USER` and `BASIC_AUTH_PASSWORD` are only needed when running against staging — Playwright passes them automatically as HTTP Basic Auth credentials when set. `ANTHROPIC_API_KEY` and `GEMINI_API_KEY` are optional — when the active provider's key is present alongside `AI_DIAGNOSIS=true` in `.vars`, failed tests receive an `AI diagnosis` attachment in the Playwright report; when either is absent the fixture behaves identically to without them. Set `AI_PROVIDER` in `.vars` to choose the provider (`anthropic` by default, or `gemini`). `OPENROUTER_API_KEY` is required when `ANTHROPIC_BASE_URL` in `.vars` points to OpenRouter (or any Anthropic-compat proxy); the PR reviewer uses it as the Bearer auth token. Get one at https://openrouter.ai/keys. In CI, secrets are injected as GitHub Actions secrets and variables via GitHub Actions variables. Sub-projects load them via `dotenv` with a path pointing two levels up (`../../.env` and `../../.vars`).
 
 ### CI repository variables
 
@@ -324,7 +326,7 @@ Use `--grep` to run a subset and `--grep-invert` to exclude it (see [Running tes
   - `zone-scripts.spec.ts` — `test.fixme` stub for the authenticated scripts page content (coverage matrix gap); tagged `@regression`
   - `zone-admin.spec.ts` — `test.fixme` stub for the authenticated admin page content (coverage matrix gap); tagged `@regression`
   - `forms.spec.ts` — `test.fixme` stubs for the `login`, `hitsFilter`, and `adminSettings` forms (coverage matrix gaps — see the `forms` section of `coverage-matrix.json`); tagged `@regression`
-- `auth.setup.ts` — Playwright auth setup: logs in via UI and saves storage state to `.auth/user.json`
+- `auth.setup.ts` — Playwright auth setup: logs in via UI as both the **filled** and **empty** accounts, saving `.auth/filled.json` and `.auth/empty.json`. The two logins run sequentially within a non-parallel `setup` project to avoid back-to-back login throttling.
 - `pages/` — Page Object Model classes
   - `base.page.ts` — `BasePage` interface (`url`, `title`, `goto()`, `heading`, optional `accessKey`)
   - `abstract.page.ts` — `AbstractPage` abstract class implementing `BasePage` boilerplate; all page classes extend this; defines shared static strings (`signIn`, `loggedInAs`, `logoutButton`)
@@ -332,11 +334,12 @@ Use `--grep` to run a subset and `--grep-invert` to exclude it (see [Running tes
   - `public/` — Public page classes: `HomePage`, `AboutSystemPage`, `ServiceStatisticsPage`, `ContactPage`, `RegisterPage`, `PasswordResetPage`, `PreviouslyAddedPage`; exported via `index.ts` as `PUBLIC_PAGE_CLASSES` (except `PreviouslyAddedPage`)
   - `authenticated/` — Authenticated page classes: `InformationPage`, `StatsPage`, `HitsPage`, `ScriptsPage`, `AdminPage`; exported via `index.ts` as `AUTHENTICATED_PAGE_CLASSES`
 - `fixtures/base.fixture.ts` — Custom Playwright fixture extending `test` with a `page` override that captures browser console logs and an XHTML DOM snapshot (`dom.xhtml` with XML declaration and `<?xml-stylesheet?>` PIs) as attachments on test failure, then calls `attachAiDiagnosis()`; re-exports `expect`, `request`, `Page`, `Locator`, `BrowserContext` from `@playwright/test`; re-exports `pixelmatch` and `PNG` (used for pixel-diff screenshot comparison)
-- `fixtures/api.fixture.ts` — Extends `base.fixture.ts` with HTTP request fixtures: `unauthenticatedRequest` (plain context) and `authenticatedRequest` (logs in via POST `/zone/`); import from here in tests that use either fixture
+- `fixtures/api.fixture.ts` — Extends `base.fixture.ts` with HTTP request fixtures: `unauthenticatedRequest` (plain context) and `authenticatedRequest` (logs in via POST `/zone/`); import from here in tests that use either fixture. Exposes the `authAccount: 'filled' | 'empty'` option (default `'filled'`) so specs can switch the API session via `test.use({ authAccount: 'empty' })`
+- `fixtures/storage-state.ts` — Exports `FILLED_STORAGE_STATE` and `EMPTY_STORAGE_STATE` path constants used by empty-state specs via `test.use({ storageState: EMPTY_STORAGE_STATE })`
 - `utils/accessibility.util.ts` — `expectNoAccessibilityViolations()` using `@axe-core/playwright` (WCAG2AAA)
 - `utils/string.util.ts` — `expectHeadings()` helper: asserts visibility of multiple headings on a page
 - `utils/validation.util.ts` — `expectValidXhtml(request, xhtml)` validates XHTML 1.0 Strict against the DTD. Default path shells out to local `xmllint --valid --noout` (libxml2, installed via `apt install libxml2-utils` in CI) — no network traffic, no authenticated HTML POSTed to a third party. Remote path (`VALIDATE_REMOTE=true`) POSTs to the classic W3C Markup Validation Service (`validator.w3.org/check`) and asserts no errors; kept available for a periodic official cross-check (the classic W3C validator is correct for XHTML 1.0 Strict; Nu is HTML5-only and gives false positives). `expectValidCss(request, cssUrl)` queries W3C CSS validator by URI and asserts zero errors
-- `utils/env.util.ts` — `loadEnv(importMetaUrl, levelsUp)` loads `.env` relative to the calling file; `requireCredentials()` validates and returns `ORWELLSTAT_USER`/`ORWELLSTAT_PASSWORD`, throwing a descriptive error if either is missing
+- `utils/env.util.ts` — `loadEnv(importMetaUrl, levelsUp)` loads `.env` relative to the calling file; `requireCredentials(account?: 'filled' | 'empty')` validates and returns the correct credentials for the requested account, defaulting to filled. The filled account prefers `ORWELLSTAT_USER_FILLED` / `ORWELLSTAT_PASSWORD_FILLED` if set, falling back to the legacy `ORWELLSTAT_USER` / `ORWELLSTAT_PASSWORD` so existing `.env` files and forks keep working unchanged. The empty account requires `ORWELLSTAT_USER_EMPTY` / `ORWELLSTAT_PASSWORD_EMPTY` with no fallback
 - `utils/diagnosis.util.ts` — `attachAiDiagnosis(testInfo, logs, domContent)`: calls the configured AI provider (Anthropic or Gemini, selected by `AI_PROVIDER`) to produce a diagnosis and optional selector-fix attachment on test failure; model names default to a per-provider map but can be overridden via `AI_MODEL_FAST` (diagnosis) and `AI_MODEL_STRONG` (selector fix); pipes the DOM snapshot, console logs, and error messages through `redactSensitive()` before they cross the provider boundary, replacing `Cookie: <name>=<value>` and `Authorization: Bearer <token>` with `[REDACTED]` and masking the local-part of email addresses (`alice@example.com` → `a***@example.com`); no-ops when `AI_DIAGNOSIS=true` is absent or the provider's API key is missing; errors are caught and warned so diagnosis never fails a test
 - `utils/diagnosis.util.test.ts` — `node:test` unit suite for `redactSensitive`, co-located with `diagnosis.util.ts`, exercising cookie / bearer / email / mixed / no-match / char-budget / XHTML-structure / multi-line cases; runs via `npm run test:unit` locally and on every PR through `playwright-typescript-lint.yml`
 - `types/` — Shared TypeScript interfaces; exported via path alias `@types-local/*`
@@ -360,7 +363,7 @@ Use `--grep` to run a subset and `--grep-invert` to exclude it (see [Running tes
 **Playwright config** (`playwright.config.ts`):
 
 - 5 browser projects: Chromium, Firefox, WebKit, Mobile Chrome (Galaxy S24), Mobile Safari (iPhone 15)
-- All projects use `storageState: '.auth/user.json'` (written by `auth.setup.ts`)
+- All browser projects default to `storageState: '.auth/filled.json'` (filled account). Specs asserting empty-state UI opt in per file via `test.use({ storageState: EMPTY_STORAGE_STATE })` from `@fixtures/storage-state`; API tests use `test.use({ authAccount: 'empty' })` from `@fixtures/api.fixture`. Never branch at runtime on which account is logged in.
 - On failure: screenshots, video, and console/DOM log attachments are saved
 - `trace: 'on-first-retry'`
 - `baseURL` is driven by the `ENV` variable (`production` by default, `staging` when `ENV=staging`); `httpCredentials` are injected automatically when `BASIC_AUTH_USER` is set

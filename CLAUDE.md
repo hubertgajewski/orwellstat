@@ -22,6 +22,12 @@ When creating GitHub issues for requirements, bugs, or code review findings, fol
 
 ---
 
+## Authenticated-test account selection
+
+Authenticated Playwright specs default to the **filled** account (real hit data). Tests asserting empty-state UI opt in per file with `test.use({ storageState: EMPTY_STORAGE_STATE })` (from `@fixtures/storage-state`); API tests use `test.use({ authAccount: 'empty' })` (from `@fixtures/api.fixture`). Never branch at runtime on which account is logged in.
+
+---
+
 ## Commit message convention
 
 Commit messages are always a **short, single-line description** with no body and no `Co-Authored-By` trailer. When a commit relates to one or more GitHub issues, **prefix the message with `#` and the issue number(s)**, followed by the description:

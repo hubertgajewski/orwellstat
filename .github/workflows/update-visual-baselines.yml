@@ -40,6 +40,8 @@ jobs:
         env:
           ORWELLSTAT_USER: ${{ secrets.ORWELLSTAT_USER }}
           ORWELLSTAT_PASSWORD: ${{ secrets.ORWELLSTAT_PASSWORD }}
+          ORWELLSTAT_USER_EMPTY: ${{ secrets.ORWELLSTAT_USER_EMPTY }}
+          ORWELLSTAT_PASSWORD_EMPTY: ${{ secrets.ORWELLSTAT_PASSWORD_EMPTY }}
       - name: Commit updated baselines
         run: |
           git config user.name "github-actions[bot]"
