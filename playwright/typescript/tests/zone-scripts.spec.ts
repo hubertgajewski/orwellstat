@@ -12,7 +12,6 @@ import { HitsPage } from '@pages/authenticated/hits.page';
 // If the product ever changes its snippet structure the templates must be regenerated —
 // the structural test above fails first, giving a clear signal.
 const TEST_DATA_BASE = new URL('../test-data/scripts/', import.meta.url);
-const BASE_URL_PLACEHOLDER = '{{ORWELLSTAT_BASE}}';
 
 const TRACKING_FIXTURES = [
   { label: 'HTML5', filename: 'tracking-html5.html' },
@@ -52,7 +51,7 @@ test.describe('scripts page tracking', { tag: '@regression' }, () => {
       // document.location includes a unique per-run marker (see comment below).
       const template = readFileSync(new URL(filename, TEST_DATA_BASE), 'utf8');
       const materialisedPath = testInfo.outputPath(filename);
-      writeFileSync(materialisedPath, template.replaceAll(BASE_URL_PLACEHOLDER, baseURL));
+      writeFileSync(materialisedPath, template.replaceAll('{{ORWELLSTAT_BASE}}', baseURL));
 
       // Append a unique marker to the fixture URL so this assertion only matches the
       // hit this test just registered — /zone/hits/ keeps rows from every prior run
