@@ -28,13 +28,15 @@ test('scripts page - content', { tag: '@regression' }, async ({ page }) => {
   await expect(scriptsPage.html4SectionHeading).toBeVisible();
   await expect(scriptsPage.xhtmlSectionHeading).toBeVisible();
 
-  // The page is served as application/xhtml+xml, so DOM nodeName is lowercase
-  // ('textarea'). Playwright's toHaveValue checks nodeName === 'TEXTAREA' strictly and
-  // mis-reports these as "Not an input element"; assert the server-rendered default
-  // value via textContent instead (equivalent for a fresh page).
-  await expect(scriptsPage.html5Snippet).toHaveText(/\S/);
-  await expect(scriptsPage.html4Snippet).toHaveText(/\S/);
-  await expect(scriptsPage.xhtmlSnippet).toHaveText(/\S/);
+  // Assert each textarea contains the stable div id from its respective snippet template
+  // so structural drift (a rename or a stripped snippet) fails fast instead of silently
+  // slipping past a non-empty check. Uses toHaveText (reads textContent) because the page
+  // is served as application/xhtml+xml: DOM nodeName is lowercase 'textarea', and
+  // Playwright's toHaveValue checks nodeName === 'TEXTAREA' strictly and mis-reports
+  // these as "Not an input element".
+  await expect(scriptsPage.html5Snippet).toHaveText(/id="orwellstat"/);
+  await expect(scriptsPage.html4Snippet).toHaveText(/id="orwellstat"/);
+  await expect(scriptsPage.xhtmlSnippet).toHaveText(/id="osMainScript"/);
 });
 
 test.describe('scripts page tracking', { tag: '@regression' }, () => {
