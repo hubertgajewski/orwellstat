@@ -6,46 +6,43 @@ export class InformationPage extends AbstractPage {
   static readonly title = 'Orwell Stat - Informacje';
   static readonly accessKey = 'I';
 
-  // The page has no <h1> text of its own (the h1 holds the site logo image); the first
-  // real section heading is this h2.
-  static readonly pageHeading = 'Podstawowe informacje';
-  // Shown when the signed-in account has no hits in the last 30 days.
-  static readonly emptyState =
-    'W ciągu ostatnich 30 dni nie odnotowano żadnych odsłon na Twoich stronach';
-  // Populated-state section headings (rendered only when the account has hits).
-  static readonly visitFrequency = 'Jak często są odwiedzane Twoje strony';
-  static readonly ranking = 'Ranking popularności';
-
-  // Populated-state content markers. Each section is inline prose — not a <table> — with
-  // <span class="bold"> values. We assert the stable labels that always appear with data.
-  static readonly todayLabel = 'Dzisiaj:';
-  static readonly topPageLabel = 'Najpopularniejsza strona:';
-
   constructor(page: Page) {
     super(page, InformationPage.url, InformationPage.title, InformationPage.accessKey);
   }
 
+  // The page has no <h1> text of its own (the h1 holds the site logo image); the first
+  // real section heading is this h2.
   get heading() {
-    return this.page.getByRole('heading', { name: InformationPage.pageHeading, exact: true });
+    return this.page.getByRole('heading', { name: 'Podstawowe informacje', exact: true });
   }
 
+  // Shown when the signed-in account has no hits in the last 30 days.
   get emptyStateHeading() {
-    return this.page.getByRole('heading', { name: InformationPage.emptyState, exact: true });
+    return this.page.getByRole('heading', {
+      name: 'W ciągu ostatnich 30 dni nie odnotowano żadnych odsłon na Twoich stronach',
+      exact: true,
+    });
   }
 
+  // Populated-state section headings (rendered only when the account has hits).
   get visitFrequencyHeading() {
-    return this.page.getByRole('heading', { name: InformationPage.visitFrequency, exact: true });
+    return this.page.getByRole('heading', {
+      name: 'Jak często są odwiedzane Twoje strony',
+      exact: true,
+    });
   }
 
   get rankingHeading() {
-    return this.page.getByRole('heading', { name: InformationPage.ranking, exact: true });
+    return this.page.getByRole('heading', { name: 'Ranking popularności', exact: true });
   }
 
+  // Populated-state content markers. Each section is inline prose — not a <table> — with
+  // <span class="bold"> values. We assert the stable labels that always appear with data.
   get todayCount() {
-    return this.page.getByText(InformationPage.todayLabel, { exact: false });
+    return this.page.getByText('Dzisiaj:', { exact: false });
   }
 
   get topPage() {
-    return this.page.getByText(InformationPage.topPageLabel, { exact: false });
+    return this.page.getByText('Najpopularniejsza strona:', { exact: false });
   }
 }
