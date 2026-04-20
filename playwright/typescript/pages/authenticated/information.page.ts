@@ -7,9 +7,8 @@ export class InformationPage extends AbstractPage {
   static readonly accessKey = 'I';
 
   // The page has no <h1> text of its own (the h1 holds the site logo image); the first
-  // real section heading is this h2. Upstream renders 'Postawowe' — a typo for 'Podstawowe';
-  // match the DOM verbatim.
-  static readonly pageHeading = 'Postawowe informacje';
+  // real section heading is this h2.
+  static readonly pageHeading = 'Podstawowe informacje';
   // Shown when the signed-in account has no hits in the last 30 days.
   static readonly emptyState =
     'W ciągu ostatnich 30 dni nie odnotowano żadnych odsłon na Twoich stronach';
