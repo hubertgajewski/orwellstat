@@ -7,34 +7,11 @@
   <body>
     <h1>Orwell Stat tracking fixture - XHTML</h1>
     <p>
-      Strict XHTML 1.0 page (the <code>.xhtml</code> extension makes file:// serve it as
-      <code>application/xhtml+xml</code>) that embeds the XHTML variant of the Orwell Stat tracking
-      snippet. The snippet is copied verbatim from <code>/zone/scripts/</code> for the populated
-      account and must be regenerated if that page changes.
+      Minimal XHTML 1.0 Strict shell for the application/xhtml+xml-variant tracking
+      snippet. The <code>{{SNIPPET}}</code> placeholder below is replaced at test time
+      with the contents of <code>snippet-xhtml.txt</code>, which is the single source of
+      truth for the snippet body and is also asserted against <code>/zone/scripts/</code>.
     </p>
-    <!-- Orwell Stat (C) 2003-2017 Hubert Gajewski ver. 0.8 XHTML -->
-    <div id="osMainScript">
-      <script type="text/javascript">
-        if (document.createElementNS) {
-          var osScriptSource =
-            '{{ORWELLSTAT_BASE}}/scripts/06.php?id=populated&amp;w=' +
-            window.screen.height +
-            '&amp;s=' +
-            window.screen.width +
-            '&amp;g=' +
-            window.screen.colorDepth +
-            '&amp;k=' +
-            Math.pow(2, window.screen.colorDepth) +
-            '&amp;o=' +
-            escape(document.referrer) +
-            '&amp;l=' +
-            escape(document.location);
-          var osCreateElement = document.createElementNS('http://www.w3.org/1999/xhtml', 'script');
-          osCreateElement.setAttribute('type', 'text/javascript');
-          osCreateElement.setAttribute('src', osScriptSource);
-          document.getElementsByTagName('div').osMainScript.appendChild(osCreateElement);
-        }
-      </script>
-    </div>
+    {{SNIPPET}}
   </body>
 </html>

@@ -1,59 +1,28 @@
 import { randomUUID } from 'node:crypto';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFile, writeFile } from 'node:fs/promises';
+import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { test, expect } from '@fixtures/base.fixture';
 import { ScriptsPage } from '@pages/authenticated/scripts.page';
 import { HitsPage } from '@pages/authenticated/hits.page';
 
-// Canonical snippet content the product renders inside each textarea on /zone/scripts/ for
-// the populated account. `{{ORWELLSTAT_BASE}}` is substituted with the active Playwright
-// baseURL at assertion time so the same strings work against both production and staging.
-// If the product changes any of these snippets, the structural test below fails and the
-// maintainer must refresh both the canonical string here and the matching fixture template.
-const CANONICAL_HTML5_SNIPPET = `<!-- Orwell Stat (C) 2003-2020 Hubert Gajewski ver. 0.9 HTML -->
-<div id="orwellstat">
-<script src="{{ORWELLSTAT_BASE}}/scripts/?id=populated">
-</script>
-<img src="{{ORWELLSTAT_BASE}}/scripts/sms.php?id=populated" width="0" height="0" alt="" />
-<noscript>
-<div><img src="{{ORWELLSTAT_BASE}}/scripts/noscript.php?id=populated" width="0" height="0" alt="" /></div>
-</noscript>
-</div>`;
-
-const CANONICAL_HTML4_SNIPPET = `<!-- Orwell Stat (C) 2003-2017 Hubert Gajewski ver. 0.5 HTML -->
-<div id="orwellstat">
-<script type="text/javascript" src="{{ORWELLSTAT_BASE}}/scripts/?id=populated">
-</script>
-<img src="{{ORWELLSTAT_BASE}}/scripts/sms.php?id=populated" width="0" height="0" alt="" />
-<noscript>
-<div><img src="{{ORWELLSTAT_BASE}}/scripts/noscript.php?id=populated" width="0" height="0" alt="" /></div>
-</noscript>
-</div>`;
-
-const CANONICAL_XHTML_SNIPPET = `<!-- Orwell Stat (C) 2003-2017 Hubert Gajewski ver. 0.8 XHTML -->
-<div id="osMainScript">
-<script type="text/javascript">
-if(document.createElementNS)
-{var osScriptSource = "{{ORWELLSTAT_BASE}}/scripts/06.php?id=populated&amp;w="+
-window.screen.height+"&amp;s="+window.screen.width+"&amp;g="+
-window.screen.colorDepth+"&amp;k="+Math.pow(2,window.screen.colorDepth)+"&amp;o="+
-escape(document.referrer)+"&amp;l="+escape(document.location);
-var osCreateElement = document.createElementNS("http://www.w3.org/1999/xhtml","script");
-osCreateElement.setAttribute("type", "text/javascript");
-osCreateElement.setAttribute("src", osScriptSource);
-document.getElementsByTagName("div").osMainScript.appendChild(osCreateElement);}
-</script>
-</div>`;
+// Single source of truth for each snippet body. The structural test below asserts these
+// match what /zone/scripts/ renders into each textarea, and the tracking tests embed them
+// into a thin HTML/HTML4/XHTML shell so the code that fires tracking is literally the code
+// the product distributes. Each snippet uses `{{ORWELLSTAT_BASE}}` in place of the server
+// origin; the Playwright `baseURL` is substituted in at runtime so the same files work
+// against both production and staging. Read sync once at module load — this happens at
+// worker startup, not on a hot path.
+const TEST_DATA_BASE = new URL('../test-data/scripts/', import.meta.url);
+const CANONICAL_SNIPPETS = {
+  'tracking-html5.html': readFileSync(new URL('snippet-html5.txt', TEST_DATA_BASE), 'utf8'),
+  'tracking-html4.html': readFileSync(new URL('snippet-html4.txt', TEST_DATA_BASE), 'utf8'),
+  'tracking.xhtml': readFileSync(new URL('snippet-xhtml.txt', TEST_DATA_BASE), 'utf8'),
+} as const;
 
 function withBase(template: string, baseURL: string): string {
   return template.replaceAll('{{ORWELLSTAT_BASE}}', baseURL);
 }
-
-// Committed HTML / HTML4 / XHTML fixture templates live under test-data/. Each embeds the
-// same tracking snippet (with the same `{{ORWELLSTAT_BASE}}` placeholder) so the tracking
-// tests exercise the exact code users would copy-paste. If a snippet changes, update both
-// the canonical constant above and the corresponding tracking fixture template.
-const TEST_DATA_BASE = new URL('../test-data/scripts/', import.meta.url);
 
 const TRACKING_FIXTURES = [
   { label: 'HTML5', filename: 'tracking-html5.html' },
@@ -76,9 +45,15 @@ test('scripts page - content', { tag: '@regression' }, async ({ page, baseURL })
   // toHaveText reads textContent — the correct way to read a textarea's default value on
   // an application/xhtml+xml page (toHaveValue checks nodeName === 'TEXTAREA' strictly and
   // fails on the lowercase nodeName that XML parsing preserves).
-  await expect(scriptsPage.html5Snippet).toHaveText(withBase(CANONICAL_HTML5_SNIPPET, baseURL));
-  await expect(scriptsPage.html4Snippet).toHaveText(withBase(CANONICAL_HTML4_SNIPPET, baseURL));
-  await expect(scriptsPage.xhtmlSnippet).toHaveText(withBase(CANONICAL_XHTML_SNIPPET, baseURL));
+  await expect(scriptsPage.html5Snippet).toHaveText(
+    withBase(CANONICAL_SNIPPETS['tracking-html5.html'], baseURL)
+  );
+  await expect(scriptsPage.html4Snippet).toHaveText(
+    withBase(CANONICAL_SNIPPETS['tracking-html4.html'], baseURL)
+  );
+  await expect(scriptsPage.xhtmlSnippet).toHaveText(
+    withBase(CANONICAL_SNIPPETS['tracking.xhtml'], baseURL)
+  );
 });
 
 test.describe('scripts page tracking', { tag: '@regression' }, () => {
@@ -90,12 +65,15 @@ test.describe('scripts page tracking', { tag: '@regression' }, () => {
       if (!baseURL) throw new Error('baseURL must be set in playwright.config.ts');
       const trackingUrlPrefix = `${baseURL}/scripts/`;
 
-      // Materialise the fixture for this run: substitute the current environment's origin
-      // into the template and write it to the test's own output dir so document.location
-      // includes a unique per-run marker (see comment below).
-      const template = readFileSync(new URL(filename, TEST_DATA_BASE), 'utf8');
+      // Materialise the fixture for this run: read the committed shell, substitute the
+      // single-source snippet body and the current environment's origin, then write the
+      // result to the test's own output dir so document.location includes a unique per-run
+      // marker (see comment below).
+      const shell = await readFile(new URL(filename, TEST_DATA_BASE), 'utf8');
+      const snippet = CANONICAL_SNIPPETS[filename];
+      const materialised = withBase(shell.replace('{{SNIPPET}}', snippet), baseURL);
       const materialisedPath = testInfo.outputPath(filename);
-      writeFileSync(materialisedPath, withBase(template, baseURL));
+      await writeFile(materialisedPath, materialised);
 
       // Append a unique marker to the fixture URL so this assertion only matches the hit
       // this test just registered — /zone/hits/ keeps rows from every prior run forever,
@@ -112,6 +90,9 @@ test.describe('scripts page tracking', { tag: '@regression' }, () => {
       ]);
 
       await page.goto(HitsPage.url);
+      // exact: false is correct here — the hits-table cell contains the full URL, host
+      // info, browser, and other metadata; the UUID is a substring within that text, not
+      // the cell's entire content.
       await expect(page.getByText(runMarker, { exact: false })).toBeVisible();
     });
   }
