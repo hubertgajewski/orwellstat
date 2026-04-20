@@ -4,6 +4,5 @@
 // Never branch at runtime on which account is logged in — see the **Fixture usage** bullet
 // in `.claude/skills/deep-review/SKILL.md`.
 
-export const POPULATED_STORAGE_STATE = new URL('../.auth/populated.json', import.meta.url)
-  .pathname;
+export const POPULATED_STORAGE_STATE = new URL('../.auth/populated.json', import.meta.url).pathname;
 export const EMPTY_STORAGE_STATE = new URL('../.auth/empty.json', import.meta.url).pathname;
