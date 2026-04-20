@@ -14,12 +14,12 @@ if (!(env in BASE_URLS)) {
 }
 const baseURL = BASE_URLS[env];
 
-// Default browser-project storage state. The filled account has real hit data so `/zone/`,
-// `/zone/stats/`, `/zone/hits/`, etc. render populated content. Empty-state tests opt into
-// `.auth/empty.json` per file via `test.use({ storageState: EMPTY_STORAGE_STATE })` from
-// `@fixtures/storage-state`. This config cannot use path aliases — they're resolved by
+// Default browser-project storage state. The populated account has real hit data so
+// `/zone/`, `/zone/stats/`, `/zone/hits/`, etc. render populated content. Empty-state tests
+// opt into `.auth/empty.json` per file via `test.use({ storageState: EMPTY_STORAGE_STATE })`
+// from `@fixtures/storage-state`. This config cannot use path aliases — they're resolved by
 // tsconfig-paths after Playwright reads the config — so the URL is inlined here.
-const FILLED_STORAGE_STATE = new URL('.auth/filled.json', import.meta.url).pathname;
+const POPULATED_STORAGE_STATE = new URL('.auth/populated.json', import.meta.url).pathname;
 
 /**
  * See https://playwright.dev/docs/test-configuration.
@@ -78,7 +78,7 @@ export default defineConfig({
       name: 'Chromium',
       use: {
         ...devices['Desktop Chrome'],
-        storageState: FILLED_STORAGE_STATE,
+        storageState: POPULATED_STORAGE_STATE,
       },
       dependencies: ['setup'],
     },
@@ -86,7 +86,7 @@ export default defineConfig({
       name: 'Firefox',
       use: {
         ...devices['Desktop Firefox'],
-        storageState: FILLED_STORAGE_STATE,
+        storageState: POPULATED_STORAGE_STATE,
       },
       dependencies: ['setup'],
     },
@@ -94,7 +94,7 @@ export default defineConfig({
       name: 'Webkit',
       use: {
         ...devices['Desktop Safari'],
-        storageState: FILLED_STORAGE_STATE,
+        storageState: POPULATED_STORAGE_STATE,
       },
       dependencies: ['setup'],
     },
@@ -102,7 +102,7 @@ export default defineConfig({
       name: 'Mobile Chrome',
       use: {
         ...devices['Galaxy S24'],
-        storageState: FILLED_STORAGE_STATE,
+        storageState: POPULATED_STORAGE_STATE,
       },
       dependencies: ['setup'],
     },
@@ -110,7 +110,7 @@ export default defineConfig({
       name: 'Mobile Safari',
       use: {
         ...devices['iPhone 15'],
-        storageState: FILLED_STORAGE_STATE,
+        storageState: POPULATED_STORAGE_STATE,
       },
       dependencies: ['setup'],
     },

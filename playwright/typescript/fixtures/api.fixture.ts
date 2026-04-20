@@ -4,7 +4,7 @@ import { requireCredentials, type Account } from '@utils/env.util';
 
 type ApiOptions = {
   // Which account `authenticatedRequest` logs in as. Override per file or describe with
-  // `test.use({ authAccount: 'empty' })`; default is the filled account to match the
+  // `test.use({ authAccount: 'empty' })`; default is the populated account to match the
   // browser-project `storageState` default. Never branch at runtime — see the
   // **Fixture usage** bullet in `.claude/skills/deep-review/SKILL.md`.
   authAccount: Account;
@@ -16,7 +16,7 @@ type ApiFixtures = {
 };
 
 export const test = base.extend<ApiOptions & ApiFixtures>({
-  authAccount: ['filled', { option: true }],
+  authAccount: ['populated', { option: true }],
 
   unauthenticatedRequest: async ({ playwright, baseURL }, use) => {
     const ctx = await playwright.request.newContext({ baseURL });

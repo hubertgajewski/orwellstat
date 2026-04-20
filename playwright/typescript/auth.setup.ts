@@ -21,8 +21,8 @@ async function authenticate(page: Page, account: Account): Promise<void> {
     .storageState({ path: new URL(`.auth/${account}.json`, import.meta.url).pathname });
 }
 
-setup('authenticate filled', async ({ page }) => {
-  await authenticate(page, 'filled');
+setup('authenticate populated', async ({ page }) => {
+  await authenticate(page, 'populated');
 });
 
 setup('authenticate empty', async ({ page }) => {
