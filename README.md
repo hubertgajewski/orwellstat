@@ -323,7 +323,7 @@ Use `--grep` to run a subset and `--grep-invert` to exclude it (see [Running tes
   - `zone-information.spec.ts` — `test.fixme` stub for the authenticated information page content (coverage matrix gap); tagged `@regression`
   - `zone-stats.spec.ts` — `test.fixme` stub for the authenticated stats page content (coverage matrix gap); tagged `@regression`
   - `zone-hits.spec.ts` — `test.fixme` stub for the authenticated hits page content (coverage matrix gap); tagged `@regression`
-  - `zone-scripts.spec.ts` — `test.fixme` stub for the authenticated scripts page content (coverage matrix gap); tagged `@regression`
+  - `zone-scripts.spec.ts` — authenticated scripts page content (three section headings visible, three snippet textareas non-empty) plus three E2E tracking tests that navigate a `file://` fixture under `test-data/scripts/` (one per snippet variant: HTML5, HTML4/XHTML, application/xhtml+xml), wait for the tracking request to fire against `orwellstat.hubertgajewski.com/scripts/`, then assert a row with a unique per-run marker appears in `/zone/hits/`; tagged `@regression`
   - `zone-admin.spec.ts` — `test.fixme` stub for the authenticated admin page content (coverage matrix gap); tagged `@regression`
   - `forms.spec.ts` — `test.fixme` stubs for the `login`, `hitsFilter`, and `adminSettings` forms (coverage matrix gaps — see the `forms` section of `coverage-matrix.json`); tagged `@regression`
 - `auth.setup.ts` — Playwright auth setup: logs in via UI as both the **populated** and **empty** accounts, saving `.auth/populated.json` and `.auth/empty.json`. The two logins run sequentially within a non-parallel `setup` project to avoid back-to-back login throttling.
@@ -345,7 +345,8 @@ Use `--grep` to run a subset and `--grep-invert` to exclude it (see [Running tes
 - `types/` — Shared TypeScript interfaces; exported via path alias `@types-local/*`
   - `svg-analysis.ts` — `SvgAnalysis` interface: shape of the object returned by `page.evaluate()` in `statistics.spec.ts`
   - `statistics-row.ts` — `StatisticsRow` interface: shape of each data row returned by the bulk `page.evaluate()` in `statistics.spec.ts`
-- `test-data/` — Reserved for static test data (currently empty)
+- `test-data/` — Static test data committed with the test suite
+  - `scripts/tracking-html5.html`, `scripts/tracking-html4.html`, `scripts/tracking.xhtml` — minimal fixture pages that embed the HTML5 / HTML4 / application/xhtml+xml variant of the Orwell Stat tracking snippet; used by `tests/zone-scripts.spec.ts` to verify end-to-end hit registration. Regenerate by copying from `/zone/scripts/` if the product changes its snippet output.
 - `coverage-matrix.json` — Manual test coverage matrix: lists all known testable pages and forms with boolean flags per category (title, content, accessibility, visualRegression, api); updated by hand when new tests are added or new pages/forms are introduced to the application; read by the Test Coverage Trends workflow to calculate and display coverage percentages
 
 **Page Object Model pattern:** Each page class extends `AbstractPage` and defines static `url`, `title` (and optionally `accessKey`) properties used in data-driven loops. The constructor calls `super(page, url, title, accessKey)`. Only the `heading` getter and page-specific static string constants need to be defined per class.
