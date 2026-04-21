@@ -2,7 +2,7 @@
 <div id="osMainScript">
 <script type="text/javascript">
 if(document.createElementNS)
-{var osScriptSource = "{{ORWELLSTAT_BASE}}/scripts/06.php?id=populated&amp;w="+
+{var osScriptSource = "{{ORWELLSTAT_BASE}}/scripts/06.php?id={{ORWELLSTAT_USER}}&amp;w="+
 window.screen.height+"&amp;s="+window.screen.width+"&amp;g="+
 window.screen.colorDepth+"&amp;k="+Math.pow(2,window.screen.colorDepth)+"&amp;o="+
 escape(document.referrer)+"&amp;l="+escape(document.location);

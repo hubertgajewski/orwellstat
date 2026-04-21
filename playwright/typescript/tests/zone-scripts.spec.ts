@@ -10,9 +10,10 @@ import { HitsPage } from '@pages/authenticated/hits.page';
 // match what /zone/scripts/ renders into each textarea, and the tracking tests embed them
 // into a thin HTML/HTML4/XHTML shell so the code that fires tracking is literally the code
 // the product distributes. Each snippet uses `{{ORWELLSTAT_BASE}}` in place of the server
-// origin; the Playwright `baseURL` is substituted in at runtime so the same files work
-// against both production and staging. Read sync once at module load — this happens at
-// worker startup, not on a hot path.
+// origin and `{{ORWELLSTAT_USER}}` in place of the tracking account id; both are
+// substituted at runtime so the same files work against production and staging and
+// against whatever populated-account credentials the environment provides. Read sync
+// once at module load — this happens at worker startup, not on a hot path.
 const TEST_DATA_BASE = new URL('../test-data/scripts/', import.meta.url);
 const CANONICAL_SNIPPETS = {
   'tracking-html5.html': readFileSync(new URL('snippet-html5.txt', TEST_DATA_BASE), 'utf8'),
@@ -20,8 +21,12 @@ const CANONICAL_SNIPPETS = {
   'tracking.xhtml': readFileSync(new URL('snippet-xhtml.txt', TEST_DATA_BASE), 'utf8'),
 } as const;
 
-function withBase(template: string, baseURL: string): string {
-  return template.replaceAll('{{ORWELLSTAT_BASE}}', baseURL);
+function applySubstitutions(template: string, baseURL: string): string {
+  const user = process.env.ORWELLSTAT_USER;
+  if (!user) throw new Error('ORWELLSTAT_USER must be set in .env (local) or repo secrets (CI)');
+  return template
+    .replaceAll('{{ORWELLSTAT_BASE}}', baseURL)
+    .replaceAll('{{ORWELLSTAT_USER}}', user);
 }
 
 const TRACKING_FIXTURES = [
@@ -46,13 +51,13 @@ test('scripts page - content', { tag: '@regression' }, async ({ page, baseURL })
   // an application/xhtml+xml page (toHaveValue checks nodeName === 'TEXTAREA' strictly and
   // fails on the lowercase nodeName that XML parsing preserves).
   await expect(scriptsPage.html5Snippet).toHaveText(
-    withBase(CANONICAL_SNIPPETS['tracking-html5.html'], baseURL)
+    applySubstitutions(CANONICAL_SNIPPETS['tracking-html5.html'], baseURL)
   );
   await expect(scriptsPage.html4Snippet).toHaveText(
-    withBase(CANONICAL_SNIPPETS['tracking-html4.html'], baseURL)
+    applySubstitutions(CANONICAL_SNIPPETS['tracking-html4.html'], baseURL)
   );
   await expect(scriptsPage.xhtmlSnippet).toHaveText(
-    withBase(CANONICAL_SNIPPETS['tracking.xhtml'], baseURL)
+    applySubstitutions(CANONICAL_SNIPPETS['tracking.xhtml'], baseURL)
   );
 });
 
@@ -71,7 +76,7 @@ test.describe('scripts page tracking', { tag: '@regression' }, () => {
       // marker (see comment below).
       const shell = await readFile(new URL(filename, TEST_DATA_BASE), 'utf8');
       const snippet = CANONICAL_SNIPPETS[filename];
-      const materialised = withBase(shell.replace('{{SNIPPET}}', snippet), baseURL);
+      const materialised = applySubstitutions(shell.replace('{{SNIPPET}}', snippet), baseURL);
       const materialisedPath = testInfo.outputPath(filename);
       await writeFile(materialisedPath, materialised);
 
