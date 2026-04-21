@@ -1,0 +1,9 @@
+<!-- Orwell Stat (C) 2003-2017 Hubert Gajewski ver. 0.5 HTML -->
+<div id="orwellstat">
+<script type="text/javascript" src="{{ORWELLSTAT_BASE}}/scripts/?id={{ORWELLSTAT_USER}}">
+</script>
+<img src="{{ORWELLSTAT_BASE}}/scripts/sms.php?id={{ORWELLSTAT_USER}}" width="0" height="0" alt="" />
+<noscript>
+<div><img src="{{ORWELLSTAT_BASE}}/scripts/noscript.php?id={{ORWELLSTAT_USER}}" width="0" height="0" alt="" /></div>
+</noscript>
+</div>
