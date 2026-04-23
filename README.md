@@ -309,7 +309,7 @@ Use `--grep` to run a subset and `--grep-invert` to exclude it (see [Running tes
 
 - `tests/` — Playwright test specs (`.spec.ts`)
   - `navigation.spec.ts` — UI navigation and title tests; tagged `@smoke`
-  - `api.spec.ts` — HTTP-level tests for public and authenticated pages; tagged `@smoke`
+  - `api.spec.ts` — HTTP-level tests for public and authenticated pages, plus the `/zone/` login CSRF gate: `failed authentication` GETs the login form to extract the rendered `_csrf` hidden input before POSTing bad credentials (asserts 401); sibling tests pin the CSRF-rejection paths (POST without `_csrf` → 403; POST with mismatched `_csrf` → 403); tagged `@smoke`
   - `accessibility.spec.ts` — WCAG accessibility tests across pages; tagged `@regression`
   - `home.spec.ts` — Home page content and navigation tests (including `PreviouslyAddedPage`); tagged `@regression`
   - `about-system.spec.ts` — About System page headings and statsbar content tests; tagged `@regression`
@@ -518,7 +518,7 @@ BASIC_AUTH_PASSWORD=<staging basic auth password>
 
 > `bruno/.env` must be at the collection root — Bruno CLI reads secrets from there, not from `environments/`.
 
-To adapt Bruno to another application, replace the `baseUrl` values in [production.bru](./bruno/environments/production.bru) and [staging.bru](./bruno/environments/staging.bru), then update the requests in [login-valid.bru](./bruno/login-valid.bru) and [login-invalid.bru](./bruno/login-invalid.bru) to match your login endpoint, request body, and expected status codes.
+To adapt Bruno to another application, replace the `baseUrl` values in [production.bru](./bruno/environments/production.bru) and [staging.bru](./bruno/environments/staging.bru), then update the requests in [csrf-bootstrap.bru](./bruno/csrf-bootstrap.bru), [login-valid.bru](./bruno/login-valid.bru), and [login-invalid.bru](./bruno/login-invalid.bru) to match your login endpoint, CSRF-token source, request body, and expected status codes.
 
 ### Environments
 
@@ -548,10 +548,11 @@ In `.bru` files:
 
 ### Requests
 
-| File                | Description                                          |
-| ------------------- | ---------------------------------------------------- |
-| `login-valid.bru`   | POST `/zone/` with valid credentials — expects 200   |
-| `login-invalid.bru` | POST `/zone/` with invalid credentials — expects 401 |
+| File                 | Description                                                                                                                      |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `csrf-bootstrap.bru` | GET `/zone/` (seq 0), extract the rendered `_csrf` hidden input via post-response script, store as `{{csrfToken}}` — expects 200 |
+| `login-invalid.bru`  | POST `/zone/` with invalid credentials + `_csrf: {{csrfToken}}` — expects 401                                                    |
+| `login-valid.bru`    | POST `/zone/` with valid credentials + `_csrf: {{csrfToken}}` — expects 200                                                      |
 
 **CI:** `.github/workflows/bruno.yml` — runs on push/PR to main/master, `pull_request_review` (submitted/dismissed), and `workflow_dispatch`; a `check-approval` pre-check job requires at least one `APPROVED` review before tests run — push and `workflow_dispatch` events bypass the gate automatically; writes secrets into `bruno/.env`, runs `bru run --env production`, then removes `.env` in a `Cleanup credentials` step (`if: always()`) so no plaintext credentials remain on the runner filesystem after the job. Supports `workflow_dispatch` with a `runner` text input (leave empty to use `vars.RUNNER`) for routing to a local self-hosted runner.
 
