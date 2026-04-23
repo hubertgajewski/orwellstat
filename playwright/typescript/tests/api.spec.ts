@@ -36,7 +36,7 @@ test('authenticated pages', { tag: '@smoke' }, async ({ authenticatedRequest }) 
 test('failed authentication', { tag: '@smoke' }, async ({ unauthenticatedRequest }) => {
   const loginPage = await unauthenticatedRequest.get('/zone/');
   expect(loginPage.status()).toBe(200);
-  const match = (await loginPage.text()).match(/name="_csrf"\s+value="([^"]+)"/);
+  const match = (await loginPage.text()).match(/name=["']_csrf["']\s+value=["']([^"']+)["']/);
   if (!match) throw new Error('login form did not render a _csrf hidden input');
   const response = await unauthenticatedRequest.post('/zone/', {
     form: {

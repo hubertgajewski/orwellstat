@@ -1,0 +1,33 @@
+meta {
+  name: CSRF bootstrap
+  type: http
+  seq: 0
+}
+
+get {
+  url: {{baseUrl}}/zone/
+  auth: none
+}
+
+script:pre-request {
+  const user = bru.getProcessEnv('BASIC_AUTH_USER');
+  const pass = bru.getProcessEnv('BASIC_AUTH_PASSWORD');
+  if (user) {
+    req.setHeader('Authorization', 'Basic ' + btoa(user + ':' + pass));
+  }
+}
+
+script:post-response {
+  const match = res.body.match(/name=["']_csrf["']\s+value=["']([^"']+)["']/);
+  if (!match) {
+    throw new Error('login form did not render a _csrf hidden input');
+  }
+  bru.setVar('csrfToken', match[1]);
+}
+
+tests {
+  test("returns 200 OK and captures csrfToken", function() {
+    expect(res.status).to.equal(200);
+    expect(bru.getVar('csrfToken')).to.be.a('string').with.length.greaterThan(0);
+  });
+}
