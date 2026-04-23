@@ -26,7 +26,7 @@ body:form-urlencoded {
   username: {{process.env.ORWELLSTAT_USER}}
   password: {{process.env.ORWELLSTAT_PASSWORD}}
   option: login
-  _csrf: {{csrfToken}}
+  _csrf: {{bootstrapCsrfToken}}
 }
 
 tests {

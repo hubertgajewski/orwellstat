@@ -550,9 +550,9 @@ In `.bru` files:
 
 | File                 | Description                                                                                                                      |
 | -------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `csrf-bootstrap.bru` | GET `/zone/` (seq 0), extract the rendered `_csrf` hidden input via post-response script, store as `{{csrfToken}}` — expects 200 |
-| `login-invalid.bru`  | POST `/zone/` with invalid credentials + `_csrf: {{csrfToken}}` — expects 401                                                    |
-| `login-valid.bru`    | POST `/zone/` with valid credentials + `_csrf: {{csrfToken}}` — expects 200                                                      |
+| `csrf-bootstrap.bru` | GET `/zone/` (seq 0), extract the rendered `_csrf` hidden input via post-response script, store as `{{bootstrapCsrfToken}}` — expects 200. Captured once; not refreshed after `login-valid.bru` rotates the server-side token on success |
+| `login-invalid.bru`  | POST `/zone/` (seq 1) with invalid credentials + `_csrf: {{bootstrapCsrfToken}}` — expects 401                                                                                                                                           |
+| `login-valid.bru`    | POST `/zone/` (seq 2) with valid credentials + `_csrf: {{bootstrapCsrfToken}}` — expects 200                                                                                                                                             |
 
 **CI:** `.github/workflows/bruno.yml` — runs on push/PR to main/master, `pull_request_review` (submitted/dismissed), and `workflow_dispatch`; a `check-approval` pre-check job requires at least one `APPROVED` review before tests run — push and `workflow_dispatch` events bypass the gate automatically; writes secrets into `bruno/.env`, runs `bru run --env production`, then removes `.env` in a `Cleanup credentials` step (`if: always()`) so no plaintext credentials remain on the runner filesystem after the job. Supports `workflow_dispatch` with a `runner` text input (leave empty to use `vars.RUNNER`) for routing to a local self-hosted runner.
 

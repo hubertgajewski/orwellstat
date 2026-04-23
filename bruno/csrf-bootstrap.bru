@@ -22,12 +22,12 @@ script:post-response {
   if (!match) {
     throw new Error('login form did not render a _csrf hidden input');
   }
-  bru.setVar('csrfToken', match[1]);
+  bru.setVar('bootstrapCsrfToken', match[1]);
 }
 
 tests {
-  test("returns 200 OK and captures csrfToken", function() {
+  test("returns 200 OK and captures bootstrapCsrfToken", function() {
     expect(res.status).to.equal(200);
-    expect(bru.getVar('csrfToken')).to.be.a('string').with.length.greaterThan(0);
+    expect(bru.getVar('bootstrapCsrfToken')).to.be.a('string').with.length.greaterThan(0);
   });
 }
