@@ -173,6 +173,9 @@ jobs:
           # Per-project glob — commit-baselines downloads with merge-multiple: true, so overlapping
           # filenames across matrix jobs would race and drop baselines (see issue #347).
           path: playwright/typescript/tests/visual.spec.ts-snapshots/*-${{ matrix.snapToken }}-linux.png
+          # Fail loudly if snapToken ever drifts from the real filename rule (e.g. a project rename
+          # that forgets to update the matrix JSON) — default `warn` would silently lose baselines.
+          if-no-files-found: error
       - name: Detect local act runner
         id: detect-act
         if: ${{ !cancelled() }}
