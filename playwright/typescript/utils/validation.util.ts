@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, type APIRequestContext } from '@fixtures/base.fixture';
+import { getCssErrors, formatCssErrors } from '@utils/css-validator.util';
 
 const W3C_MARKUP_VALIDATOR = 'https://validator.w3.org/check';
 const CSS_VALIDATOR = 'https://jigsaw.w3.org/css-validator/validator';
@@ -75,7 +76,34 @@ export async function expectValidXhtmlRemote(
   ).toHaveLength(0);
 }
 
+// Default: local csstree-validator. Keeps the CI matrix independent of the
+// W3C jigsaw service, which has returned transient 403/429/5xx on CI egress
+// and flaked the smoke suite on unrelated product changes. Remote path
+// stays available via VALIDATE_REMOTE=true for a periodic "official"
+// cross-check against jigsaw.w3.org.
 export async function expectValidCss(request: APIRequestContext, cssUrl: string): Promise<void> {
+  if (process.env.VALIDATE_REMOTE === 'true') {
+    await expectValidCssRemote(request, cssUrl);
+  } else {
+    await expectValidCssLocal(request, cssUrl);
+  }
+}
+
+export async function expectValidCssLocal(
+  request: APIRequestContext,
+  cssUrl: string
+): Promise<void> {
+  const response = await request.get(cssUrl);
+  expect(response.ok(), `CSS fetch failed for ${cssUrl}: ${response.status()}`).toBeTruthy();
+  const css = await response.text();
+  const errors = getCssErrors(css, cssUrl);
+  expect(errors, formatCssErrors(errors, cssUrl)).toHaveLength(0);
+}
+
+export async function expectValidCssRemote(
+  request: APIRequestContext,
+  cssUrl: string
+): Promise<void> {
   const response = await request.get(
     `${CSS_VALIDATOR}?output=json&uri=${encodeURIComponent(cssUrl)}`
   );
