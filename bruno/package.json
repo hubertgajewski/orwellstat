@@ -8,7 +8,7 @@
   },
   "overrides": {
     "axios": ">=1.15.0",
-    "fast-xml-parser": ">=5.5.7",
+    "fast-xml-parser": ">=5.7.0",
     "picomatch": ">=2.3.2"
   }
 }
