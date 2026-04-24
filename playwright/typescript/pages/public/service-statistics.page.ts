@@ -7,7 +7,7 @@ export class ServiceStatisticsPage extends AbstractPage {
   static readonly accessKey = 'W';
 
   static readonly statistics = 'Statystyki wszystkich użytkowników Orwell Stat';
-  static readonly statisticsRangeSelector = 'Pokaż statystyki';
+  static readonly showStatisticsSubmitLabel = 'Pokaż statystyki';
   static readonly colLp = 'Lp.';
   static readonly colBrowsers = 'Przeglądarki i inne aplikacje WWW';
   static readonly colCount = '#';

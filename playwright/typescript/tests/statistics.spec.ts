@@ -92,16 +92,19 @@ test('system statistics', { tag: '@regression' }, async ({ page }) => {
     await expectHeadings(page, [ServiceStatisticsPage.statistics, ServiceStatisticsPage.signIn]);
   });
 
-  await test.step('verify time-range selector controls', async () => {
+  await test.step('verify dimension + submit controls', async () => {
+    // The dimension <select> inherits its accessible name from the wrapping
+    // <label for="statystyki_serwisu"> that holds the submit button; the
+    // period <select name="period"> is anonymous (upstream a11y gap, see #355).
     await expect(
       page.getByRole('combobox', {
-        name: ServiceStatisticsPage.statisticsRangeSelector,
+        name: ServiceStatisticsPage.showStatisticsSubmitLabel,
         exact: true,
       })
     ).toBeVisible();
     await expect(
       page.getByRole('button', {
-        name: ServiceStatisticsPage.statisticsRangeSelector,
+        name: ServiceStatisticsPage.showStatisticsSubmitLabel,
         exact: true,
       })
     ).toBeVisible();
