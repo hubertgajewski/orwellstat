@@ -9,13 +9,13 @@ on:
     types: [submitted, dismissed]
   schedule:
     # Runs at 03:00 UTC every Sunday
-    - cron: '0 3 * * 0'
+    - cron: "0 3 * * 0"
   workflow_dispatch:
     inputs:
       project:
-        description: 'Browser project to test (all runs the full matrix)'
+        description: "Browser project to test (all runs the full matrix)"
         required: false
-        default: 'all'
+        default: "all"
         type: choice
         options:
           - all
@@ -23,17 +23,17 @@ on:
           - firefox
           - webkit
       update_visual_baselines:
-        description: 'Regenerate Linux visual baselines via --update-snapshots and commit them back to the branch (only the browser projects selected by the project input are updated)'
+        description: "Regenerate Linux visual baselines via --update-snapshots and commit them back to the branch (only the browser projects selected by the project input are updated)"
         type: boolean
         default: false
       ref:
-        description: 'Branch to run on (defaults to triggering branch)'
+        description: "Branch to run on (defaults to triggering branch)"
         required: false
-        default: ''
+        default: ""
       runner:
-        description: 'Runner override (leave empty to use the RUNNER repo variable)'
+        description: "Runner override (leave empty to use the RUNNER repo variable)"
         required: false
-        default: ''
+        default: ""
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
@@ -53,10 +53,12 @@ jobs:
           PROJECT: ${{ inputs.project }}
           EVENT: ${{ github.event_name }}
         run: |
-          ALL='{"include":[{"project":"Chromium","browser":"chromium","id":"chromium"},{"project":"Firefox","browser":"firefox","id":"firefox"},{"project":"Webkit","browser":"webkit","id":"webkit"},{"project":"Mobile Chrome","browser":"chromium","id":"mobile-chrome"},{"project":"Mobile Safari","browser":"webkit","id":"mobile-safari"}]}'
-          CHROMIUM='{"include":[{"project":"Chromium","browser":"chromium","id":"chromium"},{"project":"Mobile Chrome","browser":"chromium","id":"mobile-chrome"}]}'
-          FIREFOX='{"include":[{"project":"Firefox","browser":"firefox","id":"firefox"}]}'
-          WEBKIT='{"include":[{"project":"Webkit","browser":"webkit","id":"webkit"},{"project":"Mobile Safari","browser":"webkit","id":"mobile-safari"}]}'
+          # snapToken mirrors Playwright's snapshot filename rule (project name with spaces → hyphens,
+          # case preserved) so the upload-baselines step can glob per-project PNGs without cross-job collisions.
+          ALL='{"include":[{"project":"Chromium","browser":"chromium","id":"chromium","snapToken":"Chromium"},{"project":"Firefox","browser":"firefox","id":"firefox","snapToken":"Firefox"},{"project":"Webkit","browser":"webkit","id":"webkit","snapToken":"Webkit"},{"project":"Mobile Chrome","browser":"chromium","id":"mobile-chrome","snapToken":"Mobile-Chrome"},{"project":"Mobile Safari","browser":"webkit","id":"mobile-safari","snapToken":"Mobile-Safari"}]}'
+          CHROMIUM='{"include":[{"project":"Chromium","browser":"chromium","id":"chromium","snapToken":"Chromium"},{"project":"Mobile Chrome","browser":"chromium","id":"mobile-chrome","snapToken":"Mobile-Chrome"}]}'
+          FIREFOX='{"include":[{"project":"Firefox","browser":"firefox","id":"firefox","snapToken":"Firefox"}]}'
+          WEBKIT='{"include":[{"project":"Webkit","browser":"webkit","id":"webkit","snapToken":"Webkit"},{"project":"Mobile Safari","browser":"webkit","id":"mobile-safari","snapToken":"Mobile-Safari"}]}'
 
           if [ "$EVENT" != "workflow_dispatch" ] || [ -z "$PROJECT" ] || [ "$PROJECT" = "all" ]; then
             echo "matrix=$ALL" >> "$GITHUB_OUTPUT"
@@ -124,7 +126,7 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: lts/*
-          cache: 'npm'
+          cache: "npm"
           cache-dependency-path: playwright/typescript/package-lock.json
       - name: Install dependencies
         run: npm ci
@@ -168,7 +170,12 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: visual-baselines-linux-${{ matrix.id }}
-          path: playwright/typescript/tests/visual.spec.ts-snapshots/
+          # Per-project glob — commit-baselines downloads with merge-multiple: true, so overlapping
+          # filenames across matrix jobs would race and drop baselines (see issue #347).
+          path: playwright/typescript/tests/visual.spec.ts-snapshots/*-${{ matrix.snapToken }}-linux.png
+          # Fail loudly if snapToken ever drifts from the real filename rule (e.g. a project rename
+          # that forgets to update the matrix JSON) — default `warn` would silently lose baselines.
+          if-no-files-found: error
       - name: Detect local act runner
         id: detect-act
         if: ${{ !cancelled() }}
