@@ -92,6 +92,21 @@ test('system statistics', { tag: '@regression' }, async ({ page }) => {
     await expectHeadings(page, [ServiceStatisticsPage.statistics, ServiceStatisticsPage.signIn]);
   });
 
+  await test.step('verify time-range selector controls', async () => {
+    await expect(
+      page.getByRole('combobox', {
+        name: ServiceStatisticsPage.statisticsRangeSelector,
+        exact: true,
+      })
+    ).toBeVisible();
+    await expect(
+      page.getByRole('button', {
+        name: ServiceStatisticsPage.statisticsRangeSelector,
+        exact: true,
+      })
+    ).toBeVisible();
+  });
+
   await test.step('verify table headers', async () => {
     await expect(
       page.getByRole('columnheader', {
