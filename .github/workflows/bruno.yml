@@ -89,8 +89,10 @@ jobs:
           echo "ORWELLSTAT_PASSWORD=${{ secrets.ORWELLSTAT_PASSWORD }}" >> .env
           echo "ORWELLSTAT_USER_EMPTY=${{ secrets.ORWELLSTAT_USER_EMPTY }}" >> .env
           echo "ORWELLSTAT_PASSWORD_EMPTY=${{ secrets.ORWELLSTAT_PASSWORD_EMPTY }}" >> .env
-          echo "BASIC_AUTH_USER=${{ secrets.BASIC_AUTH_USER }}" >> .env
-          echo "BASIC_AUTH_PASSWORD=${{ secrets.BASIC_AUTH_PASSWORD }}" >> .env
+          if [ "${{ inputs.env || 'staging' }}" = "staging" ]; then
+            echo "BASIC_AUTH_USER=${{ secrets.BASIC_AUTH_USER }}" >> .env
+            echo "BASIC_AUTH_PASSWORD=${{ secrets.BASIC_AUTH_PASSWORD }}" >> .env
+          fi
 
       - name: Run Bruno tests
         run: npx bru run --env "${{ vars.ENV }}"
