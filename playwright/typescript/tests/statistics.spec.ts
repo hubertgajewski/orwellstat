@@ -116,9 +116,7 @@ test('system statistics', { tag: '@regression' }, async ({ page }) => {
       exact: true,
     });
     await expect(period).toBeVisible();
-    await expect
-      .poll(() => period.evaluate((el: HTMLSelectElement) => el.value))
-      .toBe('30');
+    await expect.poll(() => period.evaluate((el: HTMLSelectElement) => el.value)).toBe('30');
 
     await period.selectOption('90');
     await page
@@ -128,9 +126,7 @@ test('system statistics', { tag: '@regression' }, async ({ page }) => {
       })
       .click();
 
-    await expect
-      .poll(() => period.evaluate((el: HTMLSelectElement) => el.value))
-      .toBe('90');
+    await expect.poll(() => period.evaluate((el: HTMLSelectElement) => el.value)).toBe('90');
   });
 
   await test.step('verify table headers', async () => {
