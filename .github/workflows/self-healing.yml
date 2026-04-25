@@ -19,6 +19,7 @@ jobs:
       github.repository == 'hubertgajewski/orwellstat' &&
       github.event.workflow_run.conclusion == 'failure' &&
       vars.SELF_HEALING == 'true' &&
+      github.event.workflow_run.triggering_actor.login != 'dependabot[bot]' &&
       !startsWith(github.event.workflow_run.head_branch, 'fix/self-healing-')
     runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 10

@@ -2,6 +2,14 @@ name: Bruno Tests
 on:
   workflow_dispatch:
     inputs:
+      env:
+        description: 'Target environment (staging = auto-approve, production = requires reviewer approval)'
+        required: false
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
       runner:
         description: 'Runner override (leave empty to use the RUNNER repo variable)'
         required: false
@@ -56,6 +64,7 @@ jobs:
     needs: check-approval
     if: github.repository == 'hubertgajewski/orwellstat' && always() && (needs.check-approval.outputs.approved == 'true' || github.event_name == 'workflow_dispatch')
     runs-on: ${{ inputs.runner || vars.RUNNER || 'ubuntu-latest' }}
+    environment: ${{ inputs.env || 'staging' }}
     timeout-minutes: 10
     defaults:
       run:
@@ -80,9 +89,13 @@ jobs:
           echo "ORWELLSTAT_PASSWORD=${{ secrets.ORWELLSTAT_PASSWORD }}" >> .env
           echo "ORWELLSTAT_USER_EMPTY=${{ secrets.ORWELLSTAT_USER_EMPTY }}" >> .env
           echo "ORWELLSTAT_PASSWORD_EMPTY=${{ secrets.ORWELLSTAT_PASSWORD_EMPTY }}" >> .env
+          if [ "${{ inputs.env || 'staging' }}" = "staging" ]; then
+            echo "BASIC_AUTH_USER=${{ secrets.BASIC_AUTH_USER }}" >> .env
+            echo "BASIC_AUTH_PASSWORD=${{ secrets.BASIC_AUTH_PASSWORD }}" >> .env
+          fi
 
       - name: Run Bruno tests
-        run: npx bru run --env production
+        run: npx bru run --env "${{ vars.ENV }}"
 
       - name: Cleanup credentials
         if: always()
