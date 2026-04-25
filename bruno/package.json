@@ -1,7 +1,7 @@
 {
   "private": true,
   "devDependencies": {
-    "@usebruno/cli": "3.2.2"
+    "@usebruno/cli": "3.3.0"
   },
   "scripts": {
     "test": "bru run --env production"
