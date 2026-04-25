@@ -89,6 +89,7 @@
     "login": false,
     "hitsFilter": false,
     "adminSettings": false,
+    "statisticsParameter": true,
     "styleSelector": true
   }
 }
