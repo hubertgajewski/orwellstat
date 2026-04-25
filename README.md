@@ -73,7 +73,7 @@ Size is a coarse roadmap guess for epics, not a mechanical sum of children's poi
 .mcp.json                   # MCP server definitions (MCP_DOCKER, playwright, playwright-report-mcp, quality-metrics) — loaded by Claude Code and other MCP-compatible AI assistants
 .github/workflows/          # CI workflows (one per sub-project)
 CLAUDE.md                   # repository-specific behavioral guidance for Claude Code
-CODEX.md                    # Codex entrypoint; delegates shared repository guidance to CLAUDE.md
+AGENTS.md                   # Codex entrypoint; delegates shared repository guidance to CLAUDE.md
 GEMINI.md                   # Gemini entrypoint; delegates shared repository guidance to CLAUDE.md
 QUALITY_METRICS.md          # auto-generated quality metrics report (escape rate, MTTR, coverage, trends)
 SECURITY.md                 # security policy and vulnerability reporting
