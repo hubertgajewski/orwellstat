@@ -93,12 +93,9 @@ test('system statistics', { tag: '@regression' }, async ({ page }) => {
   });
 
   await test.step('verify dimension + submit controls', async () => {
-    // The dimension <select> inherits its accessible name from the wrapping
-    // <label for="statystyki_serwisu"> that holds the submit button; the
-    // period <select name="period"> is anonymous (upstream a11y gap, see #355).
     await expect(
       page.getByRole('combobox', {
-        name: ServiceStatisticsPage.showStatisticsSubmitLabel,
+        name: ServiceStatisticsPage.parameterLabel,
         exact: true,
       })
     ).toBeVisible();
@@ -108,6 +105,32 @@ test('system statistics', { tag: '@regression' }, async ({ page }) => {
         exact: true,
       })
     ).toBeVisible();
+  });
+
+  await test.step('verify period selector round-trip', async () => {
+    // App is served as application/xhtml+xml, so element.nodeName is lowercase
+    // ('select' not 'SELECT'). Playwright's toHaveValue / inputValue rejects
+    // this with "Not an input element" — read .value via evaluate() instead.
+    const period = page.getByRole('combobox', {
+      name: ServiceStatisticsPage.periodLabel,
+      exact: true,
+    });
+    await expect(period).toBeVisible();
+    await expect
+      .poll(() => period.evaluate((el: HTMLSelectElement) => el.value))
+      .toBe('30');
+
+    await period.selectOption('90');
+    await page
+      .getByRole('button', {
+        name: ServiceStatisticsPage.showStatisticsSubmitLabel,
+        exact: true,
+      })
+      .click();
+
+    await expect
+      .poll(() => period.evaluate((el: HTMLSelectElement) => el.value))
+      .toBe('90');
   });
 
   await test.step('verify table headers', async () => {
