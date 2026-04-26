@@ -21,6 +21,11 @@ on:
   pull_request_review:
     # submitted: re-run when a new approval arrives; dismissed: re-evaluate when an approval is revoked
     types: [submitted, dismissed]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   check-approval:
     if: github.repository == 'hubertgajewski/orwellstat' && vars.BRUNO == 'true' && github.event_name != 'workflow_dispatch'
