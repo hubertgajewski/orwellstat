@@ -1,0 +1,35 @@
+name: Verify Coverage Matrix
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'playwright/typescript/coverage-matrix.json'
+      - 'playwright/typescript/tests/**'
+      - 'playwright/typescript/scripts/verify-coverage-matrix.ts'
+      - '.github/workflows/verify-coverage-matrix.yml'
+  pull_request:
+    branches: [main, master]
+    paths:
+      - 'playwright/typescript/coverage-matrix.json'
+      - 'playwright/typescript/tests/**'
+      - 'playwright/typescript/scripts/verify-coverage-matrix.ts'
+      - '.github/workflows/verify-coverage-matrix.yml'
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  verify-matrix:
+    if: github.repository == 'hubertgajewski/orwellstat' && vars.PLAYWRIGHT_TYPESCRIPT == 'true'
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: playwright/typescript
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: lts/*
+      - name: Verify coverage matrix is in sync with tests
+        run: npm run verify:matrix
