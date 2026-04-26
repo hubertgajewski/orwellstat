@@ -1,31 +1,18 @@
 import { test, expect, pixelmatch, PNG } from '@fixtures/base.fixture';
-import { ServiceStatisticsPage } from '@pages/public/service-statistics.page';
+import { PARAMETER_OPTIONS, ServiceStatisticsPage } from '@pages/public/service-statistics.page';
 import { expectHeadings } from '@utils/string.util';
+import { navigateAndWaitForSvgChart } from '@utils/svg-chart.util';
 import { SvgAnalysis } from '@types-local/svg-analysis';
 import { StatisticsRow } from '@types-local/statistics-row';
 
 test('SVG chart is rendered on stats page', { tag: '@regression' }, async ({ page }) => {
-  const svgResponse = await test.step('navigate and wait for chart', async () => {
-    // Firefox does not cache Basic Auth credentials for <object> sub-resources on staging.
-    // Pre-navigate to chart_all.php so Firefox caches the credentials before the <object> loads it.
-    if (process.env.BASIC_AUTH_USER) {
-      const preAuthResponse = await page.goto(ServiceStatisticsPage.svgChartPreAuthUrl);
-      expect(preAuthResponse?.status()).toBe(200);
-    }
-
-    const [response] = await Promise.all([
-      page.waitForResponse((response) =>
-        response.url().includes(ServiceStatisticsPage.svgChartUrl)
-      ),
-      page.goto(ServiceStatisticsPage.url),
-    ]);
-    expect(response.status()).toBe(200);
-    expect(response.headers()['content-type']).toContain('svg');
-
-    await expect(page.locator('object[type="image/svg+xml"]')).toBeVisible();
-
-    return response;
-  });
+  const svgResponse = await test.step('navigate and wait for chart', async () =>
+    navigateAndWaitForSvgChart(
+      page,
+      ServiceStatisticsPage.url,
+      ServiceStatisticsPage.svgChartUrl,
+      ServiceStatisticsPage.svgChartPreAuthUrl
+    ));
 
   await test.step('verify chart animation', async () => {
     const frame1 = await page.locator('object[type="image/svg+xml"]').screenshot();
@@ -211,3 +198,36 @@ test('system statistics', { tag: '@regression' }, async ({ page }) => {
     await expect(total.getByRole('cell').nth(3)).toHaveText('-');
   });
 });
+
+// Each "Pokaż statystyki" Parametr option submits the form and reloads the chart with a
+// different dimension. Verify every option round-trips through the select and produces a
+// non-empty data table.
+for (const option of PARAMETER_OPTIONS) {
+  test(
+    `Pokaż statystyki — ${option.label} produces non-empty data`,
+    { tag: '@regression' },
+    async ({ page }) => {
+      await page.goto(ServiceStatisticsPage.url);
+
+      const statisticsPage = new ServiceStatisticsPage(page);
+      await statisticsPage.parameterCombobox.selectOption(option.value);
+
+      await Promise.all([
+        page.waitForResponse((r) => r.url().includes(ServiceStatisticsPage.svgChartUrl)),
+        statisticsPage.showStatisticsSubmit.click(),
+      ]);
+
+      // Selection must round-trip after submit.
+      await expect
+        .poll(() => statisticsPage.parameterCombobox.evaluate((el: HTMLSelectElement) => el.value))
+        .toBe(option.value);
+
+      // Chart must be present and the data table must contain at least one data row
+      // (header + N data rows + 3 footer rows). Footer rows always render, so >4 rows
+      // means at least one real data row.
+      await expect(page.locator('object[type="image/svg+xml"]')).toBeVisible();
+      const rows = page.getByRole('table').first().getByRole('row');
+      expect(await rows.count()).toBeGreaterThan(4);
+    }
+  );
+}

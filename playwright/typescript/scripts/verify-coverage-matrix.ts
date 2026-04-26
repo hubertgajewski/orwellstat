@@ -122,6 +122,7 @@ export function computeCovered(tests: ActiveTest[]): Set<CellKey> {
     ['/contact/', 'contact.spec.ts', 'contact page - headings and statsbar content'],
     ['/statistics/', 'statistics.spec.ts', 'system statistics'],
     ['/zone/', 'zone-information.spec.ts', 'visit-frequency and ranking sections with data'],
+    ['/zone/stats/', 'zone-stats.spec.ts', 'SVG chart is rendered on /zone/stats/'],
     ['/zone/scripts/', 'zone-scripts.spec.ts', 'scripts page - content'],
   ];
   for (const [url, file, title] of contentRules) {

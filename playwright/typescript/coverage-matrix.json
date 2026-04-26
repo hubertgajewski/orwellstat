@@ -58,7 +58,7 @@
     },
     "/zone/stats/": {
       "title": true,
-      "content": false,
+      "content": true,
       "accessibility": true,
       "visualRegression": false,
       "api": true
