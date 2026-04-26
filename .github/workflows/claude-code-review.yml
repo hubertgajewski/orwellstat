@@ -57,7 +57,11 @@ jobs:
       #   The Anthropic SDK sends both headers with the proxy key; OpenRouter accepts
       #   either. No cross-provider leak: the Anthropic key is only ever emitted when
       #   ANTHROPIC_BASE_URL is empty.
-      - uses: anthropics/claude-code-action@v1
+      # Pinned to v1.0.103 (4e5d8b13): later @v1 SHAs (>=v1.0.104, claude-cli 2.1.118+)
+      # ignore ANTHROPIC_DEFAULT_SONNET_MODEL for internal Agent SDK sub-calls and leak
+      # native Sonnet billing through OpenRouter. Do NOT bump to @v1 until upstream fix
+      # lands and is verified clean for 48h. See issue #375.
+      - uses: anthropics/claude-code-action@4e5d8b13ca281a6d163cdb287d8917b216e00d6f # v1.0.103
         id: claude_code_action
         env:
           ANTHROPIC_BASE_URL: ${{ vars.ANTHROPIC_BASE_URL }}
@@ -149,7 +153,8 @@ jobs:
       - name: Claude Code Review (native Sonnet fallback)
         id: claude_code_action_fallback
         if: steps.claude_code_action.conclusion == 'success' && steps.primary_check.outputs.need_fallback == 'true'
-        uses: anthropics/claude-code-action@v1
+        # Pinned to v1.0.103 (4e5d8b13) — see comment on the primary step above. #375
+        uses: anthropics/claude-code-action@4e5d8b13ca281a6d163cdb287d8917b216e00d6f # v1.0.103
         env:
           # Clear proxy config so the Anthropic SDK hits the native endpoint.
           ANTHROPIC_BASE_URL: ''
