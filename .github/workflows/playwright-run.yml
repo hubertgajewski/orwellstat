@@ -41,6 +41,10 @@ on:
         description: "Git ref to check out (empty = workflow's own ref)"
         type: string
         default: ""
+      approved:
+        description: "Run the tests. False = skip (caller passes its PR approval gate here so the matrix still fans out)."
+        type: boolean
+        default: true
     secrets:
       ORWELLSTAT_USER:
         required: true
@@ -61,7 +65,11 @@ on:
 
 jobs:
   run:
-    name: ${{ inputs.project }}
+    if: inputs.approved
+    # Static name: GitHub does not resolve `${{ inputs.X }}` for skipped jobs and would render the
+    # literal expression in the Checks tab. The caller's matrix-scoped `name:` carries the project
+    # discriminator instead.
+    name: tests
     timeout-minutes: 15
     runs-on: ${{ inputs.runner }}
     environment: ${{ inputs.env }}
