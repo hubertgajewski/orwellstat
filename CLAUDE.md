@@ -24,7 +24,7 @@ When creating GitHub issues for requirements, bugs, or code review findings, fol
 
 ## Authenticated-test account selection
 
-Authenticated Playwright specs default to the **populated** account (real hit data). Tests asserting empty-state UI opt in per file with `test.use({ storageState: EMPTY_STORAGE_STATE })` (from `@fixtures/storage-state`); API tests use `test.use({ authAccount: 'empty' })` (from `@fixtures/api.fixture`). Never branch at runtime on which account is logged in.
+Authenticated Playwright specs default to the **populated** account (real hit data). Tests asserting empty-state UI opt in per file with `test.use({ storageState: EMPTY_STORAGE_STATE })` (from `@fixtures/storage-state`). The `authenticatedRequest` API fixture inherits the project's populated `storageState` — there is no API-side empty-account switch; reach for `unauthenticatedRequest` when an unauthenticated session is needed. Never branch at runtime on which account is logged in.
 
 ---
 

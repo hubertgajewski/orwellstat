@@ -334,7 +334,7 @@ Use `--grep` to run a subset and `--grep-invert` to exclude it (see [Running tes
   - `public/` — Public page classes: `HomePage`, `AboutSystemPage`, `ServiceStatisticsPage`, `ContactPage`, `RegisterPage`, `PasswordResetPage`, `PreviouslyAddedPage`; exported via `index.ts` as `PUBLIC_PAGE_CLASSES` (except `PreviouslyAddedPage`)
   - `authenticated/` — Authenticated page classes: `InformationPage`, `StatsPage`, `HitsPage`, `ScriptsPage`, `AdminPage`; exported via `index.ts` as `AUTHENTICATED_PAGE_CLASSES`
 - `fixtures/base.fixture.ts` — Custom Playwright fixture extending `test` with a `page` override that captures browser console logs and an XHTML DOM snapshot (`dom.xhtml` with XML declaration and `<?xml-stylesheet?>` PIs) as attachments on test failure, then calls `attachAiDiagnosis()`; re-exports `expect`, `request`, `Page`, `Locator`, `BrowserContext` from `@playwright/test`; re-exports `pixelmatch` and `PNG` (used for pixel-diff screenshot comparison)
-- `fixtures/api.fixture.ts` — Extends `base.fixture.ts` with HTTP request fixtures: `unauthenticatedRequest` (plain context) and `authenticatedRequest` (logs in via POST `/zone/`); import from here in tests that use either fixture. Exposes the `authAccount: 'populated' | 'empty'` option (default `'populated'`) so specs can switch the API session via `test.use({ authAccount: 'empty' })`
+- `fixtures/api.fixture.ts` — Extends `base.fixture.ts` with HTTP request fixtures: `unauthenticatedRequest` (plain context, no cookies) and `authenticatedRequest` (Playwright's built-in `request` carrying the project's populated `storageState`; the fixture asserts `GET /zone/` returns 200 so callers fail fast if the seeded cookie is stale). Import from here in tests that use either fixture.
 - `fixtures/storage-state.ts` — Exports `POPULATED_STORAGE_STATE` and `EMPTY_STORAGE_STATE` path constants used by empty-state specs via `test.use({ storageState: EMPTY_STORAGE_STATE })`
 - `utils/accessibility.util.ts` — `expectNoAccessibilityViolations()` using `@axe-core/playwright` (WCAG2AAA)
 - `utils/string.util.ts` — `expectHeadings()` helper: asserts visibility of multiple headings on a page
@@ -368,7 +368,7 @@ Use `--grep` to run a subset and `--grep-invert` to exclude it (see [Running tes
 **Playwright config** (`playwright.config.ts`):
 
 - 5 browser projects: Chromium, Firefox, WebKit, Mobile Chrome (Galaxy S24), Mobile Safari (iPhone 15)
-- All browser projects default to `storageState: '.auth/populated.json'` (populated account). Specs asserting empty-state UI opt in per file via `test.use({ storageState: EMPTY_STORAGE_STATE })` from `@fixtures/storage-state`; API tests use `test.use({ authAccount: 'empty' })` from `@fixtures/api.fixture`. Never branch at runtime on which account is logged in.
+- All browser projects default to `storageState: '.auth/populated.json'` (populated account). Specs asserting empty-state UI opt in per file via `test.use({ storageState: EMPTY_STORAGE_STATE })` from `@fixtures/storage-state`. The `authenticatedRequest` API fixture inherits the populated `storageState`; tests needing an unauthenticated session use `unauthenticatedRequest` instead. Never branch at runtime on which account is logged in.
 - On failure: screenshots, video, and console/DOM log attachments are saved
 - `trace: 'on-first-retry'`
 - `baseURL` is driven by the `ENV` variable (`production` by default, `staging` when `ENV=staging`); `httpCredentials` are injected automatically when `BASIC_AUTH_USER` is set
