@@ -76,9 +76,12 @@ function makeAllCoveredTests(): ActiveTest[] {
     { file: 'visual.spec.ts', title: 'about system page visual regression', describe: null },
     { file: 'visual.spec.ts', title: 'contact page visual regression', describe: null },
     { file: 'visual.spec.ts', title: 'statistics page visual regression', describe: null },
+    // Raw template form mirrors what `parseSpec` actually emits for the in-repo
+    // `\`${page} visual regression - ${style} style\`` loop in visual.spec.ts —
+    // `expandTemplates` only resolves `${X.url}`, so `${style}` survives verbatim.
     {
       file: 'visual.spec.ts',
-      title: 'home page visual regression - purple_rain style',
+      title: 'home page visual regression - ${style} style',
       describe: null,
     },
     { file: 'home.spec.ts', title: 'home page', describe: null },
@@ -318,8 +321,22 @@ test('computeCovered: forms — statisticsParameter requires statistics.spec.ts 
   assert.ok(!computeCovered([]).has('form|statisticsParameter'));
 });
 
-test('computeCovered: forms — styleSelector requires a style-variant visual test', () => {
-  // Title ending in " style" qualifies (matches the in-repo `<page> visual regression - <name> style` pattern).
+test('computeCovered: forms — styleSelector matches the raw `${style} style` template parseSpec produces', () => {
+  // visual.spec.ts has `test(\`${page} visual regression - ${style} style\`, ...)` inside
+  // a `for (const style of ALL_STYLES)` loop. `parseSpec` captures the template body
+  // verbatim (with `${style}` unexpanded) because `expandTemplates` only resolves the
+  // `${X.url}` sentinel. The rule must match this raw form, not just a resolved variant.
+  assert.ok(
+    computeCovered([
+      {
+        file: 'visual.spec.ts',
+        title: 'home page visual regression - ${style} style',
+        describe: null,
+      },
+    ]).has('form|styleSelector')
+  );
+  // A resolved style name is also accepted (defensive against future refactors that
+  // pre-expand the loop).
   assert.ok(
     computeCovered([
       {
