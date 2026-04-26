@@ -4,6 +4,10 @@ import { AbstractPage } from '@pages/abstract.page';
 export interface ParameterOption {
   readonly value: string;
   readonly label: string;
+  // True when the dimension's values would be too long to render readably inside the SVG
+  // bar chart (URLs, host names, user agents). The chart shows rank numbers ("1", "2", …)
+  // in place of each row's label; the data table still shows the full text in cells[1].
+  readonly chartLabelIsRank?: boolean;
 }
 
 // "Pokaż statystyki" combobox options as rendered by /statistics/ and /zone/stats/.
