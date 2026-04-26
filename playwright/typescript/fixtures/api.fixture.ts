@@ -1,37 +1,23 @@
 import { expect, type APIRequestContext } from '@playwright/test';
 import { test as base } from '@fixtures/base.fixture';
-import { requireCredentials, type Account } from '@utils/env.util';
-
-type ApiOptions = {
-  // Which account `authenticatedRequest` logs in as. Override per file or describe with
-  // `test.use({ authAccount: 'empty' })`; default is the populated account to match the
-  // browser-project `storageState` default. Never branch at runtime — see the
-  // **Fixture usage** bullet in `.claude/skills/deep-review/SKILL.md`.
-  authAccount: Account;
-};
 
 type ApiFixtures = {
   authenticatedRequest: APIRequestContext;
   unauthenticatedRequest: APIRequestContext;
 };
 
-export const test = base.extend<ApiOptions & ApiFixtures>({
-  authAccount: ['populated', { option: true }],
-
+export const test = base.extend<ApiFixtures>({
   unauthenticatedRequest: async ({ playwright, baseURL }, use) => {
     const ctx = await playwright.request.newContext({ baseURL });
     await use(ctx);
     await ctx.dispose();
   },
 
-  authenticatedRequest: async ({ request, authAccount }, use) => {
-    const { user, password } = requireCredentials(authAccount);
-    const response = await request.post('/zone/', {
-      form: {
-        username: user,
-        password: password,
-      },
-    });
+  // `request` inherits the project's populated `storageState` from
+  // `playwright.config.ts`. Assert the session reaches an authenticated view
+  // before yielding so callers fail fast if the seeded cookie is stale.
+  authenticatedRequest: async ({ request }, use) => {
+    const response = await request.get('/zone/');
     expect(response.status()).toBe(200);
     await use(request);
   },
