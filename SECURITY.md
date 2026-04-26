@@ -1,6 +1,6 @@
 # Security Policy
 
-This repository contains test automation code (Playwright, Selenium, Bruno) for the orwellstat project. It is not a versioned software product and does not have supported release versions.
+This repository contains test automation code (Playwright, Bruno) for the orwellstat project. It is not a versioned software product and does not have supported release versions.
 
 ## Reporting a Vulnerability
 
