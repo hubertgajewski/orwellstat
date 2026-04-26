@@ -125,7 +125,7 @@ jobs:
   test:
     needs: [setup-matrix, check-approval]
     if: github.repository == 'hubertgajewski/orwellstat' && always() && (needs.check-approval.outputs.approved == 'true' || github.event_name == 'workflow_dispatch')
-    name: test
+    name: test (${{ matrix.browser }})
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.setup-matrix.outputs.matrix) }}
