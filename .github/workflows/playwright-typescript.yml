@@ -51,8 +51,7 @@ concurrency:
 
 jobs:
   setup-matrix:
-    needs: check-approval
-    if: github.repository == 'hubertgajewski/orwellstat' && always() && (needs.check-approval.outputs.approved == 'true' || github.event_name == 'workflow_dispatch')
+    if: github.repository == 'hubertgajewski/orwellstat'
     runs-on: ${{ inputs.runner || vars.RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 2
     outputs:
@@ -124,7 +123,7 @@ jobs:
 
   test:
     needs: [setup-matrix, check-approval]
-    if: github.repository == 'hubertgajewski/orwellstat' && always() && (needs.check-approval.outputs.approved == 'true' || github.event_name == 'workflow_dispatch')
+    if: github.repository == 'hubertgajewski/orwellstat' && !cancelled() && needs.setup-matrix.result == 'success'
     name: test (${{ matrix.browser }})
     strategy:
       fail-fast: false
@@ -139,6 +138,7 @@ jobs:
       env: ${{ inputs.env || 'staging' }}
       runner: ${{ inputs.runner || vars.RUNNER || 'ubuntu-latest' }}
       ref: ${{ github.event.inputs.ref || github.ref }}
+      approved: ${{ needs.check-approval.outputs.approved == 'true' || github.event_name == 'workflow_dispatch' }}
     secrets: inherit
 
   commit-baselines:
