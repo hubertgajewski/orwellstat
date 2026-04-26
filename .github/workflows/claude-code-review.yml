@@ -10,9 +10,11 @@ env:
 jobs:
   review:
     if: github.actor != 'dependabot[bot]' && vars.AI_REVIEW == 'true'
-    # 15 min (was 10) to accommodate a back-to-back primary + fallback run when the
-    # primary (proxy/Minimax) skips the mandate on a trivial diff; see #293.
-    timeout-minutes: 15
+    # 20 min (was 15) — the proxy/Minimax preset routinely runs 14–15 min on substantive
+    # diffs and was killed mid-stream on #377 (PR was 600 lines). 20 gives ~33 % headroom
+    # for the primary while still leaving room for a back-to-back fallback within the
+    # GitHub-hosted runner's overall budget. See #293 for the back-to-back rationale.
+    timeout-minutes: 20
     runs-on: ubuntu-latest
     permissions:
       contents: read
