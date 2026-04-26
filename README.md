@@ -85,7 +85,6 @@ scripts/
   setup-runners.sh             # registers and starts 8 self-hosted runner instances as launchd services
 playwright/
   typescript/               # Playwright tests in TypeScript
-selenium/                   # Selenium tests (planned)
 bruno/                      # Bruno API request collection
 mcp/
   quality-metrics/          # local MCP server exposing escape rate, MTTR, and metrics history
