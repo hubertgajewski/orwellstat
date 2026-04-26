@@ -1,0 +1,171 @@
+name: Playwright Run
+
+# Reusable workflow that encapsulates a single matrix entry's Playwright run:
+# checkout → install Node + browsers + xmllint → run tests → upload reports
+# and (on failure) self-healing artefacts. Callers pass the matrix entry as
+# discrete inputs so this workflow has no implicit knowledge of the caller's
+# matrix shape.
+
+on:
+  workflow_call:
+    inputs:
+      project:
+        description: "Playwright project name (e.g. 'Chromium', 'Mobile Safari')"
+        type: string
+        required: true
+      browser:
+        description: "Browser binary to install (chromium / firefox / webkit)"
+        type: string
+        required: true
+      id:
+        description: "Slug used in artefact names (e.g. 'chromium', 'mobile-safari')"
+        type: string
+        required: true
+      snap-token:
+        description: "Snapshot filename suffix (Playwright's project-name → hyphenated form)"
+        type: string
+        required: true
+      update-visual-baselines:
+        description: "Regenerate Linux baselines via --update-snapshots and upload them"
+        type: boolean
+        default: false
+      env:
+        description: "GitHub Environment to scope secrets/vars to"
+        type: string
+        default: "staging"
+      runner:
+        description: "runs-on label"
+        type: string
+        default: "ubuntu-latest"
+      ref:
+        description: "Git ref to check out (empty = workflow's own ref)"
+        type: string
+        default: ""
+    secrets:
+      ORWELLSTAT_USER:
+        required: true
+      ORWELLSTAT_PASSWORD:
+        required: true
+      ORWELLSTAT_USER_EMPTY:
+        required: false
+      ORWELLSTAT_PASSWORD_EMPTY:
+        required: false
+      BASIC_AUTH_USER:
+        required: false
+      BASIC_AUTH_PASSWORD:
+        required: false
+      ANTHROPIC_API_KEY:
+        required: false
+      GEMINI_API_KEY:
+        required: false
+
+jobs:
+  run:
+    name: ${{ inputs.project }}
+    timeout-minutes: 15
+    runs-on: ${{ inputs.runner }}
+    environment: ${{ inputs.env }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref }}
+      - uses: actions/setup-node@v6
+        with:
+          node-version: lts/*
+          cache: "npm"
+          cache-dependency-path: playwright/typescript/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+        working-directory: playwright/typescript
+      - name: Audit dependencies
+        run: npm audit --audit-level=high
+        working-directory: playwright/typescript
+      - name: Install Playwright Browsers
+        # chromium is always installed because the auth setup project (auth.setup.ts) has no
+        # explicit browser configured and therefore defaults to Chromium. Every matrix job needs
+        # it available to run the setup dependency. For Chromium/Mobile Chrome jobs the duplicate
+        # is idempotent and harmless.
+        run: npx playwright install --with-deps chromium ${{ inputs.browser }}
+        working-directory: playwright/typescript
+      - name: Install libxml2-utils (xmllint)
+        # xmllint provides local XHTML DTD validation used by validation.spec.ts — the default
+        # path; avoids POSTing authenticated pages to validator.w3.org on every CI run.
+        run: sudo apt-get install -y libxml2-utils
+      - name: Run Playwright tests
+        run: |
+          if [ "${{ inputs.update-visual-baselines }}" = "true" ]; then
+            npx playwright test tests/visual.spec.ts --update-snapshots --project="${{ inputs.project }}"
+          else
+            npx playwright test --project="${{ inputs.project }}"
+          fi
+        working-directory: playwright/typescript
+        env:
+          ENV: ${{ vars.ENV }}
+          ORWELLSTAT_USER: ${{ secrets.ORWELLSTAT_USER }}
+          ORWELLSTAT_PASSWORD: ${{ secrets.ORWELLSTAT_PASSWORD }}
+          ORWELLSTAT_USER_EMPTY: ${{ secrets.ORWELLSTAT_USER_EMPTY }}
+          ORWELLSTAT_PASSWORD_EMPTY: ${{ secrets.ORWELLSTAT_PASSWORD_EMPTY }}
+          BASIC_AUTH_USER: ${{ inputs.env == 'staging' && secrets.BASIC_AUTH_USER || '' }}
+          BASIC_AUTH_PASSWORD: ${{ inputs.env == 'staging' && secrets.BASIC_AUTH_PASSWORD || '' }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          AI_PROVIDER: ${{ vars.AI_PROVIDER }}
+          AI_DIAGNOSIS: ${{ vars.AI_DIAGNOSIS }}
+          AI_MODEL_FAST: ${{ vars.AI_MODEL_FAST }}
+          AI_MODEL_STRONG: ${{ vars.AI_MODEL_STRONG }}
+          VALIDATE_REMOTE: ${{ vars.VALIDATE_REMOTE }}
+      - name: Upload updated baselines
+        if: ${{ inputs.update-visual-baselines }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: visual-baselines-linux-${{ inputs.id }}
+          # Per-project glob — commit-baselines downloads with merge-multiple: true, so overlapping
+          # filenames across matrix jobs would race and drop baselines (see issue #347).
+          path: playwright/typescript/tests/visual.spec.ts-snapshots/*-${{ inputs.snap-token }}-linux.png
+          # Fail loudly if snap-token ever drifts from the real filename rule (e.g. a project rename
+          # that forgets to update the matrix JSON) — default `warn` would silently lose baselines.
+          if-no-files-found: error
+      - name: Detect local act runner
+        id: detect-act
+        if: ${{ !cancelled() }}
+        run: |
+          if [ "${ACT}" = "true" ]; then
+            echo "running=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() && steps.detect-act.outputs.running != 'true' }}
+        with:
+          name: playwright-report-${{ inputs.id }}
+          path: playwright/typescript/playwright-report/
+          retention-days: 30
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() && steps.detect-act.outputs.running != 'true' }}
+        with:
+          name: blob-report-${{ inputs.id }}
+          path: playwright/typescript/blob-report/
+          retention-days: 30
+      - name: Collect self-healing data
+        if: ${{ failure() }}
+        working-directory: playwright/typescript
+        run: |
+          mkdir -p self-healing-data
+          cp test-results/results.json self-healing-data/ 2>/dev/null || true
+          find test-results -maxdepth 2 -name 'selector-fix.md' -not -path '*/attachments/*' | while IFS= read -r f; do
+            dir="self-healing-data/$(dirname "$f")"
+            mkdir -p "$dir"
+            cp "$f" "$dir/"
+          done
+          for name in dom.xhtml error-context.md; do
+            find test-results -maxdepth 2 -name "$name" -not -path '*/attachments/*' | while IFS= read -r f; do
+              dir="self-healing-data/$(dirname "$f")"
+              mkdir -p "$dir"
+              cp "$f" "$dir/"
+            done
+          done
+      - uses: actions/upload-artifact@v7
+        if: ${{ failure() && steps.detect-act.outputs.running != 'true' }}
+        with:
+          name: self-healing-data-${{ inputs.id }}
+          path: playwright/typescript/self-healing-data/
+          retention-days: 7
+          if-no-files-found: ignore
