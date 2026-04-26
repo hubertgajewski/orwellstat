@@ -12,14 +12,14 @@ export interface ParameterOption {
 
 // "Pokaż statystyki" combobox options as rendered by /statistics/ and /zone/stats/.
 // Both pages drive the same underlying server query, so the option set is shared.
-export const PARAMETER_OPTIONS: readonly ParameterOption[] = [
+export const PARAMETER_OPTIONS = [
   { value: 'przegladarka', label: 'Przeglądarki i inne aplikacje WWW' },
   { value: 'system', label: 'Systemy operacyjne' },
   { value: 'jezyk', label: 'Język przeglądarek' },
   { value: 'kraj', label: 'Kraj' },
   { value: 'rozdzielczosc', label: 'Rozdzielczość ekranu' },
   { value: 'kolory', label: 'Liczba kolorów' },
-] as const;
+] as const satisfies readonly ParameterOption[];
 
 export class ServiceStatisticsPage extends AbstractPage {
   static readonly url = '/statistics/';

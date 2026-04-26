@@ -5,21 +5,21 @@ import { PARAMETER_OPTIONS, type ParameterOption } from '@pages/public/service-s
 // Six per-user-only Parametr dimensions that exist on `/zone/stats/` but NOT on the public
 // `/statistics/` page. They cover identifying or session-specific data the aggregate page
 // cannot show (visited URLs, IPs, user agents, referrers, host names, color depth).
-export const USER_ONLY_PARAMETER_OPTIONS: readonly ParameterOption[] = [
+export const USER_ONLY_PARAMETER_OPTIONS = [
   { value: 'glebia', label: 'Głębia barw' },
   { value: 'strona', label: 'Odwiedzana strona', chartLabelIsRank: true },
   { value: 'odsylacz', label: 'Strona odsyłająca', chartLabelIsRank: true },
   { value: 'ip', label: 'Adres IP' },
   { value: 'host', label: 'Nazwa hosta', chartLabelIsRank: true },
   { value: 'http_user_agent', label: 'User-Agent', chartLabelIsRank: true },
-] as const;
+] as const satisfies readonly ParameterOption[];
 
 // Full Parametr option set rendered on `/zone/stats/`: the six shared dimensions (also on
 // `/statistics/`) followed by the six user-only additions.
-export const USER_PARAMETER_OPTIONS: readonly ParameterOption[] = [
+export const USER_PARAMETER_OPTIONS = [
   ...PARAMETER_OPTIONS,
   ...USER_ONLY_PARAMETER_OPTIONS,
-];
+] as const satisfies readonly ParameterOption[];
 
 export class StatsPage extends AbstractPage {
   static readonly url = '/zone/stats/';

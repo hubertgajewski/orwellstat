@@ -207,15 +207,14 @@ export async function expectEveryParametrChartMatchesTableAndIsDistinct(
 
   // Distinctness uses table labels (always real data) so dimensions that render rank
   // numbers in the chart aren't falsely flagged as identical to each other.
-  const optionValues = Array.from(tableLabelsByOption.keys());
-  for (let i = 0; i < optionValues.length; i++) {
-    for (let j = i + 1; j < optionValues.length; j++) {
+  const labelEntries = Array.from(tableLabelsByOption.entries());
+  for (let i = 0; i < labelEntries.length; i++) {
+    for (let j = i + 1; j < labelEntries.length; j++) {
+      const [valueI, labelsI] = labelEntries[i];
+      const [valueJ, labelsJ] = labelEntries[j];
       expect
-        .soft(
-          tableLabelsByOption.get(optionValues[i])!.join('|'),
-          `Parametr "${optionValues[i]}" must render different data than "${optionValues[j]}"`
-        )
-        .not.toBe(tableLabelsByOption.get(optionValues[j])!.join('|'));
+        .soft(labelsI.join('|'), `Parametr "${valueI}" must render different data than "${valueJ}"`)
+        .not.toBe(labelsJ.join('|'));
     }
   }
 }
