@@ -123,8 +123,8 @@ jobs:
 
   test:
     needs: [setup-matrix, check-approval]
-    if: github.repository == 'hubertgajewski/orwellstat' && !cancelled() && needs.setup-matrix.result == 'success'
-    name: test (${{ matrix.browser }})
+    if: github.repository == 'hubertgajewski/orwellstat' && needs.setup-matrix.result == 'success'
+    name: test (${{ matrix.id }})
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.setup-matrix.outputs.matrix) }}
