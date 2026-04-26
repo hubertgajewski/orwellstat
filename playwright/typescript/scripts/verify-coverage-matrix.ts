@@ -149,6 +149,28 @@ export function verify(matrix: CoverageMatrix, tests: ActiveTest[]): VerifyResul
   const covered = computeCovered(tests);
   const errors: string[] = [];
 
+  // Drift guard: the URL groups that drive the rule predicates above must match the URL
+  // set in the matrix. If a new URL is added to the matrix without being added here (or
+  // vice versa), every rule keyed off the missing URL silently under-reports — exactly
+  // the failure mode this verifier exists to prevent. Set-equality check catches both
+  // sides in one pass.
+  const matrixUrls = new Set(Object.keys(matrix.pages));
+  const knownUrls = new Set<string>([...PUBLIC_URLS, ...AUTHENTICATED_URLS, PREVIOUSLY_ADDED_URL]);
+  for (const url of matrixUrls) {
+    if (!knownUrls.has(url)) {
+      errors.push(
+        `unknown URL in matrix: "${url}" — add it to PUBLIC_URLS, AUTHENTICATED_URLS, or PREVIOUSLY_ADDED_URL in scripts/verify-coverage-matrix.ts.`
+      );
+    }
+  }
+  for (const url of knownUrls) {
+    if (!matrixUrls.has(url)) {
+      errors.push(
+        `URL "${url}" is in the verifier's URL groups but missing from coverage-matrix.json — add the corresponding pages entry, or remove the URL from the verifier.`
+      );
+    }
+  }
+
   const categories: Category[] = ['title', 'content', 'accessibility', 'visualRegression', 'api'];
   for (const [url, cells] of Object.entries(matrix.pages)) {
     for (const category of categories) {
