@@ -20,7 +20,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "tsc": "tsc --noEmit",
-    "test:unit": "node --test --experimental-strip-types --disable-warning=ExperimentalWarning 'utils/**/*.test.ts'",
+    "test:unit": "node --test --experimental-strip-types --disable-warning=ExperimentalWarning 'utils/**/*.test.ts' 'scripts/**/*.test.ts'",
+    "verify:matrix": "node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/verify-coverage-matrix.ts",
     "prepare": "cd ../.. && husky playwright/typescript/.husky"
   },
   "lint-staged": {

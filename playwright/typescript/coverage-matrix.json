@@ -38,9 +38,9 @@
     "/2/": {
       "title": true,
       "content": true,
-      "accessibility": true,
+      "accessibility": false,
       "visualRegression": false,
-      "api": true
+      "api": false
     },
     "/password_reset/": {
       "title": true,
