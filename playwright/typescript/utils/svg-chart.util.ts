@@ -25,19 +25,3 @@ export async function navigateAndWaitForSvgChart(
 
   return response;
 }
-
-// Wait for the chart to reload after submitting the "Pokaż statystyki" form. Returns the
-// response so callers can assert content-type / status if needed.
-export async function submitAndWaitForSvgChart(
-  page: Page,
-  svgChartUrlFragment: string,
-  submit: () => Promise<void>
-): Promise<import('@playwright/test').Response> {
-  const [response] = await Promise.all([
-    page.waitForResponse((r) => r.url().includes(svgChartUrlFragment)),
-    submit(),
-  ]);
-  expect(response.status()).toBe(200);
-  expect(response.headers()['content-type']).toContain('svg');
-  return response;
-}
