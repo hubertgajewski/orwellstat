@@ -103,6 +103,7 @@ function makeAllCoveredTests(): ActiveTest[] {
       describe: null,
     },
     { file: 'zone-scripts.spec.ts', title: 'scripts page - content', describe: null },
+    { file: 'password-reset.spec.ts', title: 'password reset page - content', describe: null },
     // The "hits page - filter form" describe block in zone-hits.spec.ts is what the
     // hitsFilter rule keys off (parseSpec emits each describe call as its own top-level
     // entry with describe: null because it doesn't track nesting).
@@ -114,8 +115,9 @@ function makeAllCoveredTests(): ActiveTest[] {
 }
 
 // Matrix that matches what makeAllCoveredTests() actually covers. /2/ is partially
-// covered (title + content via home.spec.ts only); /register/, /password_reset/, and
-// the authenticated tail get title + accessibility + api but no content/visual.
+// covered (title + content via home.spec.ts only); /register/ adds content via
+// register.spec.ts; /password_reset/ adds content via password-reset.spec.ts; the
+// authenticated tail gets title + accessibility + api but no content/visual.
 function makeInSyncMatrix(): CoverageMatrix {
   return makeMatrix(
     false,
@@ -144,7 +146,7 @@ function makeInSyncMatrix(): CoverageMatrix {
         api: true,
       },
       '/register/': { title: true, content: true, accessibility: true, api: true },
-      '/password_reset/': { title: true, accessibility: true, api: true },
+      '/password_reset/': { title: true, content: true, accessibility: true, api: true },
       '/2/': { title: true, content: true },
       '/zone/': { title: true, content: true, accessibility: true, api: true },
       '/zone/stats/': { title: true, accessibility: true, api: true },
