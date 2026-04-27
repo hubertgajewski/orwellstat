@@ -127,9 +127,7 @@ test.describe('admin page - settings form', { tag: '@regression' }, () => {
     await admin.confirmPasswordField.fill('abc123');
     await admin.submitButton.click();
 
-    await expect(admin.statusMessage).toContainText(
-      'Wprowadzone aktualne hasło jest niepoprawne!'
-    );
+    await expect(admin.statusMessage).toContainText('Wprowadzone aktualne hasło jest niepoprawne!');
   });
 
   test('the literal example.com placeholder email is rejected', async ({ page }) => {
@@ -187,172 +185,179 @@ test.describe('admin page - password mismatch (real credential)', { tag: '@regre
 // reads state. The skip is keyed on `project.name` rather than `browserName`
 // because Mobile Chrome also has `browserName === 'chromium'` and would race
 // against desktop Chromium otherwise; project.name is unique per matrix entry.
-test.describe('admin page - mutating settings (Chromium project only)', { tag: '@regression' }, () => {
-  // Skip-by-project-name keyed off `test.info().project.name` (rather than the
-  // usual `({ browserName })` predicate) because Mobile Chrome shares
-  // `browserName === 'chromium'` and would otherwise race against desktop
-  // Chromium on the same backend account in CI's parallel matrix.
-  test.skip(() => test.info().project.name !== 'Chromium', 'mutating tests run only on the desktop Chromium project to avoid racing on the shared populated account');
-  test.describe.configure({ mode: 'serial' });
-
-  // Captured fresh per test in beforeEach so the afterEach hook can restore the
-  // value the test inherited even if a previous test crashed without restoring.
-  let originalEmail = '';
-
-  test.beforeEach(async ({ page }) => {
-    const admin = new AdminPage(page);
-    await admin.goto();
-    originalEmail = await readInputValue(admin.emailField);
-    if (originalEmail === SAFE_TEST_EMAIL) {
-      // A previous test's restore did not run; refusing to silently overwrite the
-      // unknown real address again. Manual reset required.
-      throw new Error(
-        `Defensive precheck: email is already ${SAFE_TEST_EMAIL} — a previous run's restore did not complete. Reset the populated account's email manually before re-running.`
-      );
-    }
-    // block_ip should be empty by default. If a previous run left it populated,
-    // blank it now so the test starts from a clean slate.
-    const blockIp = await readInputValue(admin.blockIpField);
-    if (blockIp !== '') {
-      await admin.blockIpField.fill('');
-      await admin.submitButton.click();
-      await expect(admin.statusMessage).toContainText('Dane zostały zmienione');
-    }
-    // block_cookie should be "Nie" by default. Reset if a prior run left "Tak"
-    // selected.
-    if (await admin.blockCookieRadioYes.isChecked()) {
-      await admin.blockCookieRadioNo.check();
-      await admin.submitButton.click();
-      await expect(admin.statusMessage).toContainText('Dane zostały zmienione');
-    }
-  });
-
-  test.afterEach(async ({ page }) => {
-    const admin = new AdminPage(page);
-    await admin.goto();
-    let needsSubmit = false;
-    const current = await readInputValue(admin.emailField);
-    if (current !== originalEmail) {
-      await admin.emailField.fill(originalEmail);
-      needsSubmit = true;
-    }
-    const blockIp = await readInputValue(admin.blockIpField);
-    if (blockIp !== '') {
-      await admin.blockIpField.fill('');
-      needsSubmit = true;
-    }
-    if (await admin.blockCookieRadioYes.isChecked()) {
-      await admin.blockCookieRadioNo.check();
-      needsSubmit = true;
-    }
-    if (needsSubmit) {
-      await admin.submitButton.click();
-      await expect(admin.statusMessage).toContainText('Dane zostały zmienione');
-    }
-  });
-
-  test('changing email to a valid address persists and renders the success message', async ({
-    page,
-  }) => {
-    const admin = new AdminPage(page);
-
-    await admin.emailField.fill(SAFE_TEST_EMAIL);
-    await admin.submitButton.click();
-    await expect(admin.statusMessage).toContainText('Dane zostały zmienione');
-
-    // Re-fetch the form to confirm the change persisted to the DB rather than just
-    // echoing back the submitted value.
-    await admin.goto();
-    const persisted = await readInputValue(admin.emailField);
-    expect(persisted).toBe(SAFE_TEST_EMAIL);
-  });
-
-  test("block_ip set to the test runner's public IP suppresses subsequent tracking hits", async ({
-    page,
-    baseURL,
-  }, testInfo) => {
-    if (!baseURL) throw new Error('baseURL must be set in playwright.config.ts');
-    const admin = new AdminPage(page);
-
-    // Seed one tracking hit while block_ip is still empty so we can read the
-    // server-recorded outgoing IP from /zone/hits/. The browser-to-tracker
-    // outgoing IP is exactly what the block_ip filter compares against — same
-    // source = same IP = block matches on the next hit.
-    const seed = await fireTrackingHit(page, baseURL, TRACKING_FIXTURES[0], testInfo);
-
-    const hitsPage = new HitsPage(page);
-    await hitsPage.goto();
-    await hitsPage.submitButton.click();
-    const seededRow = hitsPage.resultRows.filter({ hasText: seed.runMarker });
-    await expect(seededRow).toHaveCount(1);
-
-    // Pull the IP out of the seeded row's "Nazwa hosta/IP: <ip>" tooltip — the
-    // same primitive zone-hits.spec.ts uses to read filter inputs from a seeded
-    // row. The block_ip field is maxlength=15 (IPv4 only); skip with a clear
-    // reason if the server recorded an IPv6 source so the test does not silently
-    // store a truncated value that would never match.
-    const sourceIp = await seededRow.evaluate<string>((row) => {
-      const span = Array.from(row.querySelectorAll<HTMLSpanElement>('span[title]')).find((s) =>
-        s.title.startsWith('Nazwa hosta/IP')
-      );
-      if (!span) return '';
-      const colon = span.title.indexOf(':');
-      return colon >= 0 ? span.title.slice(colon + 1).trim() : '';
-    });
+test.describe(
+  'admin page - mutating settings (Chromium project only)',
+  { tag: '@regression' },
+  () => {
+    // Skip-by-project-name keyed off `test.info().project.name` (rather than the
+    // usual `({ browserName })` predicate) because Mobile Chrome shares
+    // `browserName === 'chromium'` and would otherwise race against desktop
+    // Chromium on the same backend account in CI's parallel matrix.
     test.skip(
-      !sourceIp || sourceIp.length > 15,
-      `block_ip field is maxlength=15; cannot exercise blocking with seed IP "${sourceIp}"`
+      () => test.info().project.name !== 'Chromium',
+      'mutating tests run only on the desktop Chromium project to avoid racing on the shared populated account'
     );
+    test.describe.configure({ mode: 'serial' });
 
-    // Apply the IP block.
-    await admin.goto();
-    await admin.blockIpField.fill(sourceIp);
-    await admin.submitButton.click();
-    await expect(admin.statusMessage).toContainText('Dane zostały zmienione');
+    // Captured fresh per test in beforeEach so the afterEach hook can restore the
+    // value the test inherited even if a previous test crashed without restoring.
+    let originalEmail = '';
 
-    // Fire a second tracking hit. With block_ip matching the source, the tracker
-    // must reject the request before recording it — the hit is never persisted.
-    const blocked = await fireTrackingHit(page, baseURL, TRACKING_FIXTURES[0], testInfo);
+    test.beforeEach(async ({ page }) => {
+      const admin = new AdminPage(page);
+      await admin.goto();
+      originalEmail = await readInputValue(admin.emailField);
+      if (originalEmail === SAFE_TEST_EMAIL) {
+        // A previous test's restore did not run; refusing to silently overwrite the
+        // unknown real address again. Manual reset required.
+        throw new Error(
+          `Defensive precheck: email is already ${SAFE_TEST_EMAIL} — a previous run's restore did not complete. Reset the populated account's email manually before re-running.`
+        );
+      }
+      // block_ip should be empty by default. If a previous run left it populated,
+      // blank it now so the test starts from a clean slate.
+      const blockIp = await readInputValue(admin.blockIpField);
+      if (blockIp !== '') {
+        await admin.blockIpField.fill('');
+        await admin.submitButton.click();
+        await expect(admin.statusMessage).toContainText('Dane zostały zmienione');
+      }
+      // block_cookie should be "Nie" by default. Reset if a prior run left "Tak"
+      // selected.
+      if (await admin.blockCookieRadioYes.isChecked()) {
+        await admin.blockCookieRadioNo.check();
+        await admin.submitButton.click();
+        await expect(admin.statusMessage).toContainText('Dane zostały zmienione');
+      }
+    });
 
-    // Remove the IP block before asserting absence. /zone/hits/ also filters its
-    // visible rows on the user's current block_ip, so the seed row — which IS
-    // recorded in the DB but matches block_ip — would also be filtered out,
-    // giving us a tautological count(0) for both rows. With block_ip unset, the
-    // seed row becomes visible again, distinguishing "tracker rejected the
-    // second hit" (intended) from "the visibility filter hid both hits"
-    // (uninteresting).
-    await admin.goto();
-    await admin.blockIpField.fill('');
-    await admin.submitButton.click();
-    await expect(admin.statusMessage).toContainText('Dane zostały zmienione');
+    test.afterEach(async ({ page }) => {
+      const admin = new AdminPage(page);
+      await admin.goto();
+      let needsSubmit = false;
+      const current = await readInputValue(admin.emailField);
+      if (current !== originalEmail) {
+        await admin.emailField.fill(originalEmail);
+        needsSubmit = true;
+      }
+      const blockIp = await readInputValue(admin.blockIpField);
+      if (blockIp !== '') {
+        await admin.blockIpField.fill('');
+        needsSubmit = true;
+      }
+      if (await admin.blockCookieRadioYes.isChecked()) {
+        await admin.blockCookieRadioNo.check();
+        needsSubmit = true;
+      }
+      if (needsSubmit) {
+        await admin.submitButton.click();
+        await expect(admin.statusMessage).toContainText('Dane zostały zmienione');
+      }
+    });
 
-    await hitsPage.goto();
-    await hitsPage.submitButton.click();
-    await expect(hitsPage.resultRows.filter({ hasText: seed.runMarker })).toHaveCount(1);
-    await expect(hitsPage.resultRows.filter({ hasText: blocked.runMarker })).toHaveCount(0);
-  });
+    test('changing email to a valid address persists and renders the success message', async ({
+      page,
+    }) => {
+      const admin = new AdminPage(page);
 
-  test('block_cookie=Tak suppresses tracking hits from the same browser session', async ({
-    page,
-    baseURL,
-  }, testInfo) => {
-    if (!baseURL) throw new Error('baseURL must be set in playwright.config.ts');
-    const admin = new AdminPage(page);
+      await admin.emailField.fill(SAFE_TEST_EMAIL);
+      await admin.submitButton.click();
+      await expect(admin.statusMessage).toContainText('Dane zostały zmienione');
 
-    // Flip the cookie-block radio to "Tak" and submit. The server response sets a
-    // marker cookie on the orwellstat domain inside the SAME browser context that
-    // fireTrackingHit will use to run the tracking script — same context = same
-    // cookie jar = the tracker recognises the marker and skips counting.
-    await admin.goto();
-    await admin.blockCookieRadioYes.check();
-    await admin.submitButton.click();
-    await expect(admin.statusMessage).toContainText('Dane zostały zmienione');
+      // Re-fetch the form to confirm the change persisted to the DB rather than just
+      // echoing back the submitted value.
+      await admin.goto();
+      const persisted = await readInputValue(admin.emailField);
+      expect(persisted).toBe(SAFE_TEST_EMAIL);
+    });
 
-    const blocked = await fireTrackingHit(page, baseURL, TRACKING_FIXTURES[0], testInfo);
+    test("block_ip set to the test runner's public IP suppresses subsequent tracking hits", async ({
+      page,
+      baseURL,
+    }, testInfo) => {
+      if (!baseURL) throw new Error('baseURL must be set in playwright.config.ts');
+      const admin = new AdminPage(page);
 
-    const hitsPage = new HitsPage(page);
-    await hitsPage.goto();
-    await hitsPage.submitButton.click();
-    await expect(hitsPage.resultRows.filter({ hasText: blocked.runMarker })).toHaveCount(0);
-  });
-});
+      // Seed one tracking hit while block_ip is still empty so we can read the
+      // server-recorded outgoing IP from /zone/hits/. The browser-to-tracker
+      // outgoing IP is exactly what the block_ip filter compares against — same
+      // source = same IP = block matches on the next hit.
+      const seed = await fireTrackingHit(page, baseURL, TRACKING_FIXTURES[0], testInfo);
+
+      const hitsPage = new HitsPage(page);
+      await hitsPage.goto();
+      await hitsPage.submitButton.click();
+      const seededRow = hitsPage.resultRows.filter({ hasText: seed.runMarker });
+      await expect(seededRow).toHaveCount(1);
+
+      // Pull the IP out of the seeded row's "Nazwa hosta/IP: <ip>" tooltip — the
+      // same primitive zone-hits.spec.ts uses to read filter inputs from a seeded
+      // row. The block_ip field is maxlength=15 (IPv4 only); skip with a clear
+      // reason if the server recorded an IPv6 source so the test does not silently
+      // store a truncated value that would never match.
+      const sourceIp = await seededRow.evaluate<string>((row) => {
+        const span = Array.from(row.querySelectorAll<HTMLSpanElement>('span[title]')).find((s) =>
+          s.title.startsWith('Nazwa hosta/IP')
+        );
+        if (!span) return '';
+        const colon = span.title.indexOf(':');
+        return colon >= 0 ? span.title.slice(colon + 1).trim() : '';
+      });
+      test.skip(
+        !sourceIp || sourceIp.length > 15,
+        `block_ip field is maxlength=15; cannot exercise blocking with seed IP "${sourceIp}"`
+      );
+
+      // Apply the IP block.
+      await admin.goto();
+      await admin.blockIpField.fill(sourceIp);
+      await admin.submitButton.click();
+      await expect(admin.statusMessage).toContainText('Dane zostały zmienione');
+
+      // Fire a second tracking hit. With block_ip matching the source, the tracker
+      // must reject the request before recording it — the hit is never persisted.
+      const blocked = await fireTrackingHit(page, baseURL, TRACKING_FIXTURES[0], testInfo);
+
+      // Remove the IP block before asserting absence. /zone/hits/ also filters its
+      // visible rows on the user's current block_ip, so the seed row — which IS
+      // recorded in the DB but matches block_ip — would also be filtered out,
+      // giving us a tautological count(0) for both rows. With block_ip unset, the
+      // seed row becomes visible again, distinguishing "tracker rejected the
+      // second hit" (intended) from "the visibility filter hid both hits"
+      // (uninteresting).
+      await admin.goto();
+      await admin.blockIpField.fill('');
+      await admin.submitButton.click();
+      await expect(admin.statusMessage).toContainText('Dane zostały zmienione');
+
+      await hitsPage.goto();
+      await hitsPage.submitButton.click();
+      await expect(hitsPage.resultRows.filter({ hasText: seed.runMarker })).toHaveCount(1);
+      await expect(hitsPage.resultRows.filter({ hasText: blocked.runMarker })).toHaveCount(0);
+    });
+
+    test('block_cookie=Tak suppresses tracking hits from the same browser session', async ({
+      page,
+      baseURL,
+    }, testInfo) => {
+      if (!baseURL) throw new Error('baseURL must be set in playwright.config.ts');
+      const admin = new AdminPage(page);
+
+      // Flip the cookie-block radio to "Tak" and submit. The server response sets a
+      // marker cookie on the orwellstat domain inside the SAME browser context that
+      // fireTrackingHit will use to run the tracking script — same context = same
+      // cookie jar = the tracker recognises the marker and skips counting.
+      await admin.goto();
+      await admin.blockCookieRadioYes.check();
+      await admin.submitButton.click();
+      await expect(admin.statusMessage).toContainText('Dane zostały zmienione');
+
+      const blocked = await fireTrackingHit(page, baseURL, TRACKING_FIXTURES[0], testInfo);
+
+      const hitsPage = new HitsPage(page);
+      await hitsPage.goto();
+      await hitsPage.submitButton.click();
+      await expect(hitsPage.resultRows.filter({ hasText: blocked.runMarker })).toHaveCount(0);
+    });
+  }
+);
