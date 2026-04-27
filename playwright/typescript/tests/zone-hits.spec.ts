@@ -2,9 +2,47 @@ import { test, expect, type Locator } from '@fixtures/base.fixture';
 import { HitsPage } from '@pages/authenticated/hits.page';
 import { fireTrackingHit, TRACKING_FIXTURES } from '@utils/track-hit.util';
 
-test.fixme('hits page - content', { tag: '@regression' }, async ({ page }) => {
-  // TODO: Navigate to HitsPage.url and verify page content.
-  await page.goto(HitsPage.url);
+// Pinned column-header strings for the results table on /zone/hits/. Verified against
+// the live DOM: the table renders only TWO `<th>` columns — "Lp." (row number) and
+// "Odsłony" (a single wide column whose cell content is a free-text run of inline
+// `<span title="…">` fragments labelling host/IP, country, browser, OS, language, color
+// depth, etc.). Issue #392 listed those inline-span labels as if they were column
+// headers, but the live DOM does not render them as `<th>`; pinning them here would
+// silently mismatch the real header set.
+const RESULTS_TABLE_HEADERS = ['Lp.', 'Odsłony'] as const satisfies readonly string[];
+
+test('hits page - content', { tag: '@regression' }, async ({ page }) => {
+  const hitsPage = new HitsPage(page);
+  await hitsPage.goto();
+
+  // The page identifies itself as "Odsłony" via the document title (and the active
+  // nav link), but the only h-element heading on /zone/hits/ is "Filtr". The title
+  // assertion below captures the "this is the Odsłony page" intent of the AC, while
+  // `hitsPage.heading` covers the real h2 contract — see the comment on the getter.
+  await expect(page).toHaveTitle(HitsPage.title);
+  await expect(hitsPage.heading).toBeVisible();
+
+  // Filter-form labels — every accessible-name getter the form exposes. If a future
+  // commit adds a new field to the form, add it here as well so the static-content
+  // surface keeps full label coverage.
+  await expect(hitsPage.periodSelect).toBeVisible();
+  await expect(hitsPage.ipField).toBeVisible();
+  await expect(hitsPage.hostField).toBeVisible();
+  await expect(hitsPage.browserField).toBeVisible();
+  await expect(hitsPage.osField).toBeVisible();
+  await expect(hitsPage.languageField).toBeVisible();
+  await expect(hitsPage.countryField).toBeVisible();
+  await expect(hitsPage.colorDepthField).toBeVisible();
+  await expect(hitsPage.rowLimitSelect).toBeVisible();
+
+  // The default 30-day filter on the populated account returns at least one seeded
+  // hit, so the results table is rendered and its header row is in the DOM. If this
+  // ever changes (e.g. seed retention shortens), the assertions below will fail with a
+  // clear "table not rendered" signal — preferable to a silent skip.
+  await expect(hitsPage.resultsTable).toBeVisible();
+  for (const header of RESULTS_TABLE_HEADERS) {
+    await expect(hitsPage.columnHeader(header)).toBeVisible();
+  }
 });
 
 // Per-field metadata for the 7 text inputs that issue #97 mandates coverage for.

@@ -11,8 +11,14 @@ export class HitsPage extends AbstractPage {
     super(page, HitsPage.url, HitsPage.title, HitsPage.accessKey);
   }
 
+  // The /zone/hits/ page renders no h-element with text "Odsłony" — the only h2 on the
+  // page is "Filtr" (the heading of the filter-form section), and the global h1 is the
+  // site-wide logo with accessible name "Orwell Stat". The "Odsłony" string is present
+  // only in the document title, the active nav link, and the results-table column-2
+  // header — none of which are headings. We therefore expose the real h2 here so the
+  // abstract `heading` contract resolves to a visible page-specific heading.
   get heading(): Locator {
-    return this.page.getByRole('heading', { name: 'Odsłony', exact: true });
+    return this.page.getByRole('heading', { name: 'Filtr', exact: true });
   }
 
   // Scope filter-form fields to the `<fieldset>` whose `<legend>` is "Formularz do
@@ -92,5 +98,13 @@ export class HitsPage extends AbstractPage {
   // Data rows in the results table — excludes the header row whose id is `row1`.
   get resultRows(): Locator {
     return this.resultsTable.locator('tr:not(#row1)');
+  }
+
+  // Single-cell locator for one results-table column header. Scoped to `#row1` (the
+  // header row, see `resultRows`) so it cannot accidentally match a data-row cell that
+  // happens to share text with a header. `getByText({ exact: true })` keeps the assertion
+  // strict so a product-side header rename surfaces here instead of silently passing.
+  columnHeader(label: string): Locator {
+    return this.resultsTable.locator('#row1').getByText(label, { exact: true });
   }
 }
