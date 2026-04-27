@@ -36,13 +36,65 @@ export class InformationPage extends AbstractPage {
     return this.page.getByRole('heading', { name: 'Ranking popularności', exact: true });
   }
 
-  // Populated-state content markers. Each section is inline prose — not a <table> — with
-  // <span class="bold"> values. We assert the stable labels that always appear with data.
-  get todayCount() {
-    return this.page.getByText('Dzisiaj:', { exact: false });
+  // Each ranking line renders as inline prose: `<label> <span class="bold">value</span> - NN.NN%
+  //                  (NNN)<br />` — note the literal newlines + tabs between `%` and `(NNN)` in
+  // the source. Playwright's regex matcher does not normalize whitespace, so `\s+` is required
+  // wherever the source can span lines. Asserting label-only would silently pass on an empty
+  // `<span>`, so the regex pins all four parts: label, non-empty value, percentage, count.
+  private rankingLine(label: string) {
+    const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return this.page.getByText(
+      new RegExp(`${escaped}\\s*\\S.*\\s+-\\s+\\d+\\.\\d+%\\s+\\(\\d+\\)`)
+    );
   }
 
-  get topPage() {
-    return this.page.getByText('Najpopularniejsza strona:', { exact: false });
+  get visitFrequencyLine() {
+    return this.page.getByText(/Dzisiaj:\s*\d+,\s*w ciągu ostatnich 30 dni:\s*\d+\./);
+  }
+
+  get topHostLine() {
+    return this.rankingLine('Najczęściej z hosta:');
+  }
+
+  get peakDayLine() {
+    return this.rankingLine('Najwięcej odsłon dnia:');
+  }
+
+  get topBrowserLine() {
+    return this.rankingLine('Najpopularniejsza przeglądarka:');
+  }
+
+  get topOsLine() {
+    return this.rankingLine('Najpopularniejszy system operacyjny:');
+  }
+
+  get topLanguageLine() {
+    return this.rankingLine('Najczęściej używany język:');
+  }
+
+  get topCountryLine() {
+    return this.rankingLine('Najczęściej z kraju:');
+  }
+
+  get topPageLine() {
+    return this.rankingLine('Najpopularniejsza strona:');
+  }
+
+  get topResolutionLine() {
+    return this.rankingLine('Najczęściej ustawiona rozdzielczość ekranu:');
+  }
+
+  get topColorDepthLine() {
+    return this.rankingLine('Najczęściej spotykana liczba kolorów:');
+  }
+
+  get footerNote() {
+    return this.page.getByText('Prezentowane dane dotyczą ostatnich 30 dni.', { exact: true });
+  }
+
+  // In the `Najwięcej odsłon dnia:` line the link is rendered on the word `odsłon`
+  // pointing at `/zone/hits/` — the date itself is plain text inside `<span class="bold">`.
+  get peakDayLink() {
+    return this.page.getByRole('link', { name: 'odsłon', exact: true });
   }
 }
