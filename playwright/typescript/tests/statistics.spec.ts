@@ -1,31 +1,21 @@
 import { test, expect, pixelmatch, PNG } from '@fixtures/base.fixture';
-import { ServiceStatisticsPage } from '@pages/public/service-statistics.page';
+import { PARAMETER_OPTIONS, ServiceStatisticsPage } from '@pages/public/service-statistics.page';
 import { expectHeadings } from '@utils/string.util';
-import { SvgAnalysis } from '@types-local/svg-analysis';
+import {
+  analyzeSvgChart,
+  expectEveryParametrChartMatchesTableAndIsDistinct,
+  navigateAndWaitForSvgChart,
+} from '@utils/svg-chart.util';
 import { StatisticsRow } from '@types-local/statistics-row';
 
 test('SVG chart is rendered on stats page', { tag: '@regression' }, async ({ page }) => {
-  const svgResponse = await test.step('navigate and wait for chart', async () => {
-    // Firefox does not cache Basic Auth credentials for <object> sub-resources on staging.
-    // Pre-navigate to chart_all.php so Firefox caches the credentials before the <object> loads it.
-    if (process.env.BASIC_AUTH_USER) {
-      const preAuthResponse = await page.goto(ServiceStatisticsPage.svgChartPreAuthUrl);
-      expect(preAuthResponse?.status()).toBe(200);
-    }
-
-    const [response] = await Promise.all([
-      page.waitForResponse((response) =>
-        response.url().includes(ServiceStatisticsPage.svgChartUrl)
-      ),
-      page.goto(ServiceStatisticsPage.url),
-    ]);
-    expect(response.status()).toBe(200);
-    expect(response.headers()['content-type']).toContain('svg');
-
-    await expect(page.locator('object[type="image/svg+xml"]')).toBeVisible();
-
-    return response;
-  });
+  const svgResponse = await test.step('navigate and wait for chart', async () =>
+    navigateAndWaitForSvgChart(
+      page,
+      ServiceStatisticsPage.url,
+      ServiceStatisticsPage.svgChartUrl,
+      ServiceStatisticsPage.svgChartPreAuthUrl
+    ));
 
   await test.step('verify chart animation', async () => {
     const frame1 = await page.locator('object[type="image/svg+xml"]').screenshot();
@@ -47,30 +37,10 @@ test('SVG chart is rendered on stats page', { tag: '@regression' }, async ({ pag
   });
 
   await test.step('analyze SVG structure', async () => {
-    // Parse SVG DOM in-browser to verify animation structure
-    const svgContent = await svgResponse.text();
+    const svgDom = await analyzeSvgChart(page, await svgResponse.text());
 
-    const svgDom = await page.evaluate<SvgAnalysis, string>((svg) => {
-      const doc = new DOMParser().parseFromString(svg, 'image/svg+xml');
-      return {
-        animateInRectCount: doc.querySelectorAll('rect > animate').length,
-        animateInTextCount: doc.querySelectorAll('text > animate').length,
-        hasWidthAnimation: doc.querySelector('animate[attributeName="width"]') !== null,
-        hasVisibilityAnimation: doc.querySelector('animate[attributeName="visibility"]') !== null,
-        rectAnimateTiming: (() => {
-          const el = doc.querySelector('rect > animate');
-          return el ? { begin: el.getAttribute('begin'), dur: el.getAttribute('dur') } : null;
-        })(),
-        textAnimateTiming: (() => {
-          const el = doc.querySelector('text > animate');
-          return el ? { begin: el.getAttribute('begin'), dur: el.getAttribute('dur') } : null;
-        })(),
-        browsers: Array.from(doc.querySelectorAll('text'))
-          .map((el) => el.textContent?.trim())
-          .filter((t) => t && !t.includes('%')),
-      };
-    }, svgContent);
-
+    // chart_all.php aggregates every user, so the default browsers dimension is dense enough
+    // for the chart to render its full top-10.
     expect(svgDom.animateInRectCount).toBe(10);
     expect(svgDom.animateInTextCount).toBe(10);
     expect(svgDom.hasWidthAnimation).toBe(true);
@@ -211,3 +181,25 @@ test('system statistics', { tag: '@regression' }, async ({ page }) => {
     await expect(total.getByRole('cell').nth(3)).toHaveText('-');
   });
 });
+
+// Walk every "Pokaż statystyki" Parametr option once: assert chart=table top-N rows for
+// each dimension AND that every dimension renders a distinct chart. One test instead of
+// six-plus-one to avoid duplicating the navigation/submit dance per option.
+test(
+  'every Parametr chart matches the data table and is distinct',
+  { tag: '@regression' },
+  async ({ page }) => {
+    test.setTimeout(90_000);
+    await page.goto(ServiceStatisticsPage.url);
+    const statisticsPage = new ServiceStatisticsPage(page);
+    await expectEveryParametrChartMatchesTableAndIsDistinct(
+      page,
+      {
+        combobox: statisticsPage.parameterCombobox,
+        submit: statisticsPage.showStatisticsSubmit,
+        svgChartUrlFragment: ServiceStatisticsPage.svgChartUrl,
+      },
+      PARAMETER_OPTIONS
+    );
+  }
+);
