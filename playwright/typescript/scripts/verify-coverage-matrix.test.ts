@@ -96,6 +96,7 @@ function makeAllCoveredTests(): ActiveTest[] {
       describe: null,
     },
     { file: 'statistics.spec.ts', title: 'system statistics', describe: null },
+    { file: 'register.spec.ts', title: 'register page - content', describe: null },
     {
       file: 'zone-information.spec.ts',
       title: 'visit-frequency and ranking sections with data',
@@ -142,7 +143,7 @@ function makeInSyncMatrix(): CoverageMatrix {
         visualRegression: true,
         api: true,
       },
-      '/register/': { title: true, accessibility: true, api: true },
+      '/register/': { title: true, content: true, accessibility: true, api: true },
       '/password_reset/': { title: true, accessibility: true, api: true },
       '/2/': { title: true, content: true },
       '/zone/': { title: true, content: true, accessibility: true, api: true },
