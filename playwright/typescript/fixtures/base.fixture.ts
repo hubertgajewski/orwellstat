@@ -52,6 +52,7 @@ export {
   type Locator,
   type BrowserContext,
   type APIRequestContext,
+  type TestInfo,
 } from '@playwright/test';
 
 export { default as pixelmatch } from 'pixelmatch';

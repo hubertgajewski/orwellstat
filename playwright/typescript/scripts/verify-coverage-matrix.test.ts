@@ -102,6 +102,10 @@ function makeAllCoveredTests(): ActiveTest[] {
       describe: null,
     },
     { file: 'zone-scripts.spec.ts', title: 'scripts page - content', describe: null },
+    // The "hits page - filter form" describe block in zone-hits.spec.ts is what the
+    // hitsFilter rule keys off (parseSpec emits each describe call as its own top-level
+    // entry with describe: null because it doesn't track nesting).
+    { file: 'zone-hits.spec.ts', title: 'hits page - filter form', describe: null },
   ]);
 }
 
@@ -147,6 +151,7 @@ function makeInSyncMatrix(): CoverageMatrix {
     {
       statisticsParameter: true,
       styleSelector: true,
+      hitsFilter: true,
     }
   );
 }
@@ -319,6 +324,24 @@ test('computeCovered: forms — statisticsParameter requires statistics.spec.ts 
     ]).has('form|statisticsParameter')
   );
   assert.ok(!computeCovered([]).has('form|statisticsParameter'));
+});
+
+test('computeCovered: forms — hitsFilter requires the "hits page - filter form" describe in zone-hits.spec.ts', () => {
+  // The describe block itself is what the rule matches — parseSpec emits each
+  // `test.describe(title, ...)` call as a flat top-level entry.
+  assert.ok(
+    computeCovered([
+      { file: 'zone-hits.spec.ts', title: 'hits page - filter form', describe: null },
+    ]).has('form|hitsFilter')
+  );
+  // Same file, different describe title → not covered.
+  assert.ok(
+    !computeCovered([
+      { file: 'zone-hits.spec.ts', title: 'hits page - other group', describe: null },
+    ]).has('form|hitsFilter')
+  );
+  // No tests at all → not covered.
+  assert.ok(!computeCovered([]).has('form|hitsFilter'));
 });
 
 test('computeCovered: forms — styleSelector matches the raw `${style} style` template parseSpec produces', () => {

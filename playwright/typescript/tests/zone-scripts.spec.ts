@@ -1,10 +1,8 @@
-import { randomUUID } from 'node:crypto';
-import { readFile, writeFile } from 'node:fs/promises';
 import { readFileSync } from 'node:fs';
-import { pathToFileURL } from 'node:url';
 import { test, expect } from '@fixtures/base.fixture';
 import { ScriptsPage } from '@pages/authenticated/scripts.page';
 import { HitsPage } from '@pages/authenticated/hits.page';
+import { fireTrackingHit, TEST_DATA_BASE, TRACKING_FIXTURES } from '@utils/track-hit.util';
 
 // Canonical snippet pattern per variant. The placeholders cover the two values that vary
 // by environment: `{{ORWELLSTAT_BASE}}` is the server origin (substituted with the live
@@ -12,7 +10,6 @@ import { HitsPage } from '@pages/authenticated/hits.page';
 // id (matched as a wildcard at assertion time because it is rendered by the server and
 // does not correspond to any credential the test harness holds — it differs per env).
 // Read sync once at module load — this happens at worker startup, not on a hot path.
-const TEST_DATA_BASE = new URL('../test-data/scripts/', import.meta.url);
 const CANONICAL_SNIPPETS = {
   'tracking-html5.html': readFileSync(new URL('snippet-html5.txt', TEST_DATA_BASE), 'utf8'),
   'tracking-html4.html': readFileSync(new URL('snippet-html4.txt', TEST_DATA_BASE), 'utf8'),
@@ -33,12 +30,6 @@ function canonicalRegex(template: string, baseURL: string): RegExp {
   const parts = withBase.split('{{ORWELLSTAT_USER}}').map(escapeRegex);
   return new RegExp(`^${parts.join('[^&"<]+')}$`);
 }
-
-const TRACKING_FIXTURES = [
-  { label: 'HTML5', filename: 'tracking-html5.html', snippetGetter: 'html5Snippet' },
-  { label: 'HTML4/XHTML', filename: 'tracking-html4.html', snippetGetter: 'html4Snippet' },
-  { label: 'application/xhtml+xml', filename: 'tracking.xhtml', snippetGetter: 'xhtmlSnippet' },
-] as const;
 
 test('scripts page - content', { tag: '@regression' }, async ({ page, baseURL }) => {
   if (!baseURL) throw new Error('baseURL must be set in playwright.config.ts');
@@ -67,43 +58,13 @@ test('scripts page - content', { tag: '@regression' }, async ({ page, baseURL })
 });
 
 test.describe('scripts page tracking', { tag: '@regression' }, () => {
-  for (const { label, filename, snippetGetter } of TRACKING_FIXTURES) {
-    test(`${label} snippet fires tracking and registers a hit`, async ({
+  for (const variant of TRACKING_FIXTURES) {
+    test(`${variant.label} snippet fires tracking and registers a hit`, async ({
       page,
       baseURL,
     }, testInfo) => {
       if (!baseURL) throw new Error('baseURL must be set in playwright.config.ts');
-      const trackingUrlPrefix = `${baseURL}/scripts/`;
-
-      // Pull the live snippet from /zone/scripts/ so the tracking fixture uses the exact
-      // code the product distributes for the current environment, with the correct
-      // account id. This is the same textarea whose body the structural test above
-      // verifies against the canonical regex.
-      await page.goto(ScriptsPage.url);
-      const scriptsPage = new ScriptsPage(page);
-      const liveSnippet = (await scriptsPage[snippetGetter].textContent()) ?? '';
-      if (!liveSnippet.trim()) throw new Error(`${label} snippet textarea was empty`);
-
-      // Materialise the fixture: read the committed shell, inject the live snippet, and
-      // write the result to the test's own output dir so document.location includes a
-      // unique per-run marker (see comment below).
-      const shell = await readFile(new URL(filename, TEST_DATA_BASE), 'utf8');
-      const materialisedPath = testInfo.outputPath(filename);
-      await writeFile(materialisedPath, shell.replace('{{SNIPPET}}', liveSnippet));
-
-      // Append a unique marker to the fixture URL so this assertion only matches the hit
-      // this test just registered — /zone/hits/ keeps rows from every prior run forever,
-      // and a plain filename substring would silently stay green during a regression.
-      const runMarker = randomUUID();
-      const fixtureUrl = pathToFileURL(materialisedPath);
-      fixtureUrl.searchParams.set('run', runMarker);
-
-      await Promise.all([
-        page.waitForRequest((req) => req.url().startsWith(trackingUrlPrefix), {
-          timeout: 10_000,
-        }),
-        page.goto(fixtureUrl.href),
-      ]);
+      const { runMarker } = await fireTrackingHit(page, baseURL, variant, testInfo);
 
       await page.goto(HitsPage.url);
       // exact: false is correct here — the hits-table cell contains the full URL, host
