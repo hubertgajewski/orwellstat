@@ -11,10 +11,12 @@ const GAP_EXCLUDED = new Set(['title', 'api']);
 
 type PageCategory = (typeof PAGE_CATEGORIES)[number];
 
-interface CoverageMatrix {
-  pages: Record<string, Record<string, boolean>>;
-  forms: Record<string, boolean>;
-}
+const matrixSchema = z.object({
+  pages: z.record(z.string(), z.record(z.string(), z.boolean())),
+  forms: z.record(z.string(), z.boolean()),
+});
+
+type CoverageMatrix = z.infer<typeof matrixSchema>;
 
 function repoRoot(): string {
   return resolve(process.env.REPO_ROOT ?? process.cwd());
@@ -51,17 +53,11 @@ function readMatrix(): { matrix?: CoverageMatrix; error?: string } {
   } catch (e) {
     return { error: `Failed to parse ${file}: ${(e as Error).message}` };
   }
-  if (
-    !parsed ||
-    typeof parsed !== 'object' ||
-    typeof (parsed as CoverageMatrix).pages !== 'object' ||
-    typeof (parsed as CoverageMatrix).forms !== 'object'
-  ) {
-    return {
-      error: `Malformed matrix at ${file}: missing pages or forms object`,
-    };
+  const result = matrixSchema.safeParse(parsed);
+  if (!result.success) {
+    return { error: `Malformed matrix at ${file}: ${result.error.message}` };
   }
-  return { matrix: parsed as CoverageMatrix };
+  return { matrix: result.data };
 }
 
 function pct(covered: number, total: number): number {
