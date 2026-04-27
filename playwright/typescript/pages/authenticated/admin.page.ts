@@ -87,15 +87,16 @@ export class AdminPage extends AbstractPage {
     return this.settingsForm.locator('#host_to_sms');
   }
 
-  // Form-status banner. The PHP renders `$register_info` inside `<span class="bold">`
-  // for both validation errors and the "Dane zostały zmienione" success message, so a
-  // single locator covers every server-side outcome. The form's wrapping `<div
-  // class="text">` also contains a `<span class="bold">` for the username inside the
-  // fieldset (`Nazwa użytkownika <span class="bold">…</span>`) and a separate `div.text`
-  // further down the page renders the "Jesteś zalogowany jako" username with the same
-  // markup — so we restrict to the direct `span.bold` child of the form's div.text via
-  // `:scope >`, which matches only the status banner the PHP echoes immediately before
-  // the `<form>` element.
+  // Form-status banner. The server renders the status message inside `<span
+  // class="bold">` for both validation errors and the "Dane zostały zmienione"
+  // success message, so a single locator covers every outcome. The form's
+  // wrapping `<div class="text">` also contains a `<span class="bold">` for the
+  // username inside the fieldset (`Nazwa użytkownika <span class="bold">…</span>`)
+  // and a separate `div.text` further down the page renders the "Jesteś
+  // zalogowany jako" username with the same markup — so we restrict to the
+  // direct `span.bold` child of the form's div.text via `:scope >`, which
+  // matches only the status banner the server emits immediately before the
+  // `<form>` element.
   get statusMessage(): Locator {
     return this.page
       .locator('div.text')
