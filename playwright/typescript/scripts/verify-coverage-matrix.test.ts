@@ -104,6 +104,7 @@ function makeAllCoveredTests(): ActiveTest[] {
     },
     { file: 'zone-scripts.spec.ts', title: 'scripts page - content', describe: null },
     { file: 'password-reset.spec.ts', title: 'password reset page - content', describe: null },
+    { file: 'zone-hits.spec.ts', title: 'hits page - content', describe: null },
     // The "hits page - filter form" describe block in zone-hits.spec.ts is what the
     // hitsFilter rule keys off (parseSpec emits each describe call as its own top-level
     // entry with describe: null because it doesn't track nesting).
@@ -150,7 +151,7 @@ function makeInSyncMatrix(): CoverageMatrix {
       '/2/': { title: true, content: true },
       '/zone/': { title: true, content: true, accessibility: true, api: true },
       '/zone/stats/': { title: true, accessibility: true, api: true },
-      '/zone/hits/': { title: true, accessibility: true, api: true },
+      '/zone/hits/': { title: true, content: true, accessibility: true, api: true },
       '/zone/scripts/': { title: true, content: true, accessibility: true, api: true },
       '/zone/admin/': { title: true, accessibility: true, api: true },
     },

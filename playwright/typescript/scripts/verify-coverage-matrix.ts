@@ -125,6 +125,7 @@ export function computeCovered(tests: ActiveTest[]): Set<CellKey> {
     ['/password_reset/', 'password-reset.spec.ts', 'password reset page - content'],
     ['/zone/', 'zone-information.spec.ts', 'visit-frequency and ranking sections with data'],
     ['/zone/stats/', 'zone-stats.spec.ts', 'SVG chart is rendered on /zone/stats/'],
+    ['/zone/hits/', 'zone-hits.spec.ts', 'hits page - content'],
     ['/zone/scripts/', 'zone-scripts.spec.ts', 'scripts page - content'],
   ];
   for (const [url, file, title] of contentRules) {
