@@ -140,8 +140,15 @@ export function computeCovered(tests: ActiveTest[]): Set<CellKey> {
   if (has('visual.spec.ts', (t) => / style$/.test(t.title))) {
     covered.add(formCell('styleSelector'));
   }
-  // login / hitsFilter / adminSettings — only test.fixme stubs in forms.spec.ts; never
-  // covered until those are implemented.
+  // hitsFilter — covered by the "hits page - filter form" describe block in
+  // zone-hits.spec.ts. The parser emits the describe call itself as a top-level entry
+  // (with `describe: null`, since it does no nesting tracking), so matching by title
+  // on that file is the right key.
+  if (has('zone-hits.spec.ts', (t) => t.title === 'hits page - filter form')) {
+    covered.add(formCell('hitsFilter'));
+  }
+  // login / adminSettings — only test.fixme stubs in forms.spec.ts; never covered
+  // until those are implemented.
 
   return covered;
 }
