@@ -70,7 +70,7 @@ Size is a coarse roadmap guess for epics, not a mechanical sum of children's poi
 .env.example                # template: ORWELLSTAT_USER, ORWELLSTAT_PASSWORD, ORWELLSTAT_USER_EMPTY, ORWELLSTAT_PASSWORD_EMPTY, ENV, BASIC_AUTH_USER, BASIC_AUTH_PASSWORD, ANTHROPIC_API_KEY, GEMINI_API_KEY, OPENROUTER_API_KEY
 .vars                       # CI repository variables (git-ignored); see .vars.example
 .vars.example               # template: AI_REVIEW, PLAYWRIGHT_TYPESCRIPT, BRUNO, QUALITY_METRICS, AI_DIAGNOSIS, AI_PROVIDER, AI_MODEL_FAST, AI_MODEL_STRONG, ANTHROPIC_BASE_URL, ANTHROPIC_DEFAULT_SONNET_MODEL, ANTHROPIC_DEFAULT_HAIKU_MODEL, SELF_HEALING
-.mcp.json                   # MCP server definitions (MCP_DOCKER, playwright, playwright-report-mcp, quality-metrics) — loaded by Claude Code and other MCP-compatible AI assistants
+.mcp.json                   # MCP server definitions (MCP_DOCKER, playwright, playwright-report-mcp, quality-metrics, coverage-matrix) — loaded by Claude Code and other MCP-compatible AI assistants
 .github/workflows/          # CI workflows (one per sub-project)
 CLAUDE.md                   # repository-specific behavioral guidance for Claude Code
 AGENTS.md                   # Codex entrypoint; delegates shared repository guidance to CLAUDE.md
@@ -88,6 +88,7 @@ playwright/
 bruno/                      # Bruno API request collection
 mcp/
   quality-metrics/          # local MCP server exposing escape rate, MTTR, and metrics history
+  coverage-matrix/          # local MCP server exposing coverage matrix gaps, summary, and mark_covered
 ```
 
 > Each Playwright minor bump ships new Chromium/WebKit/Firefox engine builds; expect sub-pixel baseline drift in `tests/visual.spec.ts-snapshots/` (e.g. 1.58.2 → 1.59.1 shifted WebKit and Mobile Safari `-linux` baselines by ~2 px height, see #294) and refresh `-linux` snapshots via `update-visual-baselines.yml` before merging the dependency PR.
@@ -422,14 +423,15 @@ After calculating metrics, the workflow runs `scripts/generate-quality-metrics.p
 
 ## MCP servers
 
-Four MCP servers are declared in `.mcp.json` and loaded automatically by any MCP-compatible AI assistant opened from the repo root. All four are loaded automatically — no local setup needed beyond having Node.js and Docker installed (and a one-off `npm run build` in `mcp/quality-metrics/` for the local server).
+Five MCP servers are declared in `.mcp.json` and loaded automatically by any MCP-compatible AI assistant opened from the repo root. All five are loaded automatically — no local setup needed beyond having Node.js and Docker installed (and a one-off `npm run build` in `mcp/quality-metrics/` and `mcp/coverage-matrix/` for the local servers).
 
-| Server                | Key in `.mcp.json`      | Purpose                                                                    |
-| --------------------- | ----------------------- | -------------------------------------------------------------------------- |
-| playwright-report-mcp | `playwright-report-mcp` | Run Playwright tests and retrieve structured results                       |
-| playwright (browser)  | `playwright`            | Live browser automation — navigate, click, screenshot, snapshot            |
-| Docker MCP gateway    | `MCP_DOCKER`            | Interact with Docker containers (used with `act` for local CI)             |
-| quality-metrics       | `quality-metrics`       | Query defect escape rate, MTTR, and metrics history (local, no deployment) |
+| Server                | Key in `.mcp.json`      | Purpose                                                                            |
+| --------------------- | ----------------------- | ---------------------------------------------------------------------------------- |
+| playwright-report-mcp | `playwright-report-mcp` | Run Playwright tests and retrieve structured results                               |
+| playwright (browser)  | `playwright`            | Live browser automation — navigate, click, screenshot, snapshot                    |
+| Docker MCP gateway    | `MCP_DOCKER`            | Interact with Docker containers (used with `act` for local CI)                     |
+| quality-metrics       | `quality-metrics`       | Query defect escape rate, MTTR, and metrics history (local, no deployment)         |
+| coverage-matrix       | `coverage-matrix`       | Query and update `playwright/typescript/coverage-matrix.json` through typed tools  |
 
 ### playwright-report-mcp
 
@@ -506,6 +508,22 @@ Local MCP server in `mcp/quality-metrics/` that exposes the same defect escape r
 | `get_metrics_history`    | Return all historical data points from `quality-metrics-history.json` as structured JSON                                             |
 
 When no `bug`-labeled issues exist, all three tools return a clear `"No bug issues found"` message instead of dividing by zero or throwing.
+
+### coverage-matrix
+
+Local MCP server in `mcp/coverage-matrix/` that exposes structured access to `playwright/typescript/coverage-matrix.json`. Lets `/generate-test`, `/generate-stubs`, and other agentic workflows query gaps and percentages through typed tools instead of parsing JSON by hand, and supports user-directed flips of a covered cell with input validation.
+
+**Setup:** Build once from the repo root — `(cd mcp/coverage-matrix && npm install && npm run build)`. The server runs via `node mcp/coverage-matrix/dist/index.js` as configured in `.mcp.json`.
+
+The summary percentages match those produced by the **Test Coverage Trends** workflow (`.github/workflows/test-coverage.yml`) since both compute `round(covered / total * 100)` over the same matrix sections. `mark_covered` writes the file back with the same 2-space JSON formatting and trailing newline as the existing matrix; it does not flip forms (the matrix's `forms` section is read-only via these tools).
+
+| Tool                   | Description                                                                                                                                                       |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `get_coverage_gaps`    | Return uncovered entries: pages grouped by URL with their missing categories (excluding `title` and `api`, which are handled by shared specs), and uncovered form names |
+| `get_coverage_summary` | Return covered/total counts and percentages per category (`title`, `content`, `accessibility`, `visualRegression`, `api`), plus forms and overall                  |
+| `mark_covered`         | Flip one page-category entry to `true` and persist the file. Returns a descriptive error (not an exception) when the page URL is unknown or the category invalid  |
+
+Valid categories for `mark_covered`: `title`, `content`, `accessibility`, `visualRegression`, `api`.
 
 ---
 
