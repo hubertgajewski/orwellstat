@@ -19,9 +19,9 @@ test.fixme('hits page - content', { tag: '@regression' }, async ({ page }) => {
 //     of reading its textContent. This is needed when the page displays a transformed
 //     view of the stored value but the filter compares against the canonical stored
 //     form. Concretely: the IP row renders the resolved hostname as text
-//     (`94-75-105-114.dynamic.play.pl`) while keeping the IP literal in
-//     `title="Nazwa hosta/IP: 94.75.105.114"`; the IP filter only matches the literal,
-//     so reading textContent there would yield a hostname that filters to zero rows.
+//     (e.g. `host.example.com`) while keeping the IP literal in
+//     `title="Nazwa hosta/IP: 192.0.2.1"`; the IP filter only matches the literal, so
+//     reading textContent there would yield a hostname that filters to zero rows.
 type FilterField = {
   readonly name: string;
   readonly getField: (p: HitsPage) => Locator;
@@ -82,9 +82,12 @@ const FILTER_FIELDS = [
   },
 ] as const satisfies readonly FilterField[];
 
-// HTML5 is the smallest fixture and the same machine context produces the same per-row
-// values regardless of variant, so the filter tests only need one variant. The combobox
-// test seeds all three to guarantee row-count headroom on a brand-new env.
+// The HTML5 *snippet variant* (one of the three tracking embeds the product publishes
+// on /zone/scripts/ — note that the orwellstat pages themselves are application/xhtml+xml
+// regardless of which embed snippet a hosting site uses) is the smallest fixture, and
+// the same machine context produces the same per-row values regardless of variant — so
+// the filter tests only need one. The combobox test seeds all three to guarantee row-
+// count headroom on a brand-new env.
 const SEED_VARIANT = TRACKING_FIXTURES[0];
 
 test.describe('hits page - filter form', { tag: '@regression' }, () => {
@@ -177,7 +180,11 @@ test.describe('hits page - filter form', { tag: '@regression' }, () => {
       // be reviewed, not silently re-baselined.
       expect(max, `${field.name}: maxlength changed in product`).toBe(field.expectedMaxlength);
 
-      await input.fill('x'.repeat(max + 10));
+      // Boundary check: filling exactly `max + 1` characters is the smallest input
+      // that should engage maxlength enforcement. A larger overshoot (e.g. +10) would
+      // not exercise anything additional — the truncation logic either kicks in at
+      // the boundary or doesn't.
+      await input.fill('x'.repeat(max + 1));
       // toHaveValue / inputValue both fail on inputs in application/xhtml+xml documents
       // — Playwright's strict nodeName check expects "INPUT" but XML preserves the
       // lowercase "input". toHaveJSProperty('value', ...) reads the .value property
