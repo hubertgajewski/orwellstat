@@ -127,12 +127,9 @@ test.describe('admin page - settings form', { tag: '@regression' }, () => {
     await admin.confirmPasswordField.fill('abc123');
     await admin.submitButton.click();
 
-    // The PHP source has a literal newline+tab between "jest" and "niepoprawne!"
-    // in the response string. Playwright's text matchers normalise whitespace, so
-    // toContainText matches regardless — split into two assertions to make a
-    // future copy-edit on either half fail with a precise diff.
-    await expect(admin.statusMessage).toContainText('Wprowadzone aktualne hasło jest');
-    await expect(admin.statusMessage).toContainText('niepoprawne!');
+    await expect(admin.statusMessage).toContainText(
+      'Wprowadzone aktualne hasło jest niepoprawne!'
+    );
   });
 
   test('the literal example.com placeholder email is rejected', async ({ page }) => {
@@ -285,7 +282,6 @@ test.describe('admin page - mutating settings (Chromium project only)', { tag: '
 
     const hitsPage = new HitsPage(page);
     await hitsPage.goto();
-    await hitsPage.periodSelect.selectOption('all');
     await hitsPage.submitButton.click();
     const seededRow = hitsPage.resultRows.filter({ hasText: seed.runMarker });
     await expect(seededRow).toHaveCount(1);
@@ -331,7 +327,6 @@ test.describe('admin page - mutating settings (Chromium project only)', { tag: '
     await expect(admin.statusMessage).toContainText('Dane zostały zmienione');
 
     await hitsPage.goto();
-    await hitsPage.periodSelect.selectOption('all');
     await hitsPage.submitButton.click();
     await expect(hitsPage.resultRows.filter({ hasText: seed.runMarker })).toHaveCount(1);
     await expect(hitsPage.resultRows.filter({ hasText: blocked.runMarker })).toHaveCount(0);
@@ -357,7 +352,6 @@ test.describe('admin page - mutating settings (Chromium project only)', { tag: '
 
     const hitsPage = new HitsPage(page);
     await hitsPage.goto();
-    await hitsPage.periodSelect.selectOption('all');
     await hitsPage.submitButton.click();
     await expect(hitsPage.resultRows.filter({ hasText: blocked.runMarker })).toHaveCount(0);
   });

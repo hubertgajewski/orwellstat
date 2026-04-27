@@ -70,11 +70,11 @@ export class AdminPage extends AbstractPage {
     return this.settingsForm.getByRole('button', { name: AdminPage.submitLabel });
   }
 
-  // SMS-tracking fields are server-rendered only for the username allowlist
-  // ("hgajewski", "ka", "orwellstat") — the populated/empty test accounts are not on
-  // that list, so these locators must resolve to count=0. They exist as getters so
-  // tests can assert their absence rather than guessing which selector "wouldn't be
-  // there".
+  // SMS-tracking fields are server-rendered only for accounts on a private
+  // username allowlist (the SMS-alert feature is enabled on a per-user basis).
+  // The populated and empty test accounts are not on that list, so these
+  // locators must resolve to count=0. They exist as getters so tests can assert
+  // their absence rather than guessing which selector "wouldn't be there".
   get mobileField(): Locator {
     return this.settingsForm.locator('#mobile');
   }
