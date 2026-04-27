@@ -51,6 +51,40 @@ async function readInputValue(locator: Locator): Promise<string> {
   return locator.evaluate<string, HTMLInputElement>((el) => el.value);
 }
 
+test.describe('admin page - content', { tag: '@regression' }, () => {
+  test('static page content renders for the populated account', async ({ page }) => {
+    const admin = new AdminPage(page);
+    await admin.goto();
+
+    await expect(admin.heading).toBeVisible();
+
+    // Read-only labels inside the "Twoje dane" fieldset, asserted via a single
+    // innerText() round-trip. Direct strings rather than `getByText` so the test
+    // is XHTML-safe (lowercase XML nodeNames break Playwright's getByLabel /
+    // toHaveValue on application/xhtml+xml). The labels are the literal text the
+    // server renders today — verified against the live page; do not "fix"
+    // `E-mail` to `Adres e-mail` etc. without first changing the product.
+    const formText = (await admin.settingsForm.innerText()).replace(/\s+/g, ' ');
+    for (const label of [
+      'Nazwa użytkownika',
+      'Aktualne hasło',
+      'Nowe hasło',
+      'Powtórz hasło',
+      'E-mail',
+      'Blokada IP (odsłony z tego IP nie będą zliczane)',
+    ]) {
+      expect(formText, `label "${label}" missing from settings form`).toContain(label);
+    }
+
+    // SMS-tracking fields are server-rendered only for accounts on a private
+    // username allowlist (see admin.page.ts:77-91); the populated and empty test
+    // accounts are not on that list, so these locators must resolve to count 0.
+    await expect(admin.mobileField).toHaveCount(0);
+    await expect(admin.ipToSmsField).toHaveCount(0);
+    await expect(admin.hostToSmsField).toHaveCount(0);
+  });
+});
+
 // Read-only describe — every test here either inspects the rendered form or submits
 // values the server short-circuits before the underlying profile UPDATE (wrong
 // current password, "example@example.com"). Safe to run on the shared populated

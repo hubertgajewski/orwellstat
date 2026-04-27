@@ -126,6 +126,7 @@ export function computeCovered(tests: ActiveTest[]): Set<CellKey> {
     ['/zone/', 'zone-information.spec.ts', 'visit-frequency and ranking sections with data'],
     ['/zone/stats/', 'zone-stats.spec.ts', 'SVG chart is rendered on /zone/stats/'],
     ['/zone/scripts/', 'zone-scripts.spec.ts', 'scripts page - content'],
+    ['/zone/admin/', 'zone-admin.spec.ts', 'admin page - content'],
   ];
   for (const [url, file, title] of contentRules) {
     if (has(file, (t) => t.title === title)) {
