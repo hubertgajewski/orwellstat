@@ -1,7 +1,12 @@
-import { test } from '@fixtures/base.fixture';
+import { test, expect } from '@fixtures/base.fixture';
 import { PasswordResetPage } from '@pages/public/password-reset.page';
 
-test.fixme('password reset page - content', { tag: '@regression' }, async ({ page }) => {
-  // TODO: Navigate to PasswordResetPage.url and verify page content (headings, form fields, labels).
-  await page.goto(PasswordResetPage.url);
+test('password reset page - content', { tag: '@regression' }, async ({ page }) => {
+  const passwordReset = new PasswordResetPage(page);
+  await passwordReset.goto();
+
+  await expect(passwordReset.heading).toBeVisible();
+  await expect(passwordReset.usernameField).toBeEditable();
+  await expect(passwordReset.submitButton).toBeEnabled();
+  await expect(passwordReset.backToHomeLink).toHaveAttribute('href', '/');
 });
