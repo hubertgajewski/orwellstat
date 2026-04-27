@@ -231,6 +231,20 @@ test.describe(
     );
     test.describe.configure({ mode: 'serial' });
 
+    // Guard against the pathological mis-config where `ORWELLSTAT_EMAIL` is set
+    // to the test placeholder — the recovery branch in `beforeEach` would then
+    // rewrite the placeholder with the placeholder, and the change-email test
+    // would submit a no-op the server may not acknowledge with `MSG_SUCCESS`.
+    test.beforeAll(() => {
+      const realEmail = requireRealEmail();
+      if (realEmail === SAFE_TEST_EMAIL) {
+        throw new Error(
+          `ORWELLSTAT_EMAIL must not equal the mutating test's placeholder address ('${SAFE_TEST_EMAIL}'). ` +
+            'Set it to the real email currently stored on the populated account.'
+        );
+      }
+    });
+
     test.beforeEach(async ({ page }) => {
       const admin = new AdminPage(page);
       const realEmail = requireRealEmail();
@@ -253,8 +267,12 @@ test.describe(
       } else if (email !== realEmail) {
         // Account email is neither the canonical real address nor the test
         // placeholder. Fail loudly rather than overwriting an unknown value.
+        // The actual values are intentionally not interpolated to keep the real
+        // email out of the Playwright trace and HTML report (which do not
+        // honour GitHub Actions secret masking).
         throw new Error(
-          `Account email is "${email}", expected "${realEmail}" or "${SAFE_TEST_EMAIL}". ORWELLSTAT_EMAIL must match the populated account.`
+          `Account email matches neither ORWELLSTAT_EMAIL nor the test placeholder ('${SAFE_TEST_EMAIL}'). ` +
+            'Verify ORWELLSTAT_EMAIL against the live populated account.'
         );
       }
       if (blockIp !== '') {
