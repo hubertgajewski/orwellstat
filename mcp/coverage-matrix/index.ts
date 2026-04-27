@@ -68,6 +68,10 @@ function pct(covered: number, total: number): number {
   return total > 0 ? Math.round((covered / total) * 100) : 0;
 }
 
+function isPageCategory(value: string): value is PageCategory {
+  return (PAGE_CATEGORIES as readonly string[]).includes(value);
+}
+
 async function getCoverageGaps() {
   const { matrix, error } = readMatrix();
   if (!matrix) return err(error ?? 'unknown error');
@@ -125,7 +129,7 @@ async function getCoverageSummary() {
 async function markCovered(args: { pageUrl: string; category: string }) {
   const { pageUrl, category } = args;
 
-  if (!(PAGE_CATEGORIES as readonly string[]).includes(category)) {
+  if (!isPageCategory(category)) {
     return err(`Invalid category "${category}". Valid categories: ${PAGE_CATEGORIES.join(', ')}`);
   }
 
@@ -138,9 +142,8 @@ async function markCovered(args: { pageUrl: string; category: string }) {
     );
   }
 
-  const cat = category as PageCategory;
-  const previous = matrix.pages[pageUrl][cat];
-  matrix.pages[pageUrl][cat] = true;
+  const previous = matrix.pages[pageUrl][category];
+  matrix.pages[pageUrl][category] = true;
 
   const file = matrixPath();
   try {
