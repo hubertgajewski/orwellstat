@@ -5,12 +5,15 @@ export class AdminPage extends AbstractPage {
   static readonly url = '/zone/admin/';
   static readonly title = 'Orwell Stat - Administracja';
   static readonly accessKey = 'A';
-  // Single submit button for the entire profile form, labelled "Zmień". Server-side
-  // validation short-circuits the underlying profile UPDATE if either email or
-  // password validation fails — wrong-password, mismatched-new-passwords and
-  // example@example.com submissions are therefore non-mutating and safe to run on
-  // the shared populated account in parallel across browsers.
   static readonly submitLabel = 'Zmień';
+
+  // Server-rendered status-banner strings. Centralised here so a server-side
+  // wording change touches one file, and so a typo in a spec assertion can't
+  // silently slide past a Polish-character review.
+  static readonly MSG_SUCCESS = 'Dane zostały zmienione';
+  static readonly MSG_WRONG_PASSWORD = 'Wprowadzone aktualne hasło jest niepoprawne!';
+  static readonly MSG_INVALID_EMAIL_PLACEHOLDER = 'Podaj prawdziwy adres e-mail';
+  static readonly MSG_PASSWORD_MISMATCH = 'Nowe hasło w obydwu polach nie jest identyczne!';
 
   constructor(page: Page) {
     super(page, AdminPage.url, AdminPage.title, AdminPage.accessKey);

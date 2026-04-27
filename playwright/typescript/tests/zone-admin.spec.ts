@@ -127,7 +127,7 @@ test.describe('admin page - settings form', { tag: '@regression' }, () => {
     await admin.confirmPasswordField.fill('abc123');
     await admin.submitButton.click();
 
-    await expect(admin.statusMessage).toContainText('Wprowadzone aktualne hasło jest niepoprawne!');
+    await expect(admin.statusMessage).toContainText(AdminPage.MSG_WRONG_PASSWORD);
   });
 
   test('the literal example.com placeholder email is rejected', async ({ page }) => {
@@ -139,7 +139,7 @@ test.describe('admin page - settings form', { tag: '@regression' }, () => {
     await admin.emailField.fill('example@example.com');
     await admin.submitButton.click();
 
-    await expect(admin.statusMessage).toContainText('Podaj prawdziwy adres e-mail');
+    await expect(admin.statusMessage).toContainText(AdminPage.MSG_INVALID_EMAIL_PLACEHOLDER);
   });
 });
 
@@ -172,9 +172,7 @@ test.describe('admin page - password mismatch (real credential)', { tag: '@regre
     // With oldpassword correct AND newpassword != newpassword2, the server
     // surfaces this validation error and runs no profile UPDATE — the test is
     // non-mutating.
-    await expect(admin.statusMessage).toContainText(
-      'Nowe hasło w obydwu polach nie jest identyczne!'
-    );
+    await expect(admin.statusMessage).toContainText(AdminPage.MSG_PASSWORD_MISMATCH);
   });
 });
 
@@ -206,52 +204,61 @@ test.describe(
     test.beforeEach(async ({ page }) => {
       const admin = new AdminPage(page);
       await admin.goto();
-      originalEmail = await readInputValue(admin.emailField);
+      // Read all three mutable fields in parallel — independent DOM lookups.
+      const [email, blockIp, cookieIsTak] = await Promise.all([
+        readInputValue(admin.emailField),
+        readInputValue(admin.blockIpField),
+        admin.blockCookieRadioYes.isChecked(),
+      ]);
+      originalEmail = email;
       if (originalEmail === SAFE_TEST_EMAIL) {
-        // A previous test's restore did not run; refusing to silently overwrite the
-        // unknown real address again. Manual reset required.
+        // A previous test's restore did not run; refusing to silently overwrite
+        // the unknown real address again. Manual reset required.
         throw new Error(
           `Defensive precheck: email is already ${SAFE_TEST_EMAIL} — a previous run's restore did not complete. Reset the populated account's email manually before re-running.`
         );
       }
-      // block_ip should be empty by default. If a previous run left it populated,
-      // blank it now so the test starts from a clean slate.
-      const blockIp = await readInputValue(admin.blockIpField);
+      // Coalesce both reset paths into a single submit so a dirty inherited
+      // state costs one form round-trip, not two.
+      let needsSubmit = false;
       if (blockIp !== '') {
         await admin.blockIpField.fill('');
-        await admin.submitButton.click();
-        await expect(admin.statusMessage).toContainText('Dane zostały zmienione');
+        needsSubmit = true;
       }
-      // block_cookie should be "Nie" by default. Reset if a prior run left "Tak"
-      // selected.
-      if (await admin.blockCookieRadioYes.isChecked()) {
+      if (cookieIsTak) {
         await admin.blockCookieRadioNo.check();
+        needsSubmit = true;
+      }
+      if (needsSubmit) {
         await admin.submitButton.click();
-        await expect(admin.statusMessage).toContainText('Dane zostały zmienione');
+        await expect(admin.statusMessage).toContainText(AdminPage.MSG_SUCCESS);
       }
     });
 
     test.afterEach(async ({ page }) => {
       const admin = new AdminPage(page);
       await admin.goto();
+      const [current, blockIp, cookieIsTak] = await Promise.all([
+        readInputValue(admin.emailField),
+        readInputValue(admin.blockIpField),
+        admin.blockCookieRadioYes.isChecked(),
+      ]);
       let needsSubmit = false;
-      const current = await readInputValue(admin.emailField);
       if (current !== originalEmail) {
         await admin.emailField.fill(originalEmail);
         needsSubmit = true;
       }
-      const blockIp = await readInputValue(admin.blockIpField);
       if (blockIp !== '') {
         await admin.blockIpField.fill('');
         needsSubmit = true;
       }
-      if (await admin.blockCookieRadioYes.isChecked()) {
+      if (cookieIsTak) {
         await admin.blockCookieRadioNo.check();
         needsSubmit = true;
       }
       if (needsSubmit) {
         await admin.submitButton.click();
-        await expect(admin.statusMessage).toContainText('Dane zostały zmienione');
+        await expect(admin.statusMessage).toContainText(AdminPage.MSG_SUCCESS);
       }
     });
 
@@ -262,7 +269,7 @@ test.describe(
 
       await admin.emailField.fill(SAFE_TEST_EMAIL);
       await admin.submitButton.click();
-      await expect(admin.statusMessage).toContainText('Dane zostały zmienione');
+      await expect(admin.statusMessage).toContainText(AdminPage.MSG_SUCCESS);
 
       // Re-fetch the form to confirm the change persisted to the DB rather than just
       // echoing back the submitted value.
@@ -312,7 +319,7 @@ test.describe(
       await admin.goto();
       await admin.blockIpField.fill(sourceIp);
       await admin.submitButton.click();
-      await expect(admin.statusMessage).toContainText('Dane zostały zmienione');
+      await expect(admin.statusMessage).toContainText(AdminPage.MSG_SUCCESS);
 
       // Fire a second tracking hit. With block_ip matching the source, the tracker
       // must reject the request before recording it — the hit is never persisted.
@@ -328,7 +335,7 @@ test.describe(
       await admin.goto();
       await admin.blockIpField.fill('');
       await admin.submitButton.click();
-      await expect(admin.statusMessage).toContainText('Dane zostały zmienione');
+      await expect(admin.statusMessage).toContainText(AdminPage.MSG_SUCCESS);
 
       await hitsPage.goto();
       await hitsPage.submitButton.click();
@@ -350,7 +357,7 @@ test.describe(
       await admin.goto();
       await admin.blockCookieRadioYes.check();
       await admin.submitButton.click();
-      await expect(admin.statusMessage).toContainText('Dane zostały zmienione');
+      await expect(admin.statusMessage).toContainText(AdminPage.MSG_SUCCESS);
 
       const blocked = await fireTrackingHit(page, baseURL, TRACKING_FIXTURES[0], testInfo);
 
