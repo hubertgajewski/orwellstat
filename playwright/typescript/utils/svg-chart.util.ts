@@ -1,5 +1,9 @@
 import { type Locator, type Page, expect } from '@fixtures/base.fixture';
 import type { SvgAnalysis } from '@types-local/svg-analysis';
+import {
+  CHART_TABLE_TOLERANCE_HUNDREDTHS,
+  chartTablePercentGapHundredths,
+} from './svg-chart-percent.util.ts';
 
 // Navigate to `pageUrl` and wait for the SVG chart sub-resource (`chart.php` /
 // `chart_all.php`) to load. On staging, Firefox does not cache Basic Auth credentials for
@@ -95,12 +99,6 @@ export async function dataTableTopRows(page: Page, n: number): Promise<DataTable
   }, n);
 }
 
-// Strip the bracket wrapper the SVG uses around percentages ("[39.67%]" → "39.67%") so the
-// value can be compared directly against the data table cell.
-export function stripSvgPercentBrackets(svgPercent: string): string {
-  return svgPercent.replace(/^\[|\]$/g, '');
-}
-
 // Walk every `Pokaż statystyki` Parametr option on the current page. For each option:
 // switch the combobox, submit, wait for the chart to reload, assert the round-trip held,
 // and assert the chart's label/percent pairs match the data table's top-N rows. Then
@@ -183,20 +181,15 @@ export async function expectEveryParametrChartMatchesTableAndIsDistinct(
         )
         .toBe(expectedChartLabel);
 
-      // Compare percentages within ±1 unit of the table's 2-decimal precision. Both sides
-      // are normalised to integer hundredths to dodge float-rounding artefacts (e.g. the
-      // direct subtraction 28.50 − 28.49 evaluates to 0.0100000000000016 in IEEE-754, so
-      // the `< 0.01` form would spuriously fail on legitimate rounding-direction disagreements).
-      const svgAt2Decimals = Math.round(
-        parseFloat(stripSvgPercentBrackets(pairs[i].percent)) * 100
-      );
-      const tableAt2Decimals = Math.round(parseFloat(tableTop[i].percent) * 100);
+      // Compare percentages within ±CHART_TABLE_TOLERANCE_HUNDREDTHS hundredths
+      // (i.e. ±0.05 pp). See the constant's docblock for why the chart and table can
+      // legitimately disagree by a few hundredths despite reading from the same dataset.
       expect
         .soft(
-          Math.abs(svgAt2Decimals - tableAt2Decimals),
+          chartTablePercentGapHundredths(pairs[i].percent, tableTop[i].percent),
           `${option.label} row ${i + 1}: chart ${pairs[i].percent} ≈ table ${tableTop[i].percent}`
         )
-        .toBeLessThanOrEqual(1);
+        .toBeLessThanOrEqual(CHART_TABLE_TOLERANCE_HUNDREDTHS);
     }
 
     tableLabelsByOption.set(
