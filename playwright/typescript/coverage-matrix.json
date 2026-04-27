@@ -88,7 +88,7 @@
   "forms": {
     "login": false,
     "hitsFilter": true,
-    "adminSettings": false,
+    "adminSettings": true,
     "statisticsParameter": true,
     "styleSelector": true
   }
