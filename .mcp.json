@@ -22,6 +22,11 @@
       "command": "node",
       "args": ["mcp/quality-metrics/dist/index.js"],
       "type": "stdio"
+    },
+    "coverage-matrix": {
+      "command": "node",
+      "args": ["mcp/coverage-matrix/dist/index.js"],
+      "type": "stdio"
     }
   }
 }
