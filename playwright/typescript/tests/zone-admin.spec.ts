@@ -2,7 +2,7 @@ import { test, expect, type Locator } from '@fixtures/base.fixture';
 import { AdminPage } from '@pages/authenticated/admin.page';
 import { HitsPage } from '@pages/authenticated/hits.page';
 import { fireTrackingHit, TRACKING_FIXTURES } from '@utils/track-hit.util';
-import { requireCredentials } from '@utils/env.util';
+import { requireCredentials, requireRealEmail } from '@utils/env.util';
 
 // Email address used for the mutating change-email test. example.com is the
 // IANA-reserved domain for documentation, never resolves to a real inbox, and
@@ -231,12 +231,23 @@ test.describe(
     );
     test.describe.configure({ mode: 'serial' });
 
-    // Captured fresh per test in beforeEach so the afterEach hook can restore the
-    // value the test inherited even if a previous test crashed without restoring.
-    let originalEmail = '';
+    // Guard against the pathological mis-config where `ORWELLSTAT_EMAIL` is set
+    // to the test placeholder — the recovery branch in `beforeEach` would then
+    // rewrite the placeholder with the placeholder, and the change-email test
+    // would submit a no-op the server may not acknowledge with `MSG_SUCCESS`.
+    test.beforeAll(() => {
+      const realEmail = requireRealEmail();
+      if (realEmail === SAFE_TEST_EMAIL) {
+        throw new Error(
+          `ORWELLSTAT_EMAIL must not equal the mutating test's placeholder address ('${SAFE_TEST_EMAIL}'). ` +
+            'Set it to the real email currently stored on the populated account.'
+        );
+      }
+    });
 
     test.beforeEach(async ({ page }) => {
       const admin = new AdminPage(page);
+      const realEmail = requireRealEmail();
       await admin.goto();
       // Read all three mutable fields in parallel — independent DOM lookups.
       const [email, blockIp, cookieIsTak] = await Promise.all([
@@ -244,17 +255,26 @@ test.describe(
         readInputValue(admin.blockIpField),
         admin.blockCookieRadioYes.isChecked(),
       ]);
-      originalEmail = email;
-      if (originalEmail === SAFE_TEST_EMAIL) {
-        // A previous test's restore did not run; refusing to silently overwrite
-        // the unknown real address again. Manual reset required.
+      // Coalesce every reset path (email recovery + blockIp + cookie) into a
+      // single submit so a dirty inherited state costs one form round-trip.
+      let needsSubmit = false;
+      if (email === SAFE_TEST_EMAIL) {
+        // Recovery: a previous afterEach didn't run, so the account is stuck at
+        // the placeholder. Rewrite the canonical address from ORWELLSTAT_EMAIL
+        // before continuing — see #397.
+        await admin.emailField.fill(realEmail);
+        needsSubmit = true;
+      } else if (email !== realEmail) {
+        // Account email is neither the canonical real address nor the test
+        // placeholder. Fail loudly rather than overwriting an unknown value.
+        // The actual values are intentionally not interpolated to keep the real
+        // email out of the Playwright trace and HTML report (which do not
+        // honour GitHub Actions secret masking).
         throw new Error(
-          `Defensive precheck: email is already ${SAFE_TEST_EMAIL} — a previous run's restore did not complete. Reset the populated account's email manually before re-running.`
+          `Account email matches neither ORWELLSTAT_EMAIL nor the test placeholder ('${SAFE_TEST_EMAIL}'). ` +
+            'Verify ORWELLSTAT_EMAIL against the live populated account.'
         );
       }
-      // Coalesce both reset paths into a single submit so a dirty inherited
-      // state costs one form round-trip, not two.
-      let needsSubmit = false;
       if (blockIp !== '') {
         await admin.blockIpField.fill('');
         needsSubmit = true;
@@ -271,6 +291,7 @@ test.describe(
 
     test.afterEach(async ({ page }) => {
       const admin = new AdminPage(page);
+      const realEmail = requireRealEmail();
       await admin.goto();
       const [current, blockIp, cookieIsTak] = await Promise.all([
         readInputValue(admin.emailField),
@@ -278,8 +299,8 @@ test.describe(
         admin.blockCookieRadioYes.isChecked(),
       ]);
       let needsSubmit = false;
-      if (current !== originalEmail) {
-        await admin.emailField.fill(originalEmail);
+      if (current !== realEmail) {
+        await admin.emailField.fill(realEmail);
         needsSubmit = true;
       }
       if (blockIp !== '') {

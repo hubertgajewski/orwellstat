@@ -54,6 +54,8 @@ on:
         required: false
       ORWELLSTAT_PASSWORD_EMPTY:
         required: false
+      ORWELLSTAT_EMAIL:
+        required: false
       BASIC_AUTH_USER:
         required: false
       BASIC_AUTH_PASSWORD:
@@ -113,6 +115,7 @@ jobs:
           ORWELLSTAT_PASSWORD: ${{ secrets.ORWELLSTAT_PASSWORD }}
           ORWELLSTAT_USER_EMPTY: ${{ secrets.ORWELLSTAT_USER_EMPTY }}
           ORWELLSTAT_PASSWORD_EMPTY: ${{ secrets.ORWELLSTAT_PASSWORD_EMPTY }}
+          ORWELLSTAT_EMAIL: ${{ secrets.ORWELLSTAT_EMAIL }}
           BASIC_AUTH_USER: ${{ inputs.env == 'staging' && secrets.BASIC_AUTH_USER || '' }}
           BASIC_AUTH_PASSWORD: ${{ inputs.env == 'staging' && secrets.BASIC_AUTH_PASSWORD || '' }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}

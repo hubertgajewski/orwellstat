@@ -35,3 +35,20 @@ export function requireCredentials(account: Account = 'populated'): {
   }
   return { user: ORWELLSTAT_USER, password: ORWELLSTAT_PASSWORD };
 }
+
+// Canonical email address for the populated account on stage. Used by the
+// zone-admin mutating-settings tests to anchor the post-test restore on a
+// source of truth that survives a cancelled afterEach — see #397. Trimmed
+// before return so a stray space in `.env` cannot silently break the
+// equality checks downstream.
+export function requireRealEmail(): string {
+  const value = process.env.ORWELLSTAT_EMAIL;
+  if (!value || value.trim() === '') {
+    throw new Error(
+      'Missing ORWELLSTAT_EMAIL. ' +
+        'Set it in .env (local) or as a repository secret (CI). ' +
+        'It must match the email currently stored on the populated account.'
+    );
+  }
+  return value.trim();
+}
