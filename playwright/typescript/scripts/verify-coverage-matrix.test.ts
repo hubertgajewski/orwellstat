@@ -106,6 +106,9 @@ function makeAllCoveredTests(): ActiveTest[] {
     // hitsFilter rule keys off (parseSpec emits each describe call as its own top-level
     // entry with describe: null because it doesn't track nesting).
     { file: 'zone-hits.spec.ts', title: 'hits page - filter form', describe: null },
+    // adminSettings rule keys off the primary "admin page - settings form" describe in
+    // zone-admin.spec.ts; same parser convention as hitsFilter.
+    { file: 'zone-admin.spec.ts', title: 'admin page - settings form', describe: null },
   ]);
 }
 
@@ -152,6 +155,7 @@ function makeInSyncMatrix(): CoverageMatrix {
       statisticsParameter: true,
       styleSelector: true,
       hitsFilter: true,
+      adminSettings: true,
     }
   );
 }
@@ -342,6 +346,30 @@ test('computeCovered: forms — hitsFilter requires the "hits page - filter form
   );
   // No tests at all → not covered.
   assert.ok(!computeCovered([]).has('form|hitsFilter'));
+});
+
+test('computeCovered: forms — adminSettings requires the "admin page - settings form" describe in zone-admin.spec.ts', () => {
+  // Same describe-as-rule-key pattern as hitsFilter. Sibling describes in the same
+  // spec file (e.g. password mismatch, mutating settings) cover additional flows of
+  // the same form but are not required to flip the cell.
+  assert.ok(
+    computeCovered([
+      { file: 'zone-admin.spec.ts', title: 'admin page - settings form', describe: null },
+    ]).has('form|adminSettings')
+  );
+  // The mutating-settings sibling describe alone must not flip the cell — the rule
+  // is anchored on the primary read-only describe so removing it surfaces the gap.
+  assert.ok(
+    !computeCovered([
+      {
+        file: 'zone-admin.spec.ts',
+        title: 'admin page - mutating settings (Chromium project only)',
+        describe: null,
+      },
+    ]).has('form|adminSettings')
+  );
+  // No tests at all → not covered.
+  assert.ok(!computeCovered([]).has('form|adminSettings'));
 });
 
 test('computeCovered: forms — styleSelector matches the raw `${style} style` template parseSpec produces', () => {

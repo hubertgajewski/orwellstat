@@ -147,8 +147,16 @@ export function computeCovered(tests: ActiveTest[]): Set<CellKey> {
   if (has('zone-hits.spec.ts', (t) => t.title === 'hits page - filter form')) {
     covered.add(formCell('hitsFilter'));
   }
-  // login / adminSettings — only test.fixme stubs in forms.spec.ts; never covered
-  // until those are implemented.
+  // adminSettings — covered by the "admin page - settings form" describe block in
+  // zone-admin.spec.ts. The same parser convention as hitsFilter applies. Sibling
+  // describes in the same spec file (password mismatch + mutating settings) exercise
+  // additional flows of the same form; the form cell flips to covered as soon as the
+  // primary read-only describe is active.
+  if (has('zone-admin.spec.ts', (t) => t.title === 'admin page - settings form')) {
+    covered.add(formCell('adminSettings'));
+  }
+  // login — only a test.fixme stub in forms.spec.ts; never covered until that is
+  // implemented.
 
   return covered;
 }
