@@ -2,14 +2,11 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { spawnSync } from 'child_process';
-import { readFileSync } from 'fs';
-import { join, resolve } from 'path';
-import { realpathSync } from 'fs';
+import { readFileSync, realpathSync } from 'fs';
+import { join } from 'path';
 import { fileURLToPath } from 'url';
+import { repoRoot, ok, err } from '@orwellstat/mcp-shared';
 
-function repoRoot(): string {
-  return resolve(process.env.REPO_ROOT ?? process.cwd());
-}
 function scriptPath(): string {
   return join(repoRoot(), 'scripts', 'generate-quality-metrics.py');
 }
@@ -41,14 +38,6 @@ interface HistoryPoint {
   escape_rate: string;
   mttr: string;
   coverage: string;
-}
-
-function ok(data: unknown) {
-  return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
-}
-
-function err(message: string) {
-  return { content: [{ type: 'text' as const, text: `ERROR: ${message}` }], isError: true };
 }
 
 function runScript(): { data?: ScriptOutput; error?: string } {

@@ -87,6 +87,7 @@ playwright/
   typescript/               # Playwright tests in TypeScript
 bruno/                      # Bruno API request collection
 mcp/
+  shared/                   # shared helpers (repoRoot, ok, err) used by the local MCP servers
   quality-metrics/          # local MCP server exposing escape rate, MTTR, and metrics history
   coverage-matrix/          # local MCP server exposing coverage matrix gaps, summary, and mark_covered
 ```
@@ -424,7 +425,7 @@ After calculating metrics, the workflow runs `scripts/generate-quality-metrics.p
 
 ## MCP servers
 
-Five MCP servers are declared in `.mcp.json` and loaded automatically by any MCP-compatible AI assistant opened from the repo root. All five are loaded automatically — no local setup needed beyond having Node.js and Docker installed (and a one-off `npm run build` in `mcp/quality-metrics/` and `mcp/coverage-matrix/` for the local servers).
+Five MCP servers are declared in `.mcp.json` and loaded automatically by any MCP-compatible AI assistant opened from the repo root. All five are loaded automatically — no local setup needed beyond having Node.js and Docker installed (and a one-off `npm install && npm run build` in `mcp/shared/` followed by the same in `mcp/quality-metrics/` and `mcp/coverage-matrix/` for the local servers; both consumers depend on the shared package via a `file:../shared` path, so it must be built first).
 
 | Server                | Key in `.mcp.json`      | Purpose                                                                           |
 | --------------------- | ----------------------- | --------------------------------------------------------------------------------- |
@@ -498,7 +499,7 @@ Docker MCP gateway. Used for interacting with Docker containers when running Git
 
 Local MCP server in `mcp/quality-metrics/` that exposes the same defect escape rate, MTTR, and metrics history data as `QUALITY_METRICS.md` — callable on demand from an AI assistant without waiting for the monthly `quality-metrics.yml` workflow run.
 
-**Setup:** Build once from the repo root — `(cd mcp/quality-metrics && npm install && npm run build)`. The server runs via `node mcp/quality-metrics/dist/index.js` as configured in `.mcp.json`.
+**Setup:** Build the shared helpers first, then this server — `(cd mcp/shared && npm install && npm run build) && (cd mcp/quality-metrics && npm install && npm run build)`. The server runs via `node mcp/quality-metrics/dist/index.js` as configured in `.mcp.json`.
 
 `get_defect_escape_rate` and `get_mttr` shell out to `scripts/generate-quality-metrics.py --json`, so the values returned are guaranteed to match `QUALITY_METRICS.md`. Requires `gh` to be authenticated locally (the default in a developer session).
 
@@ -514,7 +515,7 @@ When no `bug`-labeled issues exist, all three tools return a clear `"No bug issu
 
 Local MCP server in `mcp/coverage-matrix/` that exposes structured access to `playwright/typescript/coverage-matrix.json`. Lets `/generate-test`, `/generate-stubs`, and other agentic workflows query gaps and percentages through typed tools instead of parsing JSON by hand, and supports user-directed flips of a covered cell with input validation.
 
-**Setup:** Build once from the repo root — `(cd mcp/coverage-matrix && npm install && npm run build)`. The server runs via `node mcp/coverage-matrix/dist/index.js` as configured in `.mcp.json`.
+**Setup:** Build the shared helpers first, then this server — `(cd mcp/shared && npm install && npm run build) && (cd mcp/coverage-matrix && npm install && npm run build)`. The server runs via `node mcp/coverage-matrix/dist/index.js` as configured in `.mcp.json`.
 
 The summary percentages match those produced by the **Test Coverage Trends** workflow (`.github/workflows/test-coverage.yml`) since both compute `round(covered / total * 100)` over the same matrix sections. `mark_covered` writes the file back with the same 2-space JSON formatting and trailing newline as the existing matrix; it does not flip forms (the matrix's `forms` section is read-only via these tools).
 
