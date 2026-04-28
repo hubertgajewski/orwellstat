@@ -2,9 +2,10 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { readFileSync, writeFileSync, realpathSync } from 'fs';
-import { join, resolve } from 'path';
+import { join } from 'path';
 import { fileURLToPath } from 'url';
 import { z } from 'zod';
+import { repoRoot, ok, err } from '@orwellstat/mcp-shared';
 
 const PAGE_CATEGORIES = ['title', 'content', 'accessibility', 'visualRegression', 'api'] as const;
 const GAP_EXCLUDED = new Set(['title', 'api']);
@@ -18,25 +19,8 @@ const matrixSchema = z.object({
 
 type CoverageMatrix = z.infer<typeof matrixSchema>;
 
-function repoRoot(): string {
-  return resolve(process.env.REPO_ROOT ?? process.cwd());
-}
-
 function matrixPath(): string {
   return join(repoRoot(), 'playwright', 'typescript', 'coverage-matrix.json');
-}
-
-function ok(data: unknown) {
-  return {
-    content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }],
-  };
-}
-
-function err(message: string) {
-  return {
-    content: [{ type: 'text' as const, text: `ERROR: ${message}` }],
-    isError: true,
-  };
 }
 
 function readMatrix(): { matrix?: CoverageMatrix; error?: string } {
