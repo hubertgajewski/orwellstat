@@ -2,9 +2,8 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { spawnSync } from 'child_process';
-import { readFileSync } from 'fs';
+import { readFileSync, realpathSync } from 'fs';
 import { join } from 'path';
-import { realpathSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { repoRoot, ok, err } from '@orwellstat/mcp-shared';
 
