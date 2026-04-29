@@ -185,29 +185,33 @@ test.describe('admin page - settings form', { tag: '@regression' }, () => {
 // `playwright-typescript.yml` matrix would otherwise let `trace: 'on-first-retry'`
 // capture the form-encoded POST body in cleartext on a CI flake — see #410 for
 // the full rationale and mitigation chain.
-test.describe('admin page - password mismatch (real credential)', { tag: '@regression' }, () => {
-  test.skip(
-    () => process.env.REAL_CREDENTIAL_RUN !== 'true',
-    'gated on REAL_CREDENTIAL_RUN; runs only under playwright-real-credential.yml (#410)'
-  );
-  test('correct current password with non-matching new passwords shows the mismatch error', async ({
-    page,
-  }) => {
-    const admin = new AdminPage(page);
-    const { password } = requireCredentials('populated');
-    await admin.goto();
+test.describe(
+  'admin page - password mismatch (real credential)',
+  { tag: ['@regression', '@real-credential'] },
+  () => {
+    test.skip(
+      () => process.env.REAL_CREDENTIAL_RUN !== 'true',
+      'gated on REAL_CREDENTIAL_RUN; runs only under playwright-real-credential.yml (#410)'
+    );
+    test('correct current password with non-matching new passwords shows the mismatch error', async ({
+      page,
+    }) => {
+      const admin = new AdminPage(page);
+      const { password } = requireCredentials('populated');
+      await admin.goto();
 
-    await admin.currentPasswordField.fill(password);
-    await admin.newPasswordField.fill('newpw-attempt-1');
-    await admin.confirmPasswordField.fill('newpw-attempt-2');
-    await admin.submitButton.click();
+      await admin.currentPasswordField.fill(password);
+      await admin.newPasswordField.fill('newpw-attempt-1');
+      await admin.confirmPasswordField.fill('newpw-attempt-2');
+      await admin.submitButton.click();
 
-    // With oldpassword correct AND newpassword != newpassword2, the server
-    // surfaces this validation error and runs no profile UPDATE — the test is
-    // non-mutating.
-    await expect(admin.statusMessage).toContainText(AdminPage.MSG_PASSWORD_MISMATCH);
-  });
-});
+      // With oldpassword correct AND newpassword != newpassword2, the server
+      // surfaces this validation error and runs no profile UPDATE — the test is
+      // non-mutating.
+      await expect(admin.statusMessage).toContainText(AdminPage.MSG_PASSWORD_MISMATCH);
+    });
+  }
+);
 
 // Mutating describe — every test changes server-side profile state and restores
 // it afterwards. Confined to a single browser project (the desktop "Chromium")

@@ -24,10 +24,14 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,
   testMatch: /zone-admin\.spec\.ts$/,
-  // The other describes in zone-admin.spec.ts (form-state, content, mutating
-  // settings) don't need the hardened settings — running them here would only
+  // Tag-based grep: `@real-credential` selects the password-mismatch describe
+  // (and only that describe), and `@auth-populated` keeps the populated setup
+  // test in scope so the Chromium project's `dependencies: ['setup']` is
+  // satisfied and `.auth/populated.json` gets written. The empty setup test
+  // (`@auth-empty`) and every other describe in zone-admin.spec.ts are filtered
+  // out — they don't need the hardened settings, and running them would only
   // widen the artefact surface.
-  grep: /password mismatch \(real credential\)/,
+  grep: /@real-credential|@auth-populated/,
   use: {
     ...baseConfig.use,
     trace: 'off',
