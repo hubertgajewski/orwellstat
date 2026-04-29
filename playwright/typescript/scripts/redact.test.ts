@@ -20,7 +20,13 @@ function runRedact(input: string): string {
 
 describe('redact CLI (stdin → stdout)', () => {
   test('redacts Cookie header value', () => {
-    assert.equal(runRedact('Cookie: session=abc123; path=/'), 'Cookie: session=[REDACTED]; path=/');
+    // The first key=value is masked by the `Cookie:` rule; `; path=/` is then
+    // masked by the multi-pair `; key=value` rule (intentional over-redaction —
+    // see diagnosis.util.ts:REDACT_PATTERNS for the rationale).
+    assert.equal(
+      runRedact('Cookie: session=abc123; path=/'),
+      'Cookie: session=[REDACTED]; path=[REDACTED]'
+    );
   });
 
   test('redacts Authorization: Bearer token', () => {
