@@ -1569,6 +1569,7 @@ class TestRedactCli(unittest.TestCase):
         self.assertIn("no error-context.md or dom.xhtml", stderr_text)
 
 
+@unittest.skipIf(sys.platform == "win32", "POSIX shell script")
 class TestRedactCliFailureRaises(unittest.TestCase):
     """When the TS CLI exits non-zero, _redact must raise — never return the
     unredacted input.  Pointed at a deliberately failing dummy script so the

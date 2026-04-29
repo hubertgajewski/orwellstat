@@ -72,7 +72,7 @@ def _redact(text: str) -> str:
     the subprocess to avoid spawn overhead on absent artifacts.
     """
     if not text:
-        return text
+        return ""
     result = subprocess.run(
         REDACT_CMD,
         cwd=str(REDACT_CWD),
