@@ -26,10 +26,10 @@ async function authenticate(page: Page, account: Account): Promise<void> {
     .storageState({ path: new URL(`.auth/${account}.json`, import.meta.url).pathname });
 }
 
-setup('authenticate populated', async ({ page }) => {
+setup('authenticate populated', { tag: '@auth-populated' }, async ({ page }) => {
   await authenticate(page, 'populated');
 });
 
-setup('authenticate empty', async ({ page }) => {
+setup('authenticate empty', { tag: '@auth-empty' }, async ({ page }) => {
   await authenticate(page, 'empty');
 });
