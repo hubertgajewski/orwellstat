@@ -93,6 +93,66 @@ def _run_url(run_id: str) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Suggested-selector validation (defends against hostile AI output)
+# ---------------------------------------------------------------------------
+
+# Allow-list shape: a Playwright locator expression that begins with
+# `getBy*(...)`, `locator(...)`, or `frameLocator(...)` (optionally prefixed
+# by `page.`, `locator.`, or `frameLocator.`), then any number of chained
+# `.first() / .last() / .nth(...) / .filter(...) / .getBy*(...) / .locator(...)`
+# calls.  Argument bodies allow anything except the FORBIDDEN chars below.
+LOCATOR_SHAPE = re.compile(
+    r"^\s*(?:page|locator|frameLocator)?\.?(?:getBy[A-Z][A-Za-z]+|locator|frameLocator)"
+    r"\([^\n`$]+\)(?:\.(?:first|last|nth|filter|getBy[A-Z][A-Za-z]+|locator)\([^\n`$]*\))*\s*$"
+)
+
+# Bytes that have no business inside a single Playwright locator expression
+# but would be useful to an attacker pivoting from a string-replace into code
+# execution: newline (multi-statement), backtick (template literal), `;`
+# (statement terminator), `>` (CSS combinator AND shell redirect).  `$(` is
+# checked separately so the substring isn't masked by also banning every `$`.
+FORBIDDEN_CHARS = frozenset("\n`;>")
+
+# Hard cap on AI-suggested selector length.  Real Playwright locators in this
+# repo are well under 200 chars; 500 leaves room for object-literal options.
+MAX_SUGGESTED_LENGTH = 500
+
+
+class InvalidSuggestedSelectorError(ValueError):
+    """Raised when an AI response's suggestedSelector fails the safety
+    allow-list (shape, length, or forbidden chars).  Treated as a hard halt:
+    the run terminates without opening any source file for writing."""
+
+
+class SelectorReplaceError(RuntimeError):
+    """Raised when `_apply_selector_fix` cannot perform an exact substring
+    replace.  Refuses to fall back to fuzzy matching — a near-miss against
+    a different chain in the same file would mutate the wrong code."""
+
+
+def _is_valid_suggested(value: object) -> bool:
+    """Return True iff `value` looks like a single Playwright locator
+    expression and contains no obvious code-injection markers.
+
+    Rejection classes (any of these → False):
+      - non-string,
+      - longer than MAX_SUGGESTED_LENGTH chars,
+      - contains any byte in FORBIDDEN_CHARS,
+      - contains the substring "$(",
+      - does not match LOCATOR_SHAPE.
+    """
+    if not isinstance(value, str):
+        return False
+    if len(value) > MAX_SUGGESTED_LENGTH:
+        return False
+    if FORBIDDEN_CHARS & set(value):
+        return False
+    if "$(" in value:
+        return False
+    return bool(LOCATOR_SHAPE.match(value))
+
+
+# ---------------------------------------------------------------------------
 # Data classes
 # ---------------------------------------------------------------------------
 
@@ -442,6 +502,16 @@ def _parse_ai_response(text: str, broken_selector: str) -> SelectorFix | None:
     explanation = data.get("explanation", "")
     if not isinstance(suggested, str) or not isinstance(explanation, str):
         return None
+    # Safety gate: a hostile AI response could pass the schema check (string +
+    # one of three confidence values) and then carry an arbitrary payload to
+    # be planted into a spec file by the downstream replace.  Reject anything
+    # outside the Playwright-locator shape and halt the run hard — silent
+    # `return None` here would let the next fix in the batch proceed.
+    if not _is_valid_suggested(suggested):
+        raise InvalidSuggestedSelectorError(
+            f"AI returned a suggestedSelector that does not pass the locator-shape "
+            f"allow-list (length, forbidden chars, or shape): {suggested!r}"
+        )
     return SelectorFix(
         confidence=conf,
         broken_selector=broken_selector,
@@ -649,79 +719,25 @@ def post_comment(pr_number: int, body: str, *, dry_run: bool = False) -> None:
     print(f"[self-healing] Posted comment on PR #{pr_number}")
 
 
-_PW_METHODS = (
-    "locator", "getByRole", "getByText", "getByLabel", "getByTestId",
-    "getByPlaceholder", "getByAltText", "getByTitle", "filter", "nth",
-    "first", "last",
-)
-_PW_SPLIT_PATTERN = r"\.(?=" + "|".join(_PW_METHODS) + r")"
+def _apply_selector_fix(content: str, fix: SelectorFix) -> str:
+    """Replace a broken selector in source code via exact substring match.
 
+    Refuses any fuzzy match.  When the broken selector is not an exact
+    substring of `content` (e.g. the source wraps the chain across multiple
+    lines while `broken_selector` is single-line), raises
+    `SelectorReplaceError` — a near-miss against an unrelated chain in the
+    same file would mutate the wrong code.  Multi-line chain repair is
+    out of scope for this auto-fix path; a human handles those cases.
 
-def _find_minimal_diff(old: str, new: str) -> tuple[str, str] | None:
-    """Return the minimal (old_part, new_part) that differ between two strings.
-
-    Trims the longest common prefix and suffix, then extends the remaining
-    diff to the nearest quote boundary so it's unique enough for safe
-    search-and-replace in source code.
+    Returns the new file contents.  The diff is guaranteed to be confined
+    to the single contiguous range originally occupied by `fix.broken_selector`.
     """
-    prefix = 0
-    while prefix < len(old) and prefix < len(new) and old[prefix] == new[prefix]:
-        prefix += 1
-    suffix = 0
-    while (suffix < len(old) - prefix and suffix < len(new) - prefix
-           and old[-(suffix + 1)] == new[-(suffix + 1)]):
-        suffix += 1
-
-    # Walk prefix back to the nearest quote character so the extracted
-    # diff starts just inside a quoted string literal.  If there is no
-    # opening quote between the diff point and the start of the string
-    # (e.g. the diff is outside any quoted arg), prefix stays at 0.
-    # NOTE: this may land on a *closing* quote from a preceding argument;
-    # the resulting old_mid then won't be found in multi-line source and
-    # _apply_selector_fix will fall through to the regex path — that is
-    # the correct behaviour.
-    while prefix > 0 and old[prefix - 1] not in ("'", '"'):
-        prefix -= 1
-    end_old = len(old) - suffix
-    end_new = len(new) - suffix
-    while end_old < len(old) and old[end_old] not in ("'", '"'):
-        end_old += 1
-        end_new += 1
-
-    old_mid = old[prefix:end_old]
-    new_mid = new[prefix:end_new]
-    if not old_mid or old_mid == new_mid or len(old_mid) < 4:
-        return None
-    return old_mid, new_mid
-
-
-def _apply_selector_fix(content: str, fix: SelectorFix) -> str | None:
-    """Replace a broken selector in source code, handling multi-line chains.
-
-    Prefers a minimal replacement (only the changed substring, e.g. a string
-    argument) to preserve the original multi-line formatting.  Falls back to
-    full-span replacement when the minimal diff can't be located in the source.
-    """
-    # Fast path: exact substring match (single-line source)
-    if fix.broken_selector in content:
-        return content.replace(fix.broken_selector, fix.suggested_selector, 1)
-
-    # Try minimal diff: replace only the changed part to preserve formatting
-    diff = _find_minimal_diff(fix.broken_selector, fix.suggested_selector)
-    if diff:
-        old_part, new_part = diff
-        if old_part in content:
-            return content.replace(old_part, new_part, 1)
-
-    # Fallback: full multi-line span replacement (may alter formatting)
-    parts = re.split(_PW_SPLIT_PATTERN, fix.broken_selector)
-    if len(parts) < 2:
-        return None
-    pattern = r"\s*\.?\s*".join(re.escape(p) for p in parts)
-    m = re.search(pattern, content)
-    if not m:
-        return None
-    return content[: m.start()] + fix.suggested_selector + content[m.end() :]
+    if fix.broken_selector not in content:
+        raise SelectorReplaceError(
+            f"broken_selector not found in source as an exact substring: "
+            f"{fix.broken_selector!r}"
+        )
+    return content.replace(fix.broken_selector, fix.suggested_selector, 1)
 
 
 def create_draft_pr(
@@ -754,18 +770,33 @@ def create_draft_pr(
     # Create branch from the failing commit
     git_run("git", "checkout", "-b", fix_branch, head_sha)
 
-    # Apply each fix to test source files
+    # Apply each fix to test source files.  `_apply_selector_fix` raises
+    # `SelectorReplaceError` per file when the broken selector isn't an exact
+    # substring of that file — the broken selector is rarely in every spec, so
+    # we catch per file and keep iterating.  If no file in the loop matched,
+    # the fix is reported as un-appliable on stderr and the next fix runs.
     pw_dir = Path("playwright/typescript")
     applied = 0
     for fix in fixes:
+        fix_applied = False
         for ts_file in pw_dir.rglob("*.spec.ts"):
             content = ts_file.read_text(encoding="utf-8")
-            new_content = _apply_selector_fix(content, fix)
-            if new_content and new_content != content:
+            try:
+                new_content = _apply_selector_fix(content, fix)
+            except SelectorReplaceError:
+                continue
+            if new_content != content:
                 ts_file.write_text(new_content, encoding="utf-8")
                 git_run("git", "add", str(ts_file))
                 applied += 1
+                fix_applied = True
                 break  # Only fix first occurrence
+        if not fix_applied:
+            print(
+                f"[self-healing] could not apply fix (no exact match in any spec): "
+                f"{fix.broken_selector!r}",
+                file=sys.stderr,
+            )
 
     if applied == 0:
         print("[self-healing] No fixes could be applied to source files", file=sys.stderr)
