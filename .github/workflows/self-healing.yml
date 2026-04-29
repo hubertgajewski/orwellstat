@@ -13,10 +13,12 @@ concurrency:
 
 jobs:
   self-heal:
+    # Layer 0: head-repo guard — refuse fork-originated workflow_run triggers
     # Layer 1: branch guard — never process self-healing branches (loop prevention)
     # Layer 6: conclusion check — only process failed runs
     if: >-
       github.repository == 'hubertgajewski/orwellstat' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
       github.event.workflow_run.conclusion == 'failure' &&
       vars.SELF_HEALING == 'true' &&
       github.event.workflow_run.triggering_actor.login != 'dependabot[bot]' &&
