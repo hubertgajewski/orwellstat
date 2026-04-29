@@ -4,15 +4,16 @@ Multi-language, multi-framework end-to-end test suite for [Orwell Stat](https://
 
 ## Claude skills
 
-Five project-scoped skills are available in Claude Code (stored in `.claude/skills/`) and appear in the VSCode extension `/` menu:
+Six project-scoped skills are available in Claude Code (stored in `.claude/skills/`) and appear in the VSCode extension `/` menu:
 
-| Skill             | Usage                         | What it does                                                                                                                                                                                                            |
-| ----------------- | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/fix-issue`      | `/fix-issue <number>`         | Fixes a GitHub issue end-to-end: fetch, implement, test, review, commit, and open a PR                                                                                                                                  |
-| `/create-issue`   | `/create-issue <description>` | Scaffolds a GitHub issue in the documented format (User Story / Context / AC / Implementation Hint / DoD / milestone) and creates it via `gh issue create`                                                              |
-| `/deep-review`    | `/deep-review`                | Works through every item on the code review checklist from `.claude/skills/deep-review/SKILL.md`, applies general diff checks and CI workflow checks, and explicitly states a finding (pass / fail / N/A) for each item |
-| `/generate-stubs` | `/generate-stubs`             | Reads `coverage-matrix.json`, finds uncovered page-category combinations (excluding `title` and `api`), and generates `test.fixme()` stubs in the appropriate spec files                                                |
-| `/generate-test`  | `/generate-test <page>`       | Scaffolds `test.fixme()` blocks for one page's content / accessibility / visual-regression gaps in `coverage-matrix.json`, appending to existing spec files (never overwriting) or creating new ones                    |
+| Skill                 | Usage                            | What it does                                                                                                                                                                                                            |
+| --------------------- | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/fix-issue`          | `/fix-issue <number>`            | Fixes a GitHub issue end-to-end: fetch, implement, test, review, commit, and open a PR                                                                                                                                  |
+| `/create-issue`       | `/create-issue <description>`    | Scaffolds a GitHub issue in the documented format (User Story / Context / AC / Implementation Hint / DoD / milestone) and creates it via `gh issue create`                                                              |
+| `/deep-review`        | `/deep-review`                   | Works through every item on the code review checklist from `.claude/skills/deep-review/SKILL.md`, applies general diff checks and CI workflow checks, and explicitly states a finding (pass / fail / N/A) for each item |
+| `/deep-review-next`   | `/deep-review-next [arg]`        | Multi-agent orchestrator (transitional name; replaces `/deep-review` once benchmarked). Dispatches specialist reviewer agents in parallel via the Task tool, applies fixes across all severities, and runs a security-always re-review convergence loop — all in one invocation. `arg` is empty (local diff), a PR number (`213`), a freeform instruction, or a combination (`213 focus on race conditions`) |
+| `/generate-stubs`     | `/generate-stubs`                | Reads `coverage-matrix.json`, finds uncovered page-category combinations (excluding `title` and `api`), and generates `test.fixme()` stubs in the appropriate spec files                                                |
+| `/generate-test`      | `/generate-test <page>`          | Scaffolds `test.fixme()` blocks for one page's content / accessibility / visual-regression gaps in `coverage-matrix.json`, appending to existing spec files (never overwriting) or creating new ones                    |
 
 ## Project board
 
