@@ -14,10 +14,13 @@ import baseConfig from './playwright.config';
 // per-describe). Isolating into a separate config that targets only this test
 // is the only safe way to neutralise the leak.
 //
-// The companion guard in `zone-admin.spec.ts` (`test.skip(!process.env.REAL_CREDENTIAL_RUN, ...)`)
-// keeps the test out of the standard `playwright-typescript.yml` matrix so
-// the real password is never filled under the project-wide `trace:
-// 'on-first-retry'` / `retries: 2` settings.
+// The companion guard in `zone-admin.spec.ts`
+// (`test.skip(process.env.REAL_CREDENTIAL_RUN !== 'true', ...)`) keeps the test
+// out of the standard `playwright-typescript.yml` matrix so the real password
+// is never filled under the project-wide `trace: 'on-first-retry'` /
+// `retries: 2` settings. Only the literal string `'true'` opens the gate —
+// `1`, `yes`, etc. are deliberately rejected so the env var must be set
+// explicitly.
 export default defineConfig({
   ...baseConfig,
   retries: 0,
