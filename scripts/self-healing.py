@@ -51,6 +51,38 @@ SELECTOR_ERROR_PATTERN = re.compile(
 
 DOM_TRUNCATE_CHARS = 30_000
 
+# Redaction CLI: keeps redactSensitive in playwright/typescript/utils/diagnosis.util.ts
+# the single source of truth for both the TS and Python LLM paths (issue #402).
+# Module-level so tests can monkeypatch the command to point at a deliberately
+# failing script.
+REDACT_CWD = Path(__file__).resolve().parent.parent / "playwright" / "typescript"
+REDACT_CMD: tuple[str, ...] = (
+    "node",
+    "--experimental-strip-types",
+    "--disable-warning=ExperimentalWarning",
+    "scripts/redact.ts",
+)
+
+
+def _redact(text: str) -> str:
+    """Pipe *text* through the TS redact CLI, returning the masked output.
+
+    Subprocess failure (non-zero exit, missing node, missing script) raises;
+    the caller never sees unredacted content on error.  Empty input bypasses
+    the subprocess to avoid spawn overhead on absent artifacts.
+    """
+    if not text:
+        return text
+    result = subprocess.run(
+        REDACT_CMD,
+        cwd=str(REDACT_CWD),
+        input=text,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return result.stdout
+
 
 def _run_url(run_id: str) -> str:
     """Build a URL to the workflow run, absolute when GITHUB_REPOSITORY is set."""
@@ -842,12 +874,15 @@ def main(data_dir: str) -> None:
                 test_output_dir = results_file.parent / test.output_dir
                 ec_path = test_output_dir / "error-context.md"
                 dom_path = test_output_dir / "dom.xhtml"
+                # Redact at the read boundary so cookies, bearer tokens, and
+                # emails captured in failure traces never reach the LLM
+                # provider in cleartext (issue #402).
                 error_context = (
-                    ec_path.read_text(encoding="utf-8", errors="replace")
+                    _redact(ec_path.read_text(encoding="utf-8", errors="replace"))
                     if ec_path.is_file() else None
                 )
                 dom_content = (
-                    dom_path.read_text(encoding="utf-8", errors="replace")
+                    _redact(dom_path.read_text(encoding="utf-8", errors="replace"))
                     if dom_path.is_file() else ""
                 )
                 if not error_context and not dom_content:

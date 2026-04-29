@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
 import sys
 import tempfile
 import textwrap
@@ -1377,6 +1378,148 @@ class TestYamlGuards(unittest.TestCase):
 
     def test_repo_check(self):
         self.assertIn("github.repository", self.workflow_content)
+
+
+# ===================================================================
+# Redaction of LLM-bound artifacts (issue #402)
+#
+# self-healing.py shells out to playwright/typescript/scripts/redact.ts so the
+# regex set in utils/diagnosis.util.ts stays the single source of truth for
+# both the TS and Python LLM paths.  These tests assert two contracts:
+#   1. Sensitive content from error-context.md is masked before reaching the
+#      AI prompt body (real CLI invocation, end-to-end).
+#   2. CLI failure raises in Python — the script never falls back to sending
+#      unredacted content.
+# ===================================================================
+
+
+class TestRedactCli(unittest.TestCase):
+    """End-to-end test that hits the real TS CLI under playwright/typescript."""
+
+    SENSITIVE_ERROR_CONTEXT = textwrap.dedent("""\
+        # Test info
+
+        - Name: api.spec.ts >> authenticated request
+        - Location: tests/api.spec.ts:42:3
+
+        # Error details
+
+        ```
+        Cookie: session=s3cret_session_value
+        Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.payload.signature
+        ```
+
+        # Page snapshot
+
+        ```yaml
+        - text: Contact alice@example.com for support
+        ```
+
+        # Test source
+
+        ```ts
+        await page.locator('#submit').click();
+        ```""")
+
+    @patch("self_healing._call_anthropic")
+    def test_error_context_is_masked_in_llm_prompt(self, mock_call):
+        """Given error-context.md contains sensitive values, the prompt body
+        passed to the AI provider must contain the [REDACTED] mask, not the raw
+        cookie / bearer token / email local-part."""
+        mock_call.return_value = json.dumps({
+            "confidence": "high",
+            "brokenSelector": "locator('#submit')",
+            "suggestedSelector": "locator('#submit-button')",
+            "explanation": "id changed",
+        })
+        os.environ["ANTHROPIC_API_KEY"] = "test-key"
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                shard = Path(tmp) / "self-healing-data-chromium"
+                tr = shard / "test-results" / "api-authenticated-request-Chromium"
+                _write_file(tr / "error-context.md", self.SENSITIVE_ERROR_CONTEXT)
+
+                results = {
+                    "suites": [
+                        {
+                            "title": "api.spec.ts",
+                            "file": "api.spec.ts",
+                            "specs": [
+                                {
+                                    "title": "authenticated request",
+                                    "ok": False,
+                                    "file": "api.spec.ts",
+                                    "line": 42,
+                                    "column": 3,
+                                    "tests": [
+                                        {
+                                            "projectId": "Chromium",
+                                            "projectName": "Chromium",
+                                            "status": "unexpected",
+                                            "results": [
+                                                {
+                                                    "status": "failed",
+                                                    "errors": [
+                                                        {"message": "waiting for locator('#submit')"}
+                                                    ],
+                                                    "attachments": [
+                                                        {
+                                                            "name": "error-context",
+                                                            "contentType": "text/markdown",
+                                                            "path": "/runner/test-results/api-authenticated-request-Chromium/error-context.md",
+                                                        },
+                                                    ],
+                                                }
+                                            ],
+                                        }
+                                    ],
+                                }
+                            ],
+                            "suites": [],
+                        }
+                    ]
+                }
+                _write_file(shard / "results.json", json.dumps(results))
+
+                with patch("self_healing.find_pr_for_branch", return_value=42), \
+                     patch("self_healing.count_self_healing_comments", return_value=0), \
+                     patch("self_healing.post_comment"):
+                    self_healing.main(str(Path(tmp)))
+
+            mock_call.assert_called_once()
+            user_content = mock_call.call_args[0][1]
+
+            self.assertIn("[REDACTED]", user_content)
+            self.assertNotIn("s3cret_session_value", user_content)
+            self.assertNotIn("eyJhbGciOiJIUzI1NiJ9.payload.signature", user_content)
+            self.assertNotIn("alice@example.com", user_content)
+            self.assertIn("a***@example.com", user_content)
+        finally:
+            del os.environ["ANTHROPIC_API_KEY"]
+
+    def test_redact_returns_empty_for_empty_input_without_subprocess(self):
+        """Empty input must short-circuit to skip subprocess overhead."""
+        with patch("self_healing.subprocess.run") as mock_run:
+            self.assertEqual(self_healing._redact(""), "")
+            mock_run.assert_not_called()
+
+
+class TestRedactCliFailureRaises(unittest.TestCase):
+    """When the TS CLI exits non-zero, _redact must raise — never return the
+    unredacted input.  Pointed at a deliberately failing dummy script so the
+    failure path is exercised end-to-end (subprocess call, exit code, exception
+    propagation) without depending on a malformed redact.ts in the repo."""
+
+    def test_non_zero_exit_raises_called_process_error(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            failing = Path(tmp) / "fail.sh"
+            failing.write_text("#!/bin/sh\nexit 7\n", encoding="utf-8")
+            failing.chmod(0o755)
+            with patch.object(self_healing, "REDACT_CMD", (str(failing),)), \
+                 patch.object(self_healing, "REDACT_CWD", Path(tmp)):
+                with self.assertRaises(subprocess.CalledProcessError) as ctx:
+                    self_healing._redact("Cookie: session=leak")
+                self.assertEqual(ctx.exception.returncode, 7)
 
 
 if __name__ == "__main__":
