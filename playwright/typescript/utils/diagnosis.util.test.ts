@@ -214,4 +214,24 @@ describe('redactSensitive', () => {
       'Authorization: Bearer [REDACTED]'
     );
   });
+
+  test('known limitation: a JWT immediately followed by an email leaves the email local-part unmasked', () => {
+    // The JWT rule replaces with `[REDACTED_JWT]`. The email rule's local-part
+    // class is `[A-Za-z0-9._%+-]`, which excludes `]`, so when `]` appears
+    // immediately before `@` (i.e. `[REDACTED_JWT]@…`), the email rule cannot
+    // find a valid local-part character adjacent to the `@` and the email is
+    // left as-is. Contrived in practice — JWTs and emails don't normally
+    // adjoin, and any whitespace/quote/angle/HTML separator between them
+    // restores the email rule's match. This test pins the current behavior
+    // so a future change to the email rule's left context is detected.
+    const jwt =
+      'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0In0.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
+    assert.equal(redactSensitive(`${jwt}@example.com`), '[REDACTED_JWT]@example.com');
+
+    // Sanity check: with any separator between JWT and email, both rules fire.
+    assert.equal(
+      redactSensitive(`<a href="${jwt}">user@example.com</a>`),
+      '<a href="[REDACTED_JWT]">u***@example.com</a>'
+    );
+  });
 });
