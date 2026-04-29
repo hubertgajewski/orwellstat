@@ -811,6 +811,13 @@ class TestParseAiResponse(unittest.TestCase):
                 self.assertIsNotNone(fix)
                 self.assertEqual(fix.suggested_selector, sug)
 
+    def test_is_valid_suggested_rejects_non_string(self):
+        """Belt-and-suspenders: `_parse_ai_response` already type-checks
+        suggestedSelector, but the helper guards against direct callers too."""
+        for non_string in (None, 42, [], {}, b"bytes", True):
+            with self.subTest(value=non_string):
+                self.assertFalse(self_healing._is_valid_suggested(non_string))
+
 
 # ===================================================================
 # Error-context.md support in AI fallback
