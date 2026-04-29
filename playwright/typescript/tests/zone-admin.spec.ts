@@ -177,20 +177,19 @@ test.describe('admin page - settings form', { tag: '@regression' }, () => {
   });
 });
 
-// The mismatched-new-passwords path requires sending the REAL current password to
-// reach the new==confirm comparison branch on the server (the wrong-password test
-// above stops at the signIn check before that branch is reached). Trace/video/screenshot
-// cannot be overridden at the describe scope (Playwright treats them as
-// worker-scoped and rejects per-describe `test.use`), so the residual risk on a
-// retried CI run is that the trace's POST body for the form submission contains
-// the password in cleartext. Mitigations:
-//   - The base fixture's DOM snapshot only fires on failure, and the post-submit
-//     DOM has the password fields blanked by the server.
-//   - `screenshot: 'only-on-failure'` only captures the masked password input.
-//   - `trace: 'on-first-retry'` only captures on retry; locally retries=0.
-//   - The credential is read from `process.env.ORWELLSTAT_PASSWORD`, never logged
-//     and never echoed to console.
+// This is the only place a test fills the real `ORWELLSTAT_PASSWORD` — needed
+// to reach the server's `new == confirm` comparison branch. The describe is
+// gated on `REAL_CREDENTIAL_RUN=true` and only the dedicated workflow
+// `playwright-real-credential.yml` (under `playwright.config.real-credential.ts`,
+// which disables retries/trace/screenshot/video) sets that env var. The default
+// `playwright-typescript.yml` matrix would otherwise let `trace: 'on-first-retry'`
+// capture the form-encoded POST body in cleartext on a CI flake — see #410 for
+// the full rationale and mitigation chain.
 test.describe('admin page - password mismatch (real credential)', { tag: '@regression' }, () => {
+  test.skip(
+    () => process.env.REAL_CREDENTIAL_RUN !== 'true',
+    'gated on REAL_CREDENTIAL_RUN; runs only under playwright-real-credential.yml (#410)'
+  );
   test('correct current password with non-matching new passwords shows the mismatch error', async ({
     page,
   }) => {
