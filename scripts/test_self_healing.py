@@ -552,39 +552,9 @@ class TestComposeComment(unittest.TestCase):
 
 
 # ===================================================================
-# Minimal diff extraction
-# ===================================================================
-
-
-class TestFindMinimalDiff(unittest.TestCase):
-    def test_diacritics_fix(self):
-        """Only the string content differs — diff extends to quote boundaries."""
-        old = "locator('#menubar').getByRole('link', { name: 'Strona glowna', exact: true })"
-        new = "locator('#menubar').getByRole('link', { name: 'Strona główna', exact: true })"
-        result = self_healing._find_minimal_diff(old, new)
-        self.assertIsNotNone(result)
-        old_part, new_part = result
-        self.assertEqual(old_part, "Strona glowna")
-        self.assertEqual(new_part, "Strona główna")
-
-    def test_structural_change(self):
-        """Gemini drops locator — diff spans most of the selector.
-
-        The returned old_part won't appear verbatim in multi-line source,
-        so _apply_selector_fix correctly falls through to the regex path.
-        """
-        old = "locator('#menubar').getByRole('link', { name: 'Strona glowna', exact: true })"
-        new = "getByRole('link', { name: 'Strona główna', exact: true })"
-        result = self_healing._find_minimal_diff(old, new)
-        self.assertIsNotNone(result)
-
-    def test_identical_returns_none(self):
-        s = "getByRole('link', { name: 'foo' })"
-        self.assertIsNone(self_healing._find_minimal_diff(s, s))
-
-
-# ===================================================================
-# Apply selector fix (multi-line matching)
+# Apply selector fix (exact-substring only — fuzzy fallbacks were removed
+# under #404 because a near-miss against an unrelated chain in the same
+# file would silently mutate the wrong code)
 # ===================================================================
 
 
@@ -614,89 +584,6 @@ class TestApplySelectorFix(unittest.TestCase):
         self.assertIn("About", result)
         self.assertNotIn("O systemie", result)
 
-    def test_multiline_chained_selector(self):
-        fix = self_healing.SelectorFix(
-            "high",
-            "locator('#menubar').getByRole('link', { name: 'Strona glowna', exact: true })",
-            "locator('#menubar').getByRole('link', { name: 'Strona główna', exact: true })",
-            "reason",
-        )
-        result = self_healing._apply_selector_fix(self.MULTILINE_SOURCE, fix)
-        self.assertIsNotNone(result)
-        self.assertIn("Strona główna", result)
-        self.assertNotIn("Strona glowna", result)
-        # Formatting preserved: still two separate lines
-        self.assertIn(".locator('#menubar')\n", result)
-        self.assertIn(".getByRole('link',", result)
-
-    def test_multiline_shorter_replacement(self):
-        """Gemini-style fix: drops locator('#menubar') scoping entirely."""
-        fix = self_healing.SelectorFix(
-            "high",
-            "locator('#menubar').getByRole('link', { name: 'Strona glowna', exact: true })",
-            "getByRole('link', { name: 'Strona główna', exact: true })",
-            "reason",
-        )
-        result = self_healing._apply_selector_fix(self.MULTILINE_SOURCE, fix)
-        self.assertIsNotNone(result)
-        self.assertIn("Strona główna", result)
-        self.assertNotIn("locator('#menubar')", result)
-        # The leading dot should chain page to getByRole
-        self.assertIn(".getByRole", result)
-        self.assertIn(".click()", result)
-
-    def test_three_part_chain_multiline(self):
-        """Three-part chain: locator.getByRole.getByText across three lines."""
-        source = textwrap.dedent("""\
-            await page
-              .locator('#sidebar')
-              .getByRole('listitem')
-              .getByText('Home')""")
-        fix = self_healing.SelectorFix(
-            "high",
-            "locator('#sidebar').getByRole('listitem').getByText('Home')",
-            "locator('#sidebar').getByRole('listitem').getByText('Dashboard')",
-            "reason",
-        )
-        result = self_healing._apply_selector_fix(source, fix)
-        self.assertIsNotNone(result)
-        self.assertIn("Dashboard", result)
-        self.assertNotIn("Home", result)
-
-    def test_filter_chain_multiline(self):
-        """Chain with .filter() across multiple lines."""
-        source = textwrap.dedent("""\
-            await page
-              .getByRole('listitem')
-              .filter({ hasText: 'Active' })
-              .getByRole('link')""")
-        fix = self_healing.SelectorFix(
-            "high",
-            "getByRole('listitem').filter({ hasText: 'Active' }).getByRole('link')",
-            "getByRole('listitem').filter({ hasText: 'Enabled' }).getByRole('link')",
-            "reason",
-        )
-        result = self_healing._apply_selector_fix(source, fix)
-        self.assertIsNotNone(result)
-        self.assertIn("Enabled", result)
-        self.assertNotIn("Active", result)
-
-    def test_nth_chain_multiline(self):
-        """Chain with .nth() across lines."""
-        source = textwrap.dedent("""\
-            await page
-              .getByRole('link')
-              .nth(0)""")
-        fix = self_healing.SelectorFix(
-            "high",
-            "getByRole('link').nth(0)",
-            "getByRole('link').nth(1)",
-            "reason",
-        )
-        result = self_healing._apply_selector_fix(source, fix)
-        self.assertIsNotNone(result)
-        self.assertIn("nth(1)", result)
-
     def test_dot_in_string_arg_not_split(self):
         """Dots inside string arguments (e.g. 'example.com') must not be split."""
         source = "  await page.getByRole('link', { name: 'example.com' }).click();"
@@ -707,23 +594,6 @@ class TestApplySelectorFix(unittest.TestCase):
             "reason",
         )
         result = self_healing._apply_selector_fix(source, fix)
-        self.assertIsNotNone(result)
-        self.assertIn("example.org", result)
-
-    def test_dot_in_string_arg_multiline_fallback(self):
-        """Dot in arg + multi-line chain: split must not break on string dots."""
-        source = textwrap.dedent("""\
-            await page
-              .locator('#nav')
-              .getByRole('link', { name: 'example.com' })""")
-        fix = self_healing.SelectorFix(
-            "high",
-            "locator('#nav').getByRole('link', { name: 'example.com' })",
-            "locator('#nav').getByRole('link', { name: 'example.org' })",
-            "reason",
-        )
-        result = self_healing._apply_selector_fix(source, fix)
-        self.assertIsNotNone(result)
         self.assertIn("example.org", result)
 
     def test_getbytext_with_version_dot(self):
@@ -736,18 +606,7 @@ class TestApplySelectorFix(unittest.TestCase):
             "reason",
         )
         result = self_healing._apply_selector_fix(source, fix)
-        self.assertIsNotNone(result)
         self.assertIn("v3.0", result)
-
-    def test_no_match_returns_none(self):
-        fix = self_healing.SelectorFix(
-            "high",
-            "getByRole('button', { name: 'nonexistent' })",
-            "getByRole('button', { name: 'fixed' })",
-            "reason",
-        )
-        result = self_healing._apply_selector_fix(self.MULTILINE_SOURCE, fix)
-        self.assertIsNone(result)
 
     def test_single_part_selector_no_chain(self):
         """Single method call — no dot splitting needed."""
@@ -759,8 +618,59 @@ class TestApplySelectorFix(unittest.TestCase):
             "reason",
         )
         result = self_healing._apply_selector_fix(source, fix)
-        self.assertIsNotNone(result)
         self.assertIn("bar", result)
+
+    def test_multiline_chain_raises(self):
+        """Multi-line source where broken_selector is single-line: the fuzzy
+        regex fallback was removed under #404, so this now raises rather
+        than risking a wrong-chain mutation."""
+        fix = self_healing.SelectorFix(
+            "high",
+            "locator('#menubar').getByRole('link', { name: 'Strona glowna', exact: true })",
+            "locator('#menubar').getByRole('link', { name: 'Strona główna', exact: true })",
+            "reason",
+        )
+        with self.assertRaises(self_healing.SelectorReplaceError):
+            self_healing._apply_selector_fix(self.MULTILINE_SOURCE, fix)
+
+    def test_no_match_raises(self):
+        """broken_selector not in source at all → SelectorReplaceError, not None."""
+        fix = self_healing.SelectorFix(
+            "high",
+            "getByRole('button', { name: 'nonexistent' })",
+            "getByRole('button', { name: 'fixed' })",
+            "reason",
+        )
+        with self.assertRaises(self_healing.SelectorReplaceError):
+            self_healing._apply_selector_fix(self.MULTILINE_SOURCE, fix)
+
+    def test_diff_confined_to_broken_substring(self):
+        """On a successful replace, the post-image differs from the pre-image
+        only in the single contiguous range originally occupied by
+        broken_selector — no other byte changes."""
+        source = textwrap.dedent("""\
+            test('one', async ({ page }) => {
+              await page.getByRole('link', { name: 'foo' }).click();
+              await page.getByRole('link', { name: 'baz' }).click();
+            });""")
+        fix = self_healing.SelectorFix(
+            "high",
+            "getByRole('link', { name: 'foo' })",
+            "getByRole('link', { name: 'bar' })",
+            "reason",
+        )
+        result = self_healing._apply_selector_fix(source, fix)
+        # Locate the broken-selector byte range in the pre-image and assert
+        # everything outside that range is unchanged in the post-image.
+        start = source.index(fix.broken_selector)
+        end = start + len(fix.broken_selector)
+        self.assertEqual(source[:start], result[:start])
+        self.assertEqual(source[end:], result[end + (len(fix.suggested_selector) - len(fix.broken_selector)) :])
+        # And the only occurrence of `'baz'` is the one that was already there.
+        self.assertEqual(result.count("'baz'"), 1)
+        # And `'foo'` is gone, `'bar'` is in.
+        self.assertNotIn("'foo'", result)
+        self.assertIn("'bar'", result)
 
 
 # ===================================================================
@@ -794,11 +704,11 @@ class TestParseAiResponse(unittest.TestCase):
     def test_handles_markdown_fencing(self):
         text = "```json\n" + json.dumps({
             "confidence": "medium",
-            "brokenSelector": "x",
-            "suggestedSelector": "y",
+            "brokenSelector": "getByRole('link')",
+            "suggestedSelector": "getByRole('button')",
             "explanation": "z",
         }) + "\n```"
-        fix = self_healing._parse_ai_response(text, "x")
+        fix = self_healing._parse_ai_response(text, "getByRole('link')")
         self.assertIsNotNone(fix)
 
     def test_extracts_json_after_prose(self):
@@ -808,13 +718,13 @@ class TestParseAiResponse(unittest.TestCase):
             "```json\n"
             + json.dumps({
                 "confidence": "high",
-                "brokenSelector": "x",
-                "suggestedSelector": "y",
+                "brokenSelector": "getByRole('link')",
+                "suggestedSelector": "getByRole('button')",
                 "explanation": "z",
             })
             + "\n```"
         )
-        fix = self_healing._parse_ai_response(text, "x")
+        fix = self_healing._parse_ai_response(text, "getByRole('link')")
         self.assertIsNotNone(fix)
         self.assertEqual(fix.confidence, "high")
 
@@ -824,11 +734,82 @@ class TestParseAiResponse(unittest.TestCase):
     def test_returns_none_for_invalid_confidence(self):
         text = json.dumps({
             "confidence": "extreme",
-            "brokenSelector": "x",
-            "suggestedSelector": "y",
+            "brokenSelector": "getByRole('link')",
+            "suggestedSelector": "getByRole('button')",
             "explanation": "z",
         })
         self.assertIsNone(self_healing._parse_ai_response(text, "x"))
+
+    # ----- New under #404: suggestedSelector safety allow-list -----
+
+    @staticmethod
+    def _wrap(suggested):
+        """Build a JSON response carrying `suggested` as suggestedSelector."""
+        return json.dumps({
+            "confidence": "high",
+            "brokenSelector": "getByRole('link')",
+            "suggestedSelector": suggested,
+            "explanation": "z",
+        })
+
+    def test_rejects_suggested_with_newline(self):
+        text = self._wrap("getByText('x'))\nimport child_process")
+        with self.assertRaises(self_healing.InvalidSuggestedSelectorError):
+            self_healing._parse_ai_response(text, "x")
+
+    def test_rejects_suggested_with_backtick(self):
+        text = self._wrap("getByText(`evil`)")
+        with self.assertRaises(self_healing.InvalidSuggestedSelectorError):
+            self_healing._parse_ai_response(text, "x")
+
+    def test_rejects_suggested_with_semicolon(self):
+        text = self._wrap("getByText('x'); evil()")
+        with self.assertRaises(self_healing.InvalidSuggestedSelectorError):
+            self_healing._parse_ai_response(text, "x")
+
+    def test_rejects_suggested_with_redirect_char(self):
+        # `>` is banned even when used as a CSS combinator, because the script
+        # has no business proposing CSS-combinator selectors in this project
+        # (deep-review forbids them) and it doubles as a shell redirect marker.
+        text = self._wrap("locator('div > span')")
+        with self.assertRaises(self_healing.InvalidSuggestedSelectorError):
+            self_healing._parse_ai_response(text, "x")
+
+    def test_rejects_suggested_with_dollar_paren(self):
+        text = self._wrap("getByText('x')$(rm -rf /)")
+        with self.assertRaises(self_healing.InvalidSuggestedSelectorError):
+            self_healing._parse_ai_response(text, "x")
+
+    def test_rejects_suggested_over_max_length(self):
+        # MAX_SUGGESTED_LENGTH is 500.  Build a syntactically valid locator
+        # that overshoots the cap so only the length check trips.
+        long_arg = "a" * (self_healing.MAX_SUGGESTED_LENGTH + 50)
+        text = self._wrap(f"getByText('{long_arg}')")
+        with self.assertRaises(self_healing.InvalidSuggestedSelectorError):
+            self_healing._parse_ai_response(text, "x")
+
+    def test_rejects_suggested_not_matching_locator_shape(self):
+        # Plain JS function call — no Playwright locator at all.
+        text = self._wrap("eval('payload')")
+        with self.assertRaises(self_healing.InvalidSuggestedSelectorError):
+            self_healing._parse_ai_response(text, "x")
+
+    def test_accepts_typical_locator_shapes(self):
+        """Passing inputs (one per allowed shape) — none of these should raise."""
+        passing = [
+            "getByText('foo')",
+            "getByRole('button', { name: 'Submit', exact: true })",
+            "page.getByRole('link', { name: 'Home' })",
+            "locator('#statsbar')",
+            "locator('#statsbar').getByText('Hello').first()",
+            "page.locator('#statsbar').getByText('Hello').filter({ hasText: 'X' })",
+            "frameLocator('iframe').getByRole('button', { name: 'OK' })",
+        ]
+        for sug in passing:
+            with self.subTest(suggested=sug):
+                fix = self_healing._parse_ai_response(self._wrap(sug), "x")
+                self.assertIsNotNone(fix)
+                self.assertEqual(fix.suggested_selector, sug)
 
 
 # ===================================================================
