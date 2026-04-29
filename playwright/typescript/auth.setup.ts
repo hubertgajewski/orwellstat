@@ -15,7 +15,12 @@ async function authenticate(page: Page, account: Account): Promise<void> {
   await page.locator('[name="password"]').fill(password);
   await page.locator('form[action="/zone/"]').getByRole('button').click();
   await page.waitForURL('**/zone/');
-  await expect(page.getByText(AbstractPage.loggedInAs)).toBeVisible();
+  // Identity assertion: the post-login page must render the EXACT username
+  // this setup tried to authenticate as. Without this, swapping
+  // ORWELLSTAT_USER and ORWELLSTAT_USER_EMPTY in `.env` would silently
+  // produce two valid storage states pointed at the wrong accounts and
+  // every downstream test would run mis-attributed.
+  await expect(AbstractPage.loggedInUsername(page)).toHaveText(user);
   await page
     .context()
     .storageState({ path: new URL(`.auth/${account}.json`, import.meta.url).pathname });
