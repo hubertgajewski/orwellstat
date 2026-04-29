@@ -1503,6 +1503,71 @@ class TestRedactCli(unittest.TestCase):
             self.assertEqual(self_healing._redact(""), "")
             mock_run.assert_not_called()
 
+    @patch("self_healing.create_draft_pr")
+    @patch("self_healing.post_comment")
+    @patch("self_healing.find_pr_for_branch", return_value=None)
+    @patch("self_healing.request_selector_fix_from_ai")
+    def test_skips_test_when_artifact_files_missing_on_disk(
+        self, mock_ai, _mock_find_pr, _mock_post, _mock_draft
+    ):
+        """results.json points at error-context/dom paths, but neither file
+        exists on disk → script must skip the test (without invoking _redact
+        or the AI) and log a reason naming the missing directory."""
+        import io
+
+        with tempfile.TemporaryDirectory() as tmp:
+            shard = Path(tmp) / "self-healing-data-chromium"
+            results = {
+                "suites": [
+                    {
+                        "title": "api.spec.ts",
+                        "file": "api.spec.ts",
+                        "specs": [
+                            {
+                                "title": "missing-artifacts",
+                                "ok": False,
+                                "file": "api.spec.ts",
+                                "line": 1,
+                                "column": 1,
+                                "tests": [
+                                    {
+                                        "projectId": "Chromium",
+                                        "projectName": "Chromium",
+                                        "status": "unexpected",
+                                        "results": [
+                                            {
+                                                "status": "failed",
+                                                "errors": [
+                                                    {"message": "waiting for locator('#x')"}
+                                                ],
+                                                "attachments": [
+                                                    {
+                                                        "name": "DOM",
+                                                        "contentType": "text/html",
+                                                        "path": "/runner/test-results/missing-Chromium/dom.xhtml",
+                                                    },
+                                                ],
+                                            }
+                                        ],
+                                    }
+                                ],
+                            }
+                        ],
+                        "suites": [],
+                    }
+                ]
+            }
+            _write_file(shard / "results.json", json.dumps(results))
+
+            captured_stderr = io.StringIO()
+            with patch("sys.stderr", captured_stderr):
+                self_healing.main(str(Path(tmp)))
+            stderr_text = captured_stderr.getvalue()
+
+        mock_ai.assert_not_called()
+        self.assertIn("missing-artifacts", stderr_text)
+        self.assertIn("no error-context.md or dom.xhtml", stderr_text)
+
 
 class TestRedactCliFailureRaises(unittest.TestCase):
     """When the TS CLI exits non-zero, _redact must raise — never return the
