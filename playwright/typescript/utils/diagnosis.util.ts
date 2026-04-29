@@ -17,11 +17,34 @@ const SELECTOR_EXTRACT_PATTERN =
 const REDACT_PATTERNS: Array<[RegExp, string]> = [
   // Cookie: <name>=<value> (case-insensitive). Value runs until a separator or quote/angle.
   [/(Cookie:\s*[^;=\s]+=)[^;\n\r"<>]+/gi, '$1[REDACTED]'],
+  // Set-Cookie: <name>=<value>. Same shape as the request-side Cookie header.
+  [/(Set-Cookie:\s*[^;=\s]+=)[^;\n\r"<>]+/gi, '$1[REDACTED]'],
+  // Multi-pair cookie chain: any subsequent `; <name>=<value>` segment that
+  // wasn't anchored on the leading `Cookie:` / `Set-Cookie:` prefix. Catches
+  // `Cookie: a=1; b=2; c=3` (b=2, c=3) after the first pair has been masked
+  // by the rule above. Necessarily over-redacts Set-Cookie attributes
+  // (`Path=/`, `Domain=…`, `Max-Age=…`) — acceptable since none of those
+  // values are useful to the LLM for diagnosis.
+  [/(;\s*[^;=\s]+=)[^;\n\r"<>]+/g, '$1[REDACTED]'],
   // Authorization: Bearer <token>
   [/(Authorization:\s*Bearer\s+)[^\s<>"'`]+/gi, '$1[REDACTED]'],
   // Standalone `bearer <token>` when it appears without the Authorization prefix.
   // Requires 12+ chars so "[REDACTED]" from the prior pattern is not re-matched.
   [/(bearer\s+)[A-Za-z0-9._\-]{12,}/gi, '$1[REDACTED]'],
+  // x-api-key / apikey header (header- and JSON-shaped). The optional `["']?`
+  // around the separator absorbs the JSON closing quote on the key (`"apikey":`)
+  // and the opening quote on the value (`: "value"`), so both header and JSON
+  // shapes are matched. The closing value-quote is intentionally left outside
+  // the match to keep surrounding quoting intact in the output. The 8-char
+  // minimum on the value avoids masking placeholder words ("apikey: TODO").
+  [/((?:x-api-key|apikey)["']?\s*[:=]\s*["']?)[A-Za-z0-9._\-]{8,}/gi, '$1[REDACTED]'],
+  // apikey / api_key / token in a URL query string.
+  [/([?&](?:apikey|api_key|token)=)[^&\s"'<>]+/gi, '$1[REDACTED]'],
+  // Raw JWT anywhere — header.payload.signature, all base64url, with the
+  // canonical `eyJ` prefix on header and payload (which decode to `{"…`).
+  // Replaces with [REDACTED_JWT] so the structural marker survives even
+  // when the token wasn't behind a Bearer/Authorization prefix.
+  [/eyJ[A-Za-z0-9_-]{8,}\.eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}/g, '[REDACTED_JWT]'],
   // Email: keep first local-part char + domain, mask the rest of the local part.
   // `a@b.co` → `a***@b.co`, `alice@example.com` → `a***@example.com`.
   [/([A-Za-z0-9._%+-])[A-Za-z0-9._%+-]*(@[A-Za-z0-9.-]+\.[A-Za-z]{2,})/g, '$1***$2'],
