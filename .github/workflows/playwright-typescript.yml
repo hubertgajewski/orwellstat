@@ -4,15 +4,21 @@ on:
     branches: [main, master]
   pull_request:
     branches: [main, master]
+  pull_request_review:
+    # Fire when an APPROVED review lands so the gated `test` job runs without waiting for
+    # a follow-up commit. The split concurrency group below prevents this run from
+    # cancelling the in-flight push-triggered run that motivated #398 (and later #410's
+    # parallel re-add of the same trigger to playwright-real-credential.yml).
+    types: [submitted]
   schedule:
     # Runs at 03:00 UTC every Sunday
     - cron: "0 3 * * 0"
   workflow_dispatch:
     inputs:
       env:
-        description: 'Target environment (staging = auto-approve, production = requires reviewer approval)'
+        description: "Target environment (staging = auto-approve, production = requires reviewer approval)"
         required: false
-        default: 'staging'
+        default: "staging"
         type: choice
         options:
           - staging
@@ -43,7 +49,13 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  # Two groups per ref: push-triggered runs and review-triggered runs cannot cancel each
+  # other. Within each group `cancel-in-progress: true` still drops superseded runs (a
+  # second push cancels the first push run; a second APPROVED review cancels the first
+  # review run). This is the design that #398 left on the table — Option A from that
+  # issue dropped the trigger entirely; Option B (this) keeps the auto-rerun-on-approval
+  # semantics without re-introducing the mid-test cancellation regression.
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'pull_request_review' && 'review' || 'push' }}
   cancel-in-progress: true
 
 jobs:
