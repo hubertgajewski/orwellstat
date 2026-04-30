@@ -72,6 +72,7 @@ Size is a coarse roadmap guess for epics, not a mechanical sum of children's poi
 .vars.example               # template: AI_REVIEW, PLAYWRIGHT_TYPESCRIPT, BRUNO, QUALITY_METRICS, AI_DIAGNOSIS, AI_PROVIDER, AI_MODEL_FAST, AI_MODEL_STRONG, ANTHROPIC_BASE_URL, ANTHROPIC_DEFAULT_SONNET_MODEL, ANTHROPIC_DEFAULT_HAIKU_MODEL, SELF_HEALING
 .mcp.json                   # MCP server definitions (MCP_DOCKER, playwright, playwright-report-mcp, quality-metrics, coverage-matrix) — loaded by Claude Code and other MCP-compatible AI assistants
 .github/workflows/          # CI workflows (one per sub-project)
+.claude/agents/             # project-scoped sub-agents (used by /deep-review)
 CLAUDE.md                   # repository-specific behavioral guidance for Claude Code
 AGENTS.md                   # Codex entrypoint; delegates shared repository guidance to CLAUDE.md
 GEMINI.md                   # Gemini entrypoint; delegates shared repository guidance to CLAUDE.md
