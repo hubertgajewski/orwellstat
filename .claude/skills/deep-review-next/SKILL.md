@@ -18,6 +18,7 @@ Extend by adding new files under `.claude/agents/` and listing them here:
 | -------------------------------- | --------------------------------------------------------------------------------------------------- |
 | `deep-review-security`           | Vulnerability review anchored in OWASP Top 10:2021 / CWE Top 25 (2024) / OWASP ASVS 4.0.3            |
 | `deep-review-project-checklist`  | orwellstat-specific Playwright / POM / fixture / tag / CI-workflow conventions                       |
+| `deep-review-simplification`     | Code reuse, quality (DRY/SOLID/Fowler smells), and efficiency review — paraphrases public sources    |
 | `deep-review-code`               | General code-review (functionality / tests / naming / comments / dead code) anchored in Google Code Review Developer Guide (CC BY 3.0) |
 | `deep-review-architecture`       | Architecture review (SOLID / coupling / cohesion / dependency direction / abstraction boundaries) influenced by SOLID, "Clean Architecture" (Martin), GoF, DDD (Evans) |
 
@@ -25,7 +26,6 @@ Roadmap — pending sibling stories under epic #436 will add the rest of the fam
 
 | Pending agent                | Story |
 | ---------------------------- | ----- |
-| `deep-review-simplification` | #427  |
 | `deep-review-typescript`     | #429  |
 | `deep-review-python`         | #429  |
 | `deep-review-qa`             | #430  |
@@ -95,6 +95,18 @@ Task(subagent_type="deep-review-security",
 Task(subagent_type="deep-review-project-checklist",
      description="Project checklist review of pending diff",
      prompt="<DIFF>\n\n--- untracked files (paths only; use Read to fetch content) ---\n<UNTRACKED>\n\n---\nApply the orwellstat-specific Playwright / POM / fixture / tag / CI conventions and emit findings in the documented format.")
+
+Task(subagent_type="deep-review-simplification",
+     description="Simplification review of pending diff",
+     prompt="<DIFF>\n\n--- untracked files (paths only; use Read to fetch content) ---\n<UNTRACKED>\n\n---\nReview for missed reuse, quality (DRY/SOLID/Fowler smells), and efficiency, and emit findings in the documented pass/fail/N/A format.")
+
+Task(subagent_type="deep-review-code",
+     description="Code review of pending diff",
+     prompt="<DIFF>\n\n--- untracked files (paths only; use Read to fetch content) ---\n<UNTRACKED>\n\n---\nReview for functionality, tests, naming, comments, and dead code, citing REFERENCES.md short IDs, and emit findings in the documented HIGH/MEDIUM/LOW pipe-delimited schema.")
+
+Task(subagent_type="deep-review-architecture",
+     description="Architecture review of pending diff",
+     prompt="<DIFF>\n\n--- untracked files (paths only; use Read to fetch content) ---\n<UNTRACKED>\n\n---\nReview for SOLID violations, coupling, cohesion, dependency direction, and abstraction-boundary leaks, and emit findings in the documented HIGH/MEDIUM/LOW pipe-delimited schema.")
 ```
 
 Each agent returns its findings in its own documented format. Do not coerce one format into the other — the formats are deliberately distinct because the domains are distinct.
@@ -114,9 +126,21 @@ summary: <H> high / <M> medium / <L> low
 <agent's verbatim findings or "Failures: none.">
 Summary: <pass> pass / <fail> fail / <N/A> N/A
 
+### deep-review-simplification
+<agent's verbatim findings or "Failures: none.">
+Summary: <pass> pass / <fail> fail / <N/A> N/A
+
+### deep-review-code
+<agent's verbatim findings or "findings: none">
+summary: <H> high / <M> medium / <L> low
+
+### deep-review-architecture
+<agent's verbatim findings or "findings: none">
+summary: <H> high / <M> medium / <L> low
+
 ### aggregate
-total: <H> security HIGH / <M> security MEDIUM / <L> security LOW / <fail> checklist fail
-status: <"ready" if zero security HIGH, zero security MEDIUM, and zero checklist fail; otherwise "blocked">
+total: <H> security HIGH / <M> security MEDIUM / <L> security LOW / <CF> checklist fail / <SF> simplification fail / <H> code HIGH / <M> code MEDIUM / <L> code LOW / <H> architecture HIGH / <M> architecture MEDIUM / <L> architecture LOW
+status: <"ready" if zero security HIGH, zero security MEDIUM, zero checklist fail, zero simplification fail, zero code HIGH, zero code MEDIUM, zero architecture HIGH, and zero architecture MEDIUM; otherwise "blocked">
 ```
 
 If any roster agent was marked `UNAVAILABLE`, list it under the `### aggregate` block before the `total:` line.
