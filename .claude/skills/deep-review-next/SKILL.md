@@ -109,7 +109,7 @@ Task(subagent_type="deep-review-architecture",
      prompt="<DIFF>\n\n--- untracked files (paths only; use Read to fetch content) ---\n<UNTRACKED>\n\n---\nReview for SOLID violations, coupling, cohesion, dependency direction, and abstraction-boundary leaks, and emit findings in the documented HIGH/MEDIUM/LOW pipe-delimited schema.")
 ```
 
-Conditional dispatches — only fire these when the scope contains files of the relevant language. Look at the file paths in the diff hunks and the untracked-files listing; if neither contains a path with the listed extension, skip the dispatch and record the agent as `SKIPPED: no <ext> files in scope` in the aggregate block:
+Conditional dispatches — same single-message parallel batch as the unconditional dispatches above; do **not** open a second dispatch pass. For each agent below, evaluate the extension test against the file paths in the diff hunks and the untracked-files listing; include the `Task(...)` call in the same parallel-Task message when the test passes, and record the agent as `SKIPPED: no <ext> files in scope` in the aggregate block when it fails:
 
 ```
 # Dispatch only when at least one path under review ends in .ts or .tsx

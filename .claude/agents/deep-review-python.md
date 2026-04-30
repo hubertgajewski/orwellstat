@@ -45,7 +45,7 @@ Do not emit findings for the following, even when the diff exhibits them. A sibl
 - **architecture / SOLID / coupling / dependency direction** — owned by `deep-review-architecture`.
 - **TypeScript style or typing** — owned by `deep-review-typescript`.
 - **Playwright POM / fixture / tag conventions / coverage matrix** — owned by `deep-review-project-checklist`.
-- **type-hint completeness** — handled by the typing reviewer if/when one is added; cite under `style` only when the hint is wrong (e.g. `List` instead of `list[str]` on a Py 3.9+ project) and the missing-hint case is not flagged.
+- **type-hint completeness or modernization** — missing annotations and `pyupgrade`-class rewrites (e.g. `List[str]` → `list[str]`, `Optional[X]` → `X | None`) are out of scope here; a future typing reviewer (or the existing project-checklist agent) owns them.
 - **CI / GitHub Actions workflow content** — owned by `deep-review-ci` (when added).
 - **README / CLAUDE.md / skill-file consistency** — owned by the docs reviewer agent (when added).
 
@@ -57,8 +57,8 @@ Emit a finding only when your confidence that the issue is real and the recommen
 
 ## Severity
 
-- **HIGH** — a `bug-risk` finding with a concrete failure mode (undefined name, unused-but-shadowing import, mutable default that the function mutates, `except:` swallowing the only error path); a docstring missing on a module-level public API that callers in the diff already rely on.
-- **MEDIUM** — a `style` finding that drifts the file from the project's existing convention (visible in the same file or its neighbours), or an `idiom` finding where the Pythonic alternative is materially clearer (`enumerate`, comprehension, `isinstance`); a `docstring` finding on a function whose siblings in the file already document themselves.
+- **HIGH** — a `bug-risk` finding with a concrete failure mode (undefined name, unused-but-shadowing import, mutable default that the function mutates, `except:` swallowing the only error path).
+- **MEDIUM** — a `style` finding that drifts the file from the project's existing convention (visible in the same file or its neighbours); an `idiom` finding where the Pythonic alternative is materially clearer (`enumerate`, comprehension, `isinstance`); a `docstring` finding on a public module / class / function / method whose siblings in the file already document themselves.
 - **LOW** — a single-line style nit the formatter or `ruff --fix` resolves on the next run (whitespace, import ordering, trailing comma); a docstring nit on an internal helper that the file's style does not require to document.
 
 ## Output schema

@@ -58,7 +58,7 @@ Emit a finding only when your confidence that the issue is real and that the rec
 
 - **HIGH** — `any` widens a public API surface (exported function signature, fixture type, page-object getter), silencing every downstream type check; `!` on an env-var or optional config that is undefined on a realistic CI / local path; `as` cast that masks a structural mismatch the runtime cannot satisfy.
 - **MEDIUM** — `any` confined to a function body that nonetheless flows to an assertion or a sink that should have been typed; missing `satisfies` on a literal whose properties are referenced by name elsewhere; a `switch` over a union with no exhaustiveness guard while the union is expected to grow.
-- **LOW** — local `any` with no escape, where narrowing or `unknown` would tighten the diff but the absence is not load-bearing; a missing `as const` on an array that is only iterated, not indexed-by-literal; a typed-import vs value-import inconsistency that the Prettier/eslint pass already flags.
+- **LOW** — local `any` with no escape, where narrowing or `unknown` would tighten the diff but the absence is not load-bearing; a missing `as const` on an array that is only iterated, not indexed-by-literal; a hand-rolled type predicate where `value is T` would suffice but the call site is local.
 
 ## Output schema
 
