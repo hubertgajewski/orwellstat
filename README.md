@@ -11,7 +11,7 @@ Six project-scoped skills are available in Claude Code (stored in `.claude/skill
 | `/fix-issue`      | `/fix-issue <number>`         | Fixes a GitHub issue end-to-end: fetch, implement, test, review, commit, and open a PR                                                                                                                                  |
 | `/create-issue`   | `/create-issue <description>` | Scaffolds a GitHub issue in the documented format (User Story / Context / AC / Implementation Hint / DoD / milestone) and creates it via `gh issue create`                                                              |
 | `/deep-review`    | `/deep-review`                | Works through every item on the code review checklist from `.claude/skills/deep-review/SKILL.md`, applies general diff checks and CI workflow checks, and explicitly states a finding (pass / fail / N/A) for each item |
-| `/deep-review-next` | `/deep-review-next`         | Dispatches the project-scoped `deep-review-security` agent (OWASP Top 10:2021 / CWE Top 25 (2024) / ASVS 4.0.3 / Cheat Sheet Series) against the staged + unstaged diff and surfaces findings in a fixed pipe-separated schema  |
+| `/deep-review-next` | `/deep-review-next`         | Multi-agent code review orchestrator — dispatches every project-scoped specialist agent under `.claude/agents/` (currently `deep-review-security` and `deep-review-project-checklist`) in parallel and surfaces their findings together; coexists with `/deep-review` until promoted by atomic dir rename (#435)  |
 | `/generate-stubs` | `/generate-stubs`             | Reads `coverage-matrix.json`, finds uncovered page-category combinations (excluding `title` and `api`), and generates `test.fixme()` stubs in the appropriate spec files                                                |
 | `/generate-test`  | `/generate-test <page>`       | Scaffolds `test.fixme()` blocks for one page's content / accessibility / visual-regression gaps in `coverage-matrix.json`, appending to existing spec files (never overwriting) or creating new ones                    |
 
@@ -74,7 +74,7 @@ Size is a coarse roadmap guess for epics, not a mechanical sum of children's poi
 .mcp.json                   # MCP server definitions (MCP_DOCKER, playwright, playwright-report-mcp, quality-metrics, coverage-matrix) — loaded by Claude Code and other MCP-compatible AI assistants
 .claude/
   skills/                   # project-scoped slash commands (fix-issue, create-issue, deep-review, deep-review-next, generate-stubs, generate-test)
-  agents/                   # project-scoped sub-agents dispatched by skills (deep-review-security)
+  agents/                   # project-scoped sub-agents dispatched by skills (deep-review-security, deep-review-project-checklist)
 .github/workflows/          # CI workflows (one per sub-project)
 CLAUDE.md                   # repository-specific behavioral guidance for Claude Code
 AGENTS.md                   # Codex entrypoint; delegates shared repository guidance to CLAUDE.md
