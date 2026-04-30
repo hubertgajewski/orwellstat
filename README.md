@@ -74,9 +74,8 @@ Size is a coarse roadmap guess for epics, not a mechanical sum of children's poi
 .mcp.json                   # MCP server definitions (MCP_DOCKER, playwright, playwright-report-mcp, quality-metrics, coverage-matrix) — loaded by Claude Code and other MCP-compatible AI assistants
 .claude/
   skills/                   # project-scoped slash commands (fix-issue, create-issue, deep-review, deep-review-next, generate-stubs, generate-test)
-  agents/                   # project-scoped sub-agents dispatched by skills (deep-review-security, deep-review-project-checklist)
+  agents/                   # project-scoped sub-agents dispatched by skills (deep-review-security, deep-review-project-checklist, deep-review-simplification)
 .github/workflows/          # CI workflows (one per sub-project)
-.claude/agents/             # project-scoped sub-agents (used by /deep-review)
 CLAUDE.md                   # repository-specific behavioral guidance for Claude Code
 AGENTS.md                   # Codex entrypoint; delegates shared repository guidance to CLAUDE.md
 GEMINI.md                   # Gemini entrypoint; delegates shared repository guidance to CLAUDE.md
