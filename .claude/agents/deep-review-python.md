@@ -45,7 +45,7 @@ Do not emit findings for the following, even when the diff exhibits them. A sibl
 - **architecture / SOLID / coupling / dependency direction** — owned by `deep-review-architecture`.
 - **TypeScript style or typing** — owned by `deep-review-typescript`.
 - **Playwright POM / fixture / tag conventions / coverage matrix** — owned by `deep-review-project-checklist`.
-- **type-hint completeness or modernization** — missing annotations and `pyupgrade`-class rewrites (e.g. `List[str]` → `list[str]`, `Optional[X]` → `X | None`) are out of scope here; a future typing reviewer (or the existing project-checklist agent) owns them.
+- **type-hint completeness or modernization** — missing annotations and `pyupgrade`-class rewrites (e.g. `List[str]` → `list[str]`, `Optional[X]` → `X | None`) are out of scope here. No current or pending roster agent owns them; rely on `ruff`'s `UP*` rules in project config rather than this agent.
 - **CI / GitHub Actions workflow content** — owned by `deep-review-ci` (when added).
 - **README / CLAUDE.md / skill-file consistency** — owned by the docs reviewer agent (when added).
 
