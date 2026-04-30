@@ -53,6 +53,7 @@ jobs:
     timeout-minutes: 2
     outputs:
       matrix: ${{ steps.compute.outputs.matrix }}
+      total-shards: ${{ steps.compute.outputs.total-shards }}
     steps:
       - name: Compute matrix
         id: compute
@@ -60,30 +61,52 @@ jobs:
           # Use env vars to avoid direct ${{ }} interpolation in the shell body (script injection risk)
           PROJECT: ${{ inputs.project }}
           EVENT: ${{ github.event_name }}
+          UPDATE_BASELINES: ${{ github.event.inputs.update_visual_baselines }}
         run: |
           # snapToken mirrors Playwright's snapshot filename rule (project name with spaces → hyphens,
           # case preserved) so the upload-baselines step can glob per-project PNGs without cross-job collisions.
-          ALL='{"include":[{"project":"Chromium","browser":"chromium","id":"chromium","snapToken":"Chromium"},{"project":"Firefox","browser":"firefox","id":"firefox","snapToken":"Firefox"},{"project":"Webkit","browser":"webkit","id":"webkit","snapToken":"Webkit"},{"project":"Mobile Chrome","browser":"chromium","id":"mobile-chrome","snapToken":"Mobile-Chrome"},{"project":"Mobile Safari","browser":"webkit","id":"mobile-safari","snapToken":"Mobile-Safari"}]}'
-          CHROMIUM='{"include":[{"project":"Chromium","browser":"chromium","id":"chromium","snapToken":"Chromium"},{"project":"Mobile Chrome","browser":"chromium","id":"mobile-chrome","snapToken":"Mobile-Chrome"}]}'
-          FIREFOX='{"include":[{"project":"Firefox","browser":"firefox","id":"firefox","snapToken":"Firefox"}]}'
-          WEBKIT='{"include":[{"project":"Webkit","browser":"webkit","id":"webkit","snapToken":"Webkit"},{"project":"Mobile Safari","browser":"webkit","id":"mobile-safari","snapToken":"Mobile-Safari"}]}'
+          # Visual-baseline runs collapse to total-shards=1 — sharding visual.spec.ts can leave a
+          # shard with zero PNGs to upload for low-snapshot projects, tripping
+          # `if-no-files-found: error` in playwright-run.yml. Regular runs fan out across 2 shards
+          # to halve per-leg wall-clock; the merge-reports job stitches blob reports back into
+          # a single HTML report covering the full spec set.
+          if [ "$UPDATE_BASELINES" = "true" ]; then
+            TOTAL_SHARDS=1
+          else
+            TOTAL_SHARDS=2
+          fi
+
+          BASE_ALL='[{"project":"Chromium","browser":"chromium","id":"chromium","snapToken":"Chromium"},{"project":"Firefox","browser":"firefox","id":"firefox","snapToken":"Firefox"},{"project":"Webkit","browser":"webkit","id":"webkit","snapToken":"Webkit"},{"project":"Mobile Chrome","browser":"chromium","id":"mobile-chrome","snapToken":"Mobile-Chrome"},{"project":"Mobile Safari","browser":"webkit","id":"mobile-safari","snapToken":"Mobile-Safari"}]'
+          BASE_CHROMIUM='[{"project":"Chromium","browser":"chromium","id":"chromium","snapToken":"Chromium"},{"project":"Mobile Chrome","browser":"chromium","id":"mobile-chrome","snapToken":"Mobile-Chrome"}]'
+          BASE_FIREFOX='[{"project":"Firefox","browser":"firefox","id":"firefox","snapToken":"Firefox"}]'
+          BASE_WEBKIT='[{"project":"Webkit","browser":"webkit","id":"webkit","snapToken":"Webkit"},{"project":"Mobile Safari","browser":"webkit","id":"mobile-safari","snapToken":"Mobile-Safari"}]'
 
           if [ "$EVENT" != "workflow_dispatch" ] || [ -z "$PROJECT" ] || [ "$PROJECT" = "all" ]; then
-            echo "matrix=$ALL" >> "$GITHUB_OUTPUT"
+            BASE="$BASE_ALL"
           elif [ "$PROJECT" = "chromium" ]; then
-            echo "matrix=$CHROMIUM" >> "$GITHUB_OUTPUT"
+            BASE="$BASE_CHROMIUM"
           elif [ "$PROJECT" = "firefox" ]; then
-            echo "matrix=$FIREFOX" >> "$GITHUB_OUTPUT"
+            BASE="$BASE_FIREFOX"
           elif [ "$PROJECT" = "webkit" ]; then
-            echo "matrix=$WEBKIT" >> "$GITHUB_OUTPUT"
+            BASE="$BASE_WEBKIT"
           else
-            echo "matrix=$ALL" >> "$GITHUB_OUTPUT"
+            BASE="$BASE_ALL"
           fi
+
+          # Cross-product each browser project with the shard range (1..TOTAL_SHARDS) so every
+          # leg carries a unique (project, shard) pair; shard=1, total=1 collapses to the
+          # un-sharded case used for visual baselines.
+          MATRIX=$(echo "$BASE" | jq -c \
+            --argjson total "$TOTAL_SHARDS" \
+            '{include: [.[] as $entry | range(1; $total + 1) | $entry + {shard: ., total: $total}]}')
+          echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
+          echo "total-shards=$TOTAL_SHARDS" >> "$GITHUB_OUTPUT"
 
   test:
     needs: setup-matrix
     if: github.repository == 'hubertgajewski/orwellstat' && vars.PLAYWRIGHT_TYPESCRIPT == 'true' && needs.setup-matrix.result == 'success'
-    name: test (${{ matrix.id }})
+    # Shard suffix in the job name so the Checks tab disambiguates the per-shard legs at a glance.
+    name: test (${{ matrix.id }} ${{ matrix.shard }}/${{ matrix.total }})
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.setup-matrix.outputs.matrix) }}
@@ -97,7 +120,47 @@ jobs:
       env: ${{ inputs.env || 'staging' }}
       runner: ${{ inputs.runner || vars.RUNNER || 'ubuntu-latest' }}
       ref: ${{ github.event.inputs.ref || github.ref }}
+      shard: ${{ matrix.shard }}
+      total-shards: ${{ matrix.total }}
     secrets: inherit
+
+  merge-reports:
+    needs: [setup-matrix, test]
+    # Only run when the matrix actually fanned out (regular runs); visual-baseline runs collapse
+    # to total-shards=1 with no per-leg blob reports worth merging. `always()` keeps the merge
+    # alive when individual shards fail so the unified HTML report still surfaces the failures.
+    if: ${{ github.repository == 'hubertgajewski/orwellstat' && always() && needs.test.result != 'skipped' && needs.test.result != 'cancelled' && needs.setup-matrix.outputs.total-shards != '1' }}
+    timeout-minutes: 5
+    runs-on: ${{ inputs.runner || vars.RUNNER || 'ubuntu-latest' }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.inputs.ref || github.ref }}
+      - uses: actions/setup-node@v6
+        with:
+          node-version: lts/*
+          cache: "npm"
+          cache-dependency-path: playwright/typescript/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+        working-directory: playwright/typescript
+      - name: Download blob reports
+        # `merge-multiple: true` flattens every shard's blob-report-* artifact into a single
+        # directory; the per-blob filenames are unique so they can co-exist without collision.
+        uses: actions/download-artifact@v8
+        with:
+          pattern: blob-report-*
+          path: playwright/typescript/all-blob-reports
+          merge-multiple: true
+      - name: Merge blob reports into a unified HTML report
+        run: npx playwright merge-reports --reporter=html ./all-blob-reports
+        working-directory: playwright/typescript
+      - name: Upload merged HTML report
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report-merged
+          path: playwright/typescript/playwright-report
+          retention-days: 30
 
   commit-baselines:
     needs: test

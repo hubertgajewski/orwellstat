@@ -41,6 +41,14 @@ on:
         description: "Git ref to check out (empty = workflow's own ref)"
         type: string
         default: ""
+      shard:
+        description: "1-based index of this shard (1..total-shards). Tests run with --shard=<shard>/<total-shards> when total-shards > 1."
+        type: number
+        default: 1
+      total-shards:
+        description: "Total number of shards across which specs are split for this matrix entry. 1 = no sharding."
+        type: number
+        default: 1
     secrets:
       ORWELLSTAT_USER:
         required: true
@@ -82,26 +90,59 @@ jobs:
       - name: Audit dependencies
         run: npm audit --audit-level=high
         working-directory: playwright/typescript
+      - name: Cache Playwright browsers
+        # Reuses the ~600 MB ms-playwright tarball across runs and shards. The key is bound to
+        # the Playwright version pinned in package-lock.json plus the per-leg browser slug, so
+        # any version bump (or a different browser binary) misses the cache and triggers a
+        # fresh download — no stale binaries can leak into a newer Playwright runtime. No
+        # `restore-keys` fallback: a partial restore would extract old binaries that the
+        # subsequent `install --with-deps` (cache-miss branch) would overwrite anyway, so the
+        # extra I/O has no benefit.
+        id: cache-playwright
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ms-playwright-${{ runner.os }}-${{ inputs.browser }}-${{ hashFiles('playwright/typescript/package-lock.json') }}
       - name: Install Playwright Browsers
         # chromium is always installed because the auth setup project (auth.setup.ts) has no
         # explicit browser configured and therefore defaults to Chromium. Every matrix job needs
         # it available to run the setup dependency. For Chromium/Mobile Chrome jobs the duplicate
-        # is idempotent and harmless.
-        run: npx playwright install --with-deps chromium ${{ inputs.browser }}
+        # is idempotent and harmless. On cache hit only OS deps are reinstalled (apt packages
+        # are not in the cached path).
+        run: |
+          if [ "${CACHE_HIT}" = "true" ]; then
+            npx playwright install-deps chromium "${BROWSER}"
+          else
+            npx playwright install --with-deps chromium "${BROWSER}"
+          fi
         working-directory: playwright/typescript
+        env:
+          BROWSER: ${{ inputs.browser }}
+          CACHE_HIT: ${{ steps.cache-playwright.outputs.cache-hit }}
       - name: Install libxml2-utils (xmllint)
         # xmllint provides local XHTML DTD validation used by validation.spec.ts — the default
         # path; avoids POSTing authenticated pages to validator.w3.org on every CI run.
         run: sudo apt-get install -y libxml2-utils
       - name: Run Playwright tests
         run: |
-          if [ "${{ inputs.update-visual-baselines }}" = "true" ]; then
-            npx playwright test tests/visual.spec.ts --update-snapshots --project="${{ inputs.project }}"
+          SHARD_ARGS=()
+          if [ "${TOTAL_SHARDS}" -gt 1 ]; then
+            SHARD_ARGS+=("--shard=${SHARD}/${TOTAL_SHARDS}")
+          fi
+          if [ "${UPDATE_BASELINES}" = "true" ]; then
+            npx playwright test tests/visual.spec.ts --update-snapshots --project="${PROJECT}" "${SHARD_ARGS[@]}"
           else
-            npx playwright test --project="${{ inputs.project }}"
+            npx playwright test --project="${PROJECT}" "${SHARD_ARGS[@]}"
           fi
         working-directory: playwright/typescript
         env:
+          # Move workflow inputs through env so the shell body never embeds raw `${{ }}`
+          # interpolation (script-injection hygiene; matches the pattern in
+          # playwright-typescript.yml's setup-matrix).
+          PROJECT: ${{ inputs.project }}
+          SHARD: ${{ inputs.shard }}
+          TOTAL_SHARDS: ${{ inputs.total-shards }}
+          UPDATE_BASELINES: ${{ inputs.update-visual-baselines }}
           ENV: ${{ vars.ENV }}
           ORWELLSTAT_USER: ${{ secrets.ORWELLSTAT_USER }}
           ORWELLSTAT_PASSWORD: ${{ secrets.ORWELLSTAT_PASSWORD }}
@@ -121,9 +162,10 @@ jobs:
         if: ${{ inputs.update-visual-baselines }}
         uses: actions/upload-artifact@v7
         with:
-          name: visual-baselines-linux-${{ inputs.id }}
-          # Per-project glob — commit-baselines downloads with merge-multiple: true, so overlapping
-          # filenames across matrix jobs would race and drop baselines (see issue #347).
+          # Per-project filename globs already prevent cross-project collisions (see #347);
+          # per-shard suffix is the equivalent guard within a single project — each shard
+          # regenerates only the visual tests it owns.
+          name: visual-baselines-linux-${{ inputs.id }}-${{ inputs.shard }}
           path: playwright/typescript/tests/visual.spec.ts-snapshots/*-${{ inputs.snap-token }}-linux.png
           # Fail loudly if snap-token ever drifts from the real filename rule (e.g. a project rename
           # that forgets to update the matrix JSON) — default `warn` would silently lose baselines.
@@ -138,13 +180,13 @@ jobs:
       - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() && steps.detect-act.outputs.running != 'true' }}
         with:
-          name: playwright-report-${{ inputs.id }}
+          name: playwright-report-${{ inputs.id }}-${{ inputs.shard }}
           path: playwright/typescript/playwright-report/
           retention-days: 30
       - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() && steps.detect-act.outputs.running != 'true' }}
         with:
-          name: blob-report-${{ inputs.id }}
+          name: blob-report-${{ inputs.id }}-${{ inputs.shard }}
           path: playwright/typescript/blob-report/
           retention-days: 30
       - name: Collect self-healing data
@@ -168,7 +210,7 @@ jobs:
       - uses: actions/upload-artifact@v7
         if: ${{ failure() && steps.detect-act.outputs.running != 'true' }}
         with:
-          name: self-healing-data-${{ inputs.id }}
+          name: self-healing-data-${{ inputs.id }}-${{ inputs.shard }}
           path: playwright/typescript/self-healing-data/
           retention-days: 7
           if-no-files-found: ignore
