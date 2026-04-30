@@ -70,11 +70,11 @@ If a hunk falls under more than one category, pick the category that names the *
 
 ## Out-of-scope categories (narrow)
 
-Skip findings that fall only into the following — they are either non-security-shaped, owned by a sibling reviewer, or beyond what a static diff can establish:
+Skip findings that fall only into the following — they are either non-security-shaped or beyond what a static diff can establish:
 
-- style / formatting / non-security defects → handled by `/simplify`.
-- documentation consistency → handled by `deep-review-docs`.
-- test correctness → handled by the deep-review checklist.
+- style, formatting, code-reuse, efficiency, or correctness defects with no security impact.
+- documentation consistency.
+- test correctness or coverage.
 - theoretical timing attacks where the value compared is not itself a secret.
 - secrets persisted to disk when the surrounding access control or filesystem mode already enforces protection.
 - threats listed in **Scope honesty** above (runtime exploitation, infra/network config, threat-model-level business logic, hardware, social vectors).
