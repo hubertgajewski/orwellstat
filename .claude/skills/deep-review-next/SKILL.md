@@ -20,7 +20,7 @@ Extend by adding new files under `.claude/agents/` and listing them here:
 | `deep-review-project-checklist`  | orwellstat-specific Playwright / POM / fixture / tag / CI-workflow conventions                       |
 | `deep-review-simplification`     | Code reuse, quality (DRY/SOLID/Fowler smells), and efficiency review — paraphrases public sources    |
 | `deep-review-code`               | General code-review (functionality / tests / naming / comments / dead code) anchored in Google Code Review Developer Guide (CC BY 3.0) |
-| `deep-review-architecture`       | Architecture review (SOLID / coupling / cohesion / dependency direction / abstraction boundaries) influenced by SOLID, "Clean Architecture" (Martin), GoF, DDD (Evans) |
+| `deep-review-architecture`       | Architecture review (dependency direction / layer leaks / abstraction boundaries) influenced by SOLID, "Clean Architecture" (Martin), GoF, DDD (Evans) |
 
 Roadmap — pending sibling stories under epic #436 will add the rest of the family (each story creates one agent file under `.claude/agents/` and adds a row above):
 
