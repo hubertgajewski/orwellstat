@@ -18,12 +18,12 @@ Extend by adding new files under `.claude/agents/` and listing them here:
 | -------------------------------- | --------------------------------------------------------------------------------------------------- |
 | `deep-review-security`           | Vulnerability review anchored in OWASP Top 10:2021 / CWE Top 25 (2024) / OWASP ASVS 4.0.3            |
 | `deep-review-project-checklist`  | orwellstat-specific Playwright / POM / fixture / tag / CI-workflow conventions                       |
+| `deep-review-simplification`     | Code reuse, quality (DRY/SOLID/Fowler smells), and efficiency review — paraphrases public sources    |
 
 Roadmap — pending sibling stories under epic #436 will add the rest of the family (each story creates one agent file under `.claude/agents/` and adds a row above):
 
 | Pending agent                | Story |
 | ---------------------------- | ----- |
-| `deep-review-simplification` | #427  |
 | `deep-review-code`           | #428  |
 | `deep-review-architecture`   | #428  |
 | `deep-review-typescript`     | #429  |
@@ -95,6 +95,10 @@ Task(subagent_type="deep-review-security",
 Task(subagent_type="deep-review-project-checklist",
      description="Project checklist review of pending diff",
      prompt="<DIFF>\n\n--- untracked files (paths only; use Read to fetch content) ---\n<UNTRACKED>\n\n---\nApply the orwellstat-specific Playwright / POM / fixture / tag / CI conventions and emit findings in the documented format.")
+
+Task(subagent_type="deep-review-simplification",
+     description="Simplification review of pending diff",
+     prompt="<DIFF>\n\n--- untracked files (paths only; use Read to fetch content) ---\n<UNTRACKED>\n\n---\nReview for missed reuse, quality (DRY/SOLID/Fowler smells), and efficiency, and emit findings in the documented pass/fail/N/A format.")
 ```
 
 Each agent returns its findings in its own documented format. Do not coerce one format into the other — the formats are deliberately distinct because the domains are distinct.
@@ -114,9 +118,13 @@ summary: <H> high / <M> medium / <L> low
 <agent's verbatim findings or "Failures: none.">
 Summary: <pass> pass / <fail> fail / <N/A> N/A
 
+### deep-review-simplification
+<agent's verbatim findings or "Failures: none.">
+Summary: <pass> pass / <fail> fail / <N/A> N/A
+
 ### aggregate
-total: <H> security HIGH / <M> security MEDIUM / <L> security LOW / <fail> checklist fail
-status: <"ready" if zero security HIGH, zero security MEDIUM, and zero checklist fail; otherwise "blocked">
+total: <H> security HIGH / <M> security MEDIUM / <L> security LOW / <CF> checklist fail / <SF> simplification fail
+status: <"ready" if zero security HIGH, zero security MEDIUM, zero checklist fail, and zero simplification fail; otherwise "blocked">
 ```
 
 If any roster agent was marked `UNAVAILABLE`, list it under the `### aggregate` block before the `total:` line.
