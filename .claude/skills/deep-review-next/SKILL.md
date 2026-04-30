@@ -123,7 +123,7 @@ Summary: <pass> pass / <fail> fail / <N/A> N/A
 Summary: <pass> pass / <fail> fail / <N/A> N/A
 
 ### aggregate
-total: <H> security HIGH / <M> security MEDIUM / <L> security LOW / <Cf> checklist fail / <Sf> simplification fail
+total: <H> security HIGH / <M> security MEDIUM / <L> security LOW / <CF> checklist fail / <SF> simplification fail
 status: <"ready" if zero security HIGH, zero security MEDIUM, zero checklist fail, and zero simplification fail; otherwise "blocked">
 ```
 
