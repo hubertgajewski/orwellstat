@@ -280,6 +280,31 @@ describe('coverage-matrix MCP', () => {
       expect(after).toBe(before);
     });
 
+    it('serialises ≥5 concurrent markCovered calls; every flip lands', async () => {
+      const calls = [
+        { pageUrl: '/a/', category: 'content' },
+        { pageUrl: '/a/', category: 'visualRegression' },
+        { pageUrl: '/c/', category: 'title' },
+        { pageUrl: '/c/', category: 'content' },
+        { pageUrl: '/c/', category: 'accessibility' },
+        { pageUrl: '/c/', category: 'visualRegression' },
+        { pageUrl: '/c/', category: 'api' },
+      ];
+      const results = await Promise.all(calls.map((c) => markCovered(c)));
+      for (const r of results) {
+        expect(r.isError).toBeFalsy();
+      }
+      const final = readMatrix();
+      expect(final.pages['/a/'].content).toBe(true);
+      expect(final.pages['/a/'].visualRegression).toBe(true);
+      expect(final.pages['/c/'].title).toBe(true);
+      expect(final.pages['/c/'].content).toBe(true);
+      expect(final.pages['/c/'].accessibility).toBe(true);
+      expect(final.pages['/c/'].visualRegression).toBe(true);
+      expect(final.pages['/c/'].api).toBe(true);
+      expect(final.pages['/b/']).toEqual(SAMPLE_MATRIX.pages['/b/']);
+    });
+
     it('preserves trailing newline and JSON structure when writing', async () => {
       await markCovered({ pageUrl: '/a/', category: 'content' });
       const raw = readFileSync(
