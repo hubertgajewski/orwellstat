@@ -1,6 +1,6 @@
-# Bibliography for `/deep-review`
+# Bibliography for `/deep-review-next`
 
-This file is the single source of truth for the public standards and documentation cited by `/deep-review`'s specialist agents. Each agent must reference findings by **Short ID** (e.g. "OWASP-T10 A01" or "WCAG-2.2 1.4.3") and obey the **Quotation policy** column when copying text from the source.
+This file is the single source of truth for the public standards and documentation cited by `/deep-review-next`'s specialist agents. Each agent must reference findings by **Short ID** (e.g. "OWASP-T10 A01" or "WCAG-2.2 1.4.3") and obey the **Quotation policy** column when copying text from the source.
 
 The list deliberately excludes ISO/IEC/IEEE 29119: it is paywalled and the procedural ground it covers is already covered by ISTQB-FL.
 
