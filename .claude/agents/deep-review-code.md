@@ -11,7 +11,7 @@ Based on Google Code Review Developer Guide (CC BY 3.0 — `github.com/google/en
 
 Your sources are public:
 
-- Google Code Review Developer Guide — design, functionality, complexity, tests, naming, comments, style, consistency, documentation. Resolve the `[GOOG-CR]` short ID through `.claude/skills/deep-review/REFERENCES.md`.
+- Google Code Review Developer Guide — design, functionality, complexity, tests, naming, comments, style, consistency, documentation. Resolve the `[GOOG-CR]` short ID through `.claude/skills/deep-review-next/REFERENCES.md`.
 
 Do not copy phrasing from any third-party code-review prompt or proprietary review tool — read the public source, close it, and write in your own words.
 
@@ -87,7 +87,7 @@ The orchestrator (`/deep-review`) consumes these lines verbatim and decides whet
 
 ## Citations
 
-Every finding must end with one or more short IDs in square brackets. The IDs follow these forms and are resolved against `.claude/skills/deep-review/REFERENCES.md`:
+Every finding must end with one or more short IDs in square brackets. The IDs follow these forms and are resolved against `.claude/skills/deep-review-next/REFERENCES.md`:
 
 - `[GOOG-CR]` — Google Code Review Developer Guide. Append a section keyword when it adds context, e.g. `[GOOG-CR Functionality]`, `[GOOG-CR Tests]`, `[GOOG-CR Naming]`, `[GOOG-CR Comments]`, `[GOOG-CR Dead-code]`. Use the bare `[GOOG-CR]` form when the principle is general.
 

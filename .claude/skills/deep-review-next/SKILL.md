@@ -18,14 +18,14 @@ Extend by adding new files under `.claude/agents/` and listing them here:
 | -------------------------------- | --------------------------------------------------------------------------------------------------- |
 | `deep-review-security`           | Vulnerability review anchored in OWASP Top 10:2021 / CWE Top 25 (2024) / OWASP ASVS 4.0.3            |
 | `deep-review-project-checklist`  | orwellstat-specific Playwright / POM / fixture / tag / CI-workflow conventions                       |
+| `deep-review-code`               | General code-review (functionality / tests / naming / comments / dead code) anchored in Google Code Review Developer Guide (CC BY 3.0) |
+| `deep-review-architecture`       | Architecture review (SOLID / coupling / cohesion / dependency direction / abstraction boundaries) influenced by SOLID, "Clean Architecture" (Martin), GoF, DDD (Evans) |
 
 Roadmap — pending sibling stories under epic #436 will add the rest of the family (each story creates one agent file under `.claude/agents/` and adds a row above):
 
 | Pending agent                | Story |
 | ---------------------------- | ----- |
 | `deep-review-simplification` | #427  |
-| `deep-review-code`           | #428  |
-| `deep-review-architecture`   | #428  |
 | `deep-review-typescript`     | #429  |
 | `deep-review-python`         | #429  |
 | `deep-review-qa`             | #430  |

@@ -14,7 +14,7 @@ Background influence (no quoted phrasing; principles paraphrased and named in fi
 - **Design Patterns** (Gamma, Helm, Johnson, Vlissides — "Gang of Four") — vocabulary for recurring object-oriented structures (factory, adapter, observer, strategy, etc.).
 - **Domain-Driven Design** (Eric Evans) — bounded contexts, aggregates, domain vs application vs infrastructure layering, ubiquitous language.
 
-These four sources are influence only. They are *not* listed in `.claude/skills/deep-review/REFERENCES.md` and you must not quote them verbatim. Cite SOLID principle violations by the principle name (`[SOLID-SRP]`, `[SOLID-OCP]`, `[SOLID-LSP]`, `[SOLID-ISP]`, `[SOLID-DIP]`) — these are vocabulary tokens, not REFERENCES.md entries. For high-level design comments that are not principle-specific, cite `[GOOG-CR]` (resolved through `REFERENCES.md`).
+These four sources are influence only. They are *not* listed in `.claude/skills/deep-review-next/REFERENCES.md` and you must not quote them verbatim. Cite SOLID principle violations by the principle name (`[SOLID-SRP]`, `[SOLID-OCP]`, `[SOLID-LSP]`, `[SOLID-ISP]`, `[SOLID-DIP]`) — these are vocabulary tokens, not REFERENCES.md entries. For high-level design comments that are not principle-specific, cite `[GOOG-CR]` (resolved through `REFERENCES.md`).
 
 Do not copy phrasing from any third-party architecture-review prompt or proprietary review tool — read the public sources, close them, and write in your own words.
 
@@ -96,6 +96,6 @@ The orchestrator (`/deep-review`) consumes these lines verbatim and decides whet
 Every finding must end with one or more short IDs in square brackets. The IDs follow these forms:
 
 - `[SOLID-SRP]`, `[SOLID-OCP]`, `[SOLID-LSP]`, `[SOLID-ISP]`, `[SOLID-DIP]` — SOLID principle vocabulary tokens. These are *not* `REFERENCES.md` entries; they are stable principle names used to identify which axis of architecture is at stake. Use exactly one when the finding is principle-specific.
-- `[GOOG-CR]` — Google Code Review Developer Guide, resolved through `.claude/skills/deep-review/REFERENCES.md`. Append a section keyword when it adds context, e.g. `[GOOG-CR Design]`. Use this for high-level design or coupling/cohesion findings that are not pinned to a single SOLID principle.
+- `[GOOG-CR]` — Google Code Review Developer Guide, resolved through `.claude/skills/deep-review-next/REFERENCES.md`. Append a section keyword when it adds context, e.g. `[GOOG-CR Design]`. Use this for high-level design or coupling/cohesion findings that are not pinned to a single SOLID principle.
 
 Use the most specific identifier first (a SOLID token), followed by `[GOOG-CR]` for the underlying design-review concern when both apply. If `REFERENCES.md` is missing, still emit the short IDs verbatim — the orchestrator resolves them.
