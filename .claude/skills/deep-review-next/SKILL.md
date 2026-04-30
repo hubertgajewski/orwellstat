@@ -21,13 +21,13 @@ Extend by adding new files under `.claude/agents/` and listing them here:
 | `deep-review-simplification`     | Code reuse, quality (DRY/SOLID/Fowler smells), and efficiency review — paraphrases public sources    |
 | `deep-review-code`               | General code-review (functionality / tests / naming / comments / dead code) anchored in Google Code Review Developer Guide (CC BY 3.0) |
 | `deep-review-architecture`       | Architecture review (dependency direction / layer leaks / abstraction boundaries) influenced by SOLID, "Clean Architecture" (Martin), GoF, DDD (Evans) |
+| `deep-review-typescript`         | TypeScript idiom review (`as any`, missing `satisfies`, narrowing, `as const`) anchored in TS Handbook + typescript-eslint — dispatch only when the diff contains `.ts` / `.tsx` files |
+| `deep-review-python`             | Python style / idiom / docstring review (PEP 8 / 20 / 257 violations and ruff-equivalent issues) — dispatch only when the diff contains `.py` files |
 
 Roadmap — pending sibling stories under epic #436 will add the rest of the family (each story creates one agent file under `.claude/agents/` and adds a row above):
 
 | Pending agent                | Story |
 | ---------------------------- | ----- |
-| `deep-review-typescript`     | #429  |
-| `deep-review-python`         | #429  |
 | `deep-review-qa`             | #430  |
 | `deep-review-unit-test`      | #430  |
 | `deep-review-ci`             | #431  |
@@ -109,6 +109,20 @@ Task(subagent_type="deep-review-architecture",
      prompt="<DIFF>\n\n--- untracked files (paths only; use Read to fetch content) ---\n<UNTRACKED>\n\n---\nReview for SOLID violations, coupling, cohesion, dependency direction, and abstraction-boundary leaks, and emit findings in the documented HIGH/MEDIUM/LOW pipe-delimited schema.")
 ```
 
+Conditional dispatches — same single-message parallel batch as the unconditional dispatches above; do **not** open a second dispatch pass. For each agent below, evaluate the extension test against the file paths in the diff hunks and the untracked-files listing; include the `Task(...)` call in the same parallel-Task message when the test passes, and record the agent as `SKIPPED: no <ext> files in scope` in the aggregate block when it fails:
+
+```
+# Dispatch only when at least one path under review ends in .ts or .tsx
+Task(subagent_type="deep-review-typescript",
+     description="TypeScript idiom review of pending diff",
+     prompt="<DIFF>\n\n--- untracked files (paths only; use Read to fetch content) ---\n<UNTRACKED>\n\n---\nReview for `as any`, missing `satisfies`, missing narrowing, `!` non-null assertions, and named typescript-eslint rule violations, citing REFERENCES.md short IDs, and emit findings in the documented HIGH/MEDIUM/LOW pipe-delimited schema.")
+
+# Dispatch only when at least one path under review ends in .py
+Task(subagent_type="deep-review-python",
+     description="Python idiom review of pending diff",
+     prompt="<DIFF>\n\n--- untracked files (paths only; use Read to fetch content) ---\n<UNTRACKED>\n\n---\nReview for PEP 8 / 20 / 257 violations and ruff-equivalent issues (style, idiom, docstring, bug-risk), citing REFERENCES.md short IDs, and emit findings in the documented HIGH/MEDIUM/LOW pipe-delimited schema.")
+```
+
 Each agent returns its findings in its own documented format. Do not coerce one format into the other — the formats are deliberately distinct because the domains are distinct.
 
 **Agent error handling** — if a Task call times out or errors, retry it once **sequentially** (single Task call, not bundled with others). If it still fails, mark the agent as `UNAVAILABLE: <reason>` for the aggregate report and continue with the others.
@@ -138,12 +152,20 @@ summary: <H> high / <M> medium / <L> low
 <agent's verbatim findings or "findings: none">
 summary: <H> high / <M> medium / <L> low
 
+### deep-review-typescript
+<agent's verbatim findings or "findings: none" or "SKIPPED: no .ts/.tsx files in scope">
+summary: <H> high / <M> medium / <L> low
+
+### deep-review-python
+<agent's verbatim findings or "findings: none" or "SKIPPED: no .py files in scope">
+summary: <H> high / <M> medium / <L> low
+
 ### aggregate
-total: <H> security HIGH / <M> security MEDIUM / <L> security LOW / <CF> checklist fail / <SF> simplification fail / <H> code HIGH / <M> code MEDIUM / <L> code LOW / <H> architecture HIGH / <M> architecture MEDIUM / <L> architecture LOW
-status: <"ready" if zero security HIGH, zero security MEDIUM, zero checklist fail, zero simplification fail, zero code HIGH, zero code MEDIUM, zero architecture HIGH, and zero architecture MEDIUM; otherwise "blocked">
+total: <H> security HIGH / <M> security MEDIUM / <L> security LOW / <CF> checklist fail / <SF> simplification fail / <H> code HIGH / <M> code MEDIUM / <L> code LOW / <H> architecture HIGH / <M> architecture MEDIUM / <L> architecture LOW / <H> typescript HIGH / <M> typescript MEDIUM / <L> typescript LOW / <H> python HIGH / <M> python MEDIUM / <L> python LOW
+status: <"ready" if zero security HIGH, zero security MEDIUM, zero checklist fail, zero simplification fail, zero code HIGH, zero code MEDIUM, zero architecture HIGH, zero architecture MEDIUM, zero typescript HIGH, zero typescript MEDIUM, zero python HIGH, and zero python MEDIUM; otherwise "blocked">
 ```
 
-If any roster agent was marked `UNAVAILABLE`, list it under the `### aggregate` block before the `total:` line.
+A `SKIPPED:` agent contributes 0 to all counts and never blocks. If any roster agent was marked `UNAVAILABLE`, list it under the `### aggregate` block before the `total:` line.
 
 ## Step 3 — Re-review convergence loop (cap = 3)
 
