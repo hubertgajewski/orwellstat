@@ -19,18 +19,18 @@ The current roster (extend by adding new files under `.claude/agents/` and listi
 
 Capture the diff once in this orchestrator and inject it into each dispatch — the specialist agents are granted `Read, Grep, Glob` only and cannot run `git diff` themselves.
 
-1. Capture: `DIFF=$(git diff HEAD)` and `UNTRACKED=$(git ls-files --others --exclude-standard)`. If both are empty, return `aggregate: no changes` and stop.
+1. Run `git diff HEAD` and capture the full stdout as `DIFF`. Run `git ls-files --others --exclude-standard` and capture its stdout as `UNTRACKED` (this returns **paths only**, not file content — agents fetch content with `Read`). If both are empty, return `aggregate: no changes` and stop.
 
-2. For each agent in the roster, dispatch in parallel:
+2. For each agent in the roster, build the prompt by concatenating the captured `DIFF` text, a `\n\n--- untracked files (paths only; use Read to fetch content) ---\n` separator, the `UNTRACKED` listing, and a `\n\n---\n` followed by the per-agent task instruction. Dispatch all agents in parallel:
 
 ```
 Task(subagent_type="deep-review-security",
      description="Security review of pending diff",
-     prompt="<DIFF + untracked-files listing here>\nReview for vulnerabilities and emit findings in the documented schema, citing REFERENCES.md short IDs.")
+     prompt="<DIFF>\n\n--- untracked files (paths only; use Read to fetch content) ---\n<UNTRACKED>\n\n---\nReview for vulnerabilities and emit findings in the documented schema, citing REFERENCES.md short IDs.")
 
 Task(subagent_type="deep-review-project-checklist",
      description="Project checklist review of pending diff",
-     prompt="<DIFF + untracked-files listing here>\nApply the orwellstat-specific Playwright / POM / fixture / tag / CI conventions and emit findings in the documented format.")
+     prompt="<DIFF>\n\n--- untracked files (paths only; use Read to fetch content) ---\n<UNTRACKED>\n\n---\nApply the orwellstat-specific Playwright / POM / fixture / tag / CI conventions and emit findings in the documented format.")
 ```
 
 3. Each agent returns its findings in its own documented format. Do not coerce one format into the other — the formats are deliberately distinct because the domains are distinct.
