@@ -106,9 +106,9 @@ mcp/
 | [Bruno](https://www.usebruno.com/)                                | API request collection         | Standalone app or [VSCode extension](https://marketplace.visualstudio.com/items?itemName=bruno-api-client.bruno)                                  |
 | [Docker Desktop](https://www.docker.com/products/docker-desktop/) | Running GitHub Actions locally | [docker.com](https://www.docker.com/products/docker-desktop/)                                                                                     |
 | [act](https://github.com/nektos/act)                              | Running GitHub Actions locally | macOS: `brew install act` (requires [Homebrew](https://brew.sh)); Linux/Windows 11: [nektos/act releases](https://github.com/nektos/act/releases) |
-| [actionlint](https://github.com/rhysd/actionlint)                 | `/deep-review` GitHub Actions reviewer agent | macOS: `brew install actionlint shellcheck` (requires [Homebrew](https://brew.sh)); other platforms: [rhysd/actionlint releases](https://github.com/rhysd/actionlint/releases) |
+| [actionlint](https://github.com/rhysd/actionlint)                 | `/deep-review-next` GitHub Actions reviewer agent | macOS: `brew install actionlint shellcheck` (requires [Homebrew](https://brew.sh)); other platforms: [rhysd/actionlint releases](https://github.com/rhysd/actionlint/releases) |
 
-Node.js includes `npm` — no separate installation needed. Docker, `act`, and `actionlint` are optional: Docker and `act` are only needed for local CI testing; `actionlint` is only needed when running the `/deep-review` GitHub Actions reviewer agent locally.
+Node.js includes `npm` — no separate installation needed. Docker, `act`, and `actionlint` are optional: Docker and `act` are only needed for local CI testing; `actionlint` is only needed when running the `/deep-review-next` GitHub Actions reviewer agent locally.
 
 ## Credentials
 
