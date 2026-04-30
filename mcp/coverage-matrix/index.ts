@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { readFileSync, writeFileSync, realpathSync } from 'fs';
+import { readFileSync, writeFileSync, renameSync, rmSync, realpathSync } from 'fs';
 import { join } from 'path';
 import { fileURLToPath } from 'url';
 import { z } from 'zod';
+import lockfile from 'proper-lockfile';
 import { repoRoot, ok, err } from '@orwellstat/mcp-shared';
 
 const PAGE_CATEGORIES = ['title', 'content', 'accessibility', 'visualRegression', 'api'] as const;
@@ -113,30 +114,47 @@ async function markCovered(args: { pageUrl: string; category: string }) {
     return err(`Invalid category "${category}". Valid categories: ${PAGE_CATEGORIES.join(', ')}`);
   }
 
-  const { matrix, error } = readMatrix();
-  if (!matrix) return err(error ?? 'unknown error');
-
-  if (!(pageUrl in matrix.pages)) {
-    return err(
-      `Unknown page URL "${pageUrl}". Known URLs: ${Object.keys(matrix.pages).join(', ')}`
-    );
-  }
-
-  const previous = matrix.pages[pageUrl][category];
-  matrix.pages[pageUrl][category] = true;
-
   const file = matrixPath();
+  let release: () => Promise<void>;
   try {
-    writeFileSync(file, JSON.stringify(matrix, null, 2) + '\n', 'utf8');
+    release = await lockfile.lock(file, {
+      retries: { retries: 20, factor: 1.5, minTimeout: 20, maxTimeout: 500 },
+    });
   } catch (e) {
-    return err(`Failed to write ${file}: ${(e as Error).message}`);
+    return err(`Failed to acquire lock on ${file}: ${(e as Error).message}`);
   }
 
-  return ok({
-    pageUrl,
-    category,
-    previous: previous === true,
-  });
+  try {
+    const { matrix, error } = readMatrix();
+    if (!matrix) return err(error ?? 'unknown error');
+
+    if (!(pageUrl in matrix.pages)) {
+      return err(
+        `Unknown page URL "${pageUrl}". Known URLs: ${Object.keys(matrix.pages).join(', ')}`
+      );
+    }
+
+    const previous = matrix.pages[pageUrl][category];
+    matrix.pages[pageUrl][category] = true;
+
+    // Same-dir tmp file so renameSync stays on one filesystem (atomic).
+    const tmp = `${file}.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}.tmp`;
+    try {
+      writeFileSync(tmp, JSON.stringify(matrix, null, 2) + '\n', 'utf8');
+      renameSync(tmp, file);
+    } catch (e) {
+      rmSync(tmp, { force: true });
+      return err(`Failed to write ${file}: ${(e as Error).message}`);
+    }
+
+    return ok({
+      pageUrl,
+      category,
+      previous: previous === true,
+    });
+  } finally {
+    await release();
+  }
 }
 
 const server = new McpServer({ name: 'coverage-matrix', version: '1.0.0' });
