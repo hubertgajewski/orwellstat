@@ -24,6 +24,7 @@ Extend by adding new files under `.claude/agents/` and listing them here:
 | `deep-review-typescript`         | TypeScript idiom review (`as any`, missing `satisfies`, narrowing, `as const`) anchored in TS Handbook + typescript-eslint — dispatch only when the diff contains `.ts` / `.tsx` files |
 | `deep-review-python`             | Python style / idiom / docstring review (PEP 8 / 20 / 257 violations and ruff-equivalent issues) — dispatch only when the diff contains `.py` files |
 | `deep-review-docs`               | Verifies README/CLAUDE.md/skill-file consistency against the project's documented split rules                                                                                  |
+| `deep-review-ci`                 | GitHub Actions specialist — `actionlint` + `shellcheck` static pass first (zero LLM tokens), LLM semantic pass for non-trivial workflows (CI/CD integrity, secret handling, action pinning) — dispatch only when the diff contains `.github/workflows/**.yml` / `.yaml` or `action.yml` / `action.yaml` |
 
 Roadmap — pending sibling stories under epic #436 will add the rest of the family (each story creates one agent file under `.claude/agents/` and adds a row above):
 
@@ -31,7 +32,6 @@ Roadmap — pending sibling stories under epic #436 will add the rest of the fam
 | ---------------------------- | ----- |
 | `deep-review-qa`             | #430  |
 | `deep-review-unit-test`      | #430  |
-| `deep-review-ci`             | #431  |
 
 ## Step 0 — Argument parsing and scope resolution
 
@@ -83,7 +83,7 @@ If the bias is non-empty, append it verbatim to every agent's prompt under a `Re
 
 ## Step 1 — Parallel agent dispatch
 
-Dispatch every agent in the **current roster** (specialist agents table above — not the roadmap) in a single message via parallel Task tool calls. The specialist agents are granted `Read, Grep, Glob` only and cannot run `git diff` themselves; capture the scope once in this orchestrator and inject it into each dispatch.
+Dispatch every agent in the **current roster** (specialist agents table above — not the roadmap) in a single message via parallel Task tool calls. Most specialist agents are granted `Read, Grep, Glob` only and cannot run `git diff` themselves — `deep-review-ci` is the exception: it additionally whitelists `Bash(actionlint *)` and `Bash(shellcheck *)` because its first pass is a static analyzer run, not an LLM call. Capture the scope once in this orchestrator and inject it into each dispatch.
 
 Build each prompt by concatenating `DIFF`, a `\n\n--- untracked files (paths only; use Read to fetch content) ---\n` separator, the `UNTRACKED` listing, the `Reviewer bias: <text>` line if non-empty, the PR description verbatim for US2, and a `\n\n---\n` followed by the per-agent task instruction. Dispatch all roster agents in parallel:
 
@@ -125,6 +125,11 @@ Task(subagent_type="deep-review-typescript",
 Task(subagent_type="deep-review-python",
      description="Python idiom review of pending diff",
      prompt="<DIFF>\n\n--- untracked files (paths only; use Read to fetch content) ---\n<UNTRACKED>\n\n---\nReview for PEP 8 / 20 / 257 violations and ruff-equivalent issues (style, idiom, docstring, bug-risk), citing REFERENCES.md short IDs, and emit findings in the documented HIGH/MEDIUM/LOW pipe-delimited schema.")
+
+# Dispatch only when at least one path under review matches .github/workflows/**.yml, .github/workflows/**.yaml, action.yml, or action.yaml
+Task(subagent_type="deep-review-ci",
+     description="CI / GitHub Actions review of pending diff",
+     prompt="<DIFF>\n\n--- untracked files (paths only; use Read to fetch content) ---\n<UNTRACKED>\n\n---\nRun the actionlint static pass on every changed workflow file first; escalate to the LLM semantic pass only for non-trivial workflows (if conditions, multi-job orchestration, head_sha-style refs, pull_request_target / workflow_run triggers, secret writes, concurrency, schedule). Cite REFERENCES.md short IDs and emit findings in the documented HIGH/MEDIUM/LOW pipe-delimited schema.")
 ```
 
 Each agent returns its findings in its own documented format. Do not coerce one format into the other — the formats are deliberately distinct because the domains are distinct.
@@ -168,9 +173,13 @@ summary: <H> high / <M> medium / <L> low
 <agent's verbatim findings or "Failures: none.">
 Summary: <pass> pass / <fail> fail / <N/A> N/A
 
+### deep-review-ci
+<agent's verbatim findings or "findings: none" or "SKIPPED: no .github/workflows/**.yml or action.yml files in scope">
+summary: <H> high / <M> medium / <L> low
+
 ### aggregate
-total: <H> security HIGH / <M> security MEDIUM / <L> security LOW / <CF> checklist fail / <SF> simplification fail / <H> code HIGH / <M> code MEDIUM / <L> code LOW / <H> architecture HIGH / <M> architecture MEDIUM / <L> architecture LOW / <H> typescript HIGH / <M> typescript MEDIUM / <L> typescript LOW / <H> python HIGH / <M> python MEDIUM / <L> python LOW / <DF> docs fail
-status: <"ready" if zero security HIGH, zero security MEDIUM, zero checklist fail, zero simplification fail, zero code HIGH, zero code MEDIUM, zero architecture HIGH, zero architecture MEDIUM, zero typescript HIGH, zero typescript MEDIUM, zero python HIGH, zero python MEDIUM, and zero docs fail; otherwise "blocked">
+total: <H> security HIGH / <M> security MEDIUM / <L> security LOW / <CF> checklist fail / <SF> simplification fail / <H> code HIGH / <M> code MEDIUM / <L> code LOW / <H> architecture HIGH / <M> architecture MEDIUM / <L> architecture LOW / <H> typescript HIGH / <M> typescript MEDIUM / <L> typescript LOW / <H> python HIGH / <M> python MEDIUM / <L> python LOW / <DF> docs fail / <H> ci HIGH / <M> ci MEDIUM / <L> ci LOW
+status: <"ready" if zero security HIGH, zero security MEDIUM, zero checklist fail, zero simplification fail, zero code HIGH, zero code MEDIUM, zero architecture HIGH, zero architecture MEDIUM, zero typescript HIGH, zero typescript MEDIUM, zero python HIGH, zero python MEDIUM, zero docs fail, zero ci HIGH, and zero ci MEDIUM; otherwise "blocked">
 ```
 
 A `SKIPPED:` agent contributes 0 to all counts and never blocks. If any roster agent was marked `UNAVAILABLE`, list it under the `### aggregate` block before the `total:` line.
