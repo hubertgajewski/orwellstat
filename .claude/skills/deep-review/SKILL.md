@@ -14,6 +14,22 @@ Also apply the general diff checks and (if `.github/workflows/*.yml` files chang
 
 After completing all checks, provide a summary: total pass / fail / N/A counts and a prioritised list of any failures that must be fixed before committing.
 
+## Step 4 — Token-estimate footer
+
+After the summary, emit one footer block estimating LLM token usage for each phase that ran. The estimate is approximate because the parent session cannot directly read token usage of the built-in `/security-review` and `/simplify` slash commands; derive each per-phase figure from observed I/O sizes (input ≈ bytes of diff fed in; output ≈ bytes produced).
+
+- The `/simplify` line accumulates across all cycles and shows the cycle count.
+- Emit the footer even when the loop hits the 3-cycle cap with remaining findings — print it before the prompt that asks how to proceed.
+- If `/security-review` or `/simplify` is unavailable and the skill falls back to manual checks, replace that phase's per-token numbers with `manual fallback` and append a numeric estimate covering the manual checks (e.g. `/simplify: manual fallback ~<X2> input / ~<Y2> output`); on the `/simplify` line, also drop the `across <C> cycle(s)` suffix since no cycles ran. The appended numeric estimate is what feeds the total.
+
+```
+Token estimate:
+  /security-review: ~<X1> input / ~<Y1> output
+  /simplify:        ~<X2> input / ~<Y2> output across <C> cycle(s)
+  inline checklist: ~<X3> input / ~<Y3> output
+  total:            ~<X> input / ~<Y> output
+```
+
 ---
 
 ## Code review checklist
