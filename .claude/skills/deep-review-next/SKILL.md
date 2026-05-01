@@ -175,7 +175,7 @@ After every per-agent section, emit:
 ### aggregate
 [UNAVAILABLE: <Agent>: <reason>   ← one line per UNAVAILABLE agent, if any]
 total: <enumerate every non-skipped row's format-relevant placeholders, in roster order, separated by " / ", e.g. "<security-H> security HIGH / <security-M> security MEDIUM / <security-L> security LOW / <project-checklist-fail> checklist fail / …">
-status: ready iff every metric named in each row's Blocking column is zero (a SKIPPED row contributes 0); otherwise blocked.
+status: ready if every metric named in each row's Blocking column is zero (a SKIPPED row contributes 0); otherwise blocked.
 ```
 
 A `SKIPPED:` agent contributes 0 to all counts and never blocks. The **Blocking** column of the master roster is the sole source of truth for which counts gate `status: ready` — for example, with `deep-review-security` Blocking = `HIGH + MEDIUM`, `<security-H>` and `<security-M>` must be zero; `<security-L>` is informational.
