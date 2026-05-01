@@ -34,6 +34,8 @@ Roadmap — all sibling stories under epic #436 have landed; the orchestrator's 
 
 Trim leading/trailing whitespace from `$ARGUMENTS`. Apply the rules below in order; the first match wins. Whatever the mode, the scope is captured as **`DIFF`** (the literal text the agents will review) and **`UNTRACKED`** (paths only of new untracked files; agents fetch content with `Read`):
 
+**Quoting contract.** When feeding `$ARGUMENTS` into the shell commands below, **single-quote** the argument to suppress expansion of `$VAR`, `$(cmd)`, and backticks. Double-quoting is not sufficient — `git rev-parse --verify --quiet "$arg" --` would still expand `$HOME` or evaluate `$(cmd)` embedded in the input. Prefer `git rev-parse --verify --quiet '<arg>' --` and `test -e '<arg>'`, or pass the value via an environment variable that is not interpolated into the command string. Rule 2 (PR number) is regex-gated to digits and is unaffected.
+
 1. **Empty** (`$ARGUMENTS` is the empty string) → **US1 local-diff mode**:
    ```bash
    DIFF=$(git diff HEAD)                                # staged + unstaged vs HEAD
@@ -53,15 +55,17 @@ Trim leading/trailing whitespace from `$ARGUMENTS`. Apply the rules below in ord
    ```
    Do not abort; continue with the PR diff.
 
-3. **Git ref or range** — the argument contains `..` or `...`, OR `git rev-parse --verify --quiet <arg> -- 2>/dev/null` returns 0 → **US3a range mode**:
+3. **Git ref or range** — the argument contains `..` or `...`, OR `git rev-parse --verify --quiet '<arg>' -- 2>/dev/null` returns 0 → **US3a range mode**:
    ```bash
    DIFF=$(git diff <range>)   # or git diff <ref>...HEAD if a single ref was passed
    UNTRACKED=
    ```
 
-4. **Path** — `test -e "<arg>"` succeeds → **US3b file/dir mode**: scope is the file or directory tree's contents (no diff). Concatenate the file's contents (or each file under the directory) into `DIFF`; leave `UNTRACKED` empty.
+4. **Path** — `test -e '<arg>'` succeeds → **US3b file/dir mode**: scope is the file or directory tree's contents (no diff). Concatenate the file's contents (or each file under the directory) into `DIFF`; leave `UNTRACKED` empty.
 
 5. **Otherwise** → **US3c freeform mode**: scope is the local diff (same as US1) AND the freeform string is recorded as a `Reviewer bias:` for every agent.
+
+**Precedence on collision.** Rules 3 and 4 can both match the same argument (e.g., a local file literally named `main` or `HEAD`). Rule 3 wins by virtue of the "first match wins" ordering. To force path mode, prefix the argument with `./` (e.g., `./main`) — `./main` is not a valid git ref, so rule 3's `git rev-parse` check fails and rule 4 matches.
 
 A non-empty freeform bias must be propagated in modes 2–4 if it is supplied (e.g. `213 focus on race conditions` parses as US2 PR=213 with bias `focus on race conditions`).
 
@@ -190,7 +194,7 @@ summary: <H> high / <M> medium / <L> low
 Summary: <pass> pass / <fail> fail / <N/A> N/A
 
 ### deep-review-ci
-<agent's verbatim findings or "findings: none" or "SKIPPED: no .github/workflows/**.yml or action.yml files in scope">
+<agent's verbatim findings or "findings: none" or "SKIPPED: no `.github/workflows/**.yml`, `.github/workflows/**.yaml`, `action.yml`, or `action.yaml` files in scope">
 summary: <H> high / <M> medium / <L> low
 
 ### deep-review-qa
