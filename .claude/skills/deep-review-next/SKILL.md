@@ -14,23 +14,34 @@ This orchestrator must complete every step below within a **single invocation**.
 
 Adding a new agent is a single new row in this table plus a new file under `.claude/agents/`. Steps 1 and 2 read from this table; the `status:` rule in Step 2 reads the **Blocking** column.
 
-| Agent | Domain | Dispatch | Format | Empty-state sentinel | Blocking | Task instruction |
-| --- | --- | --- | --- | --- | --- | --- |
-| `deep-review-security` | OWASP Top 10:2021 / CWE Top 25 (2024) / OWASP ASVS 4.0.3 vulnerability review | always | H/M/L | `findings: none` | HIGH + MEDIUM | Review for vulnerabilities, citing REFERENCES.md short IDs. |
-| `deep-review-project-checklist` | orwellstat-specific Playwright / POM / fixture / tag / CI-workflow conventions | always | pass/fail/N/A | `Failures: none.` | fail | Apply the orwellstat-specific Playwright / POM / fixture / tag / CI conventions. |
-| `deep-review-simplification` | DRY / SOLID / Fowler smells and efficiency review — paraphrases public sources | always | pass/fail/N/A | `Failures: none.` | fail | Review for missed reuse, quality (DRY/SOLID/Fowler smells), and efficiency. |
-| `deep-review-code` | Google Code Review Developer Guide (CC BY 3.0) — functionality / tests / naming / comments / dead code | always | H/M/L | `findings: none` | HIGH + MEDIUM | Review for functionality, tests, naming, comments, and dead code, citing REFERENCES.md short IDs. |
-| `deep-review-architecture` | SOLID, "Clean Architecture" (Martin), GoF, DDD (Evans) — dependency direction / coupling / cohesion / abstraction boundaries | always | H/M/L | `findings: none` | HIGH + MEDIUM | Review for SOLID violations, coupling, cohesion, dependency direction, and abstraction-boundary leaks, citing REFERENCES.md short IDs. |
-| `deep-review-docs` | README / CLAUDE.md / skill-file consistency against the project's documented split rules | always | pass/fail/N/A | `Failures: none.` | fail | Verify README / CLAUDE.md / skill-file consistency against the documented split rules. |
-| `deep-review-typescript` | TS Handbook + typescript-eslint idiom (`as any`, missing `satisfies`, narrowing, `as const`, `!` non-null) | scope contains `*.ts` or `*.tsx` | H/M/L | `findings: none` | HIGH + MEDIUM | Review for `as any`, missing `satisfies`, missing narrowing, `!` non-null assertions, and named typescript-eslint rule violations, citing REFERENCES.md short IDs. |
-| `deep-review-python` | PEP 8 / 20 / 257 + ruff-equivalent issues (style / idiom / docstring / bug-risk) | scope contains `*.py` | H/M/L | `findings: none` | HIGH + MEDIUM | Review for PEP 8 / 20 / 257 violations and ruff-equivalent issues (style, idiom, docstring, bug-risk), citing REFERENCES.md short IDs. |
-| `deep-review-ci` | GitHub Actions — `actionlint` + `shellcheck` static pass first (zero LLM tokens), LLM semantic pass for non-trivial workflows | scope contains `.github/workflows/**.yml`, `.github/workflows/**.yaml`, `action.yml`, or `action.yaml` | H/M/L | `findings: none` | HIGH + MEDIUM | Run actionlint static pass on every changed workflow first; escalate to the LLM semantic pass only for non-trivial workflows (if conditions, multi-job orchestration, head_sha-style refs, pull_request_target / workflow_run triggers, secret writes, concurrency, schedule). Cite REFERENCES.md short IDs. |
-| `deep-review-qa` | Playwright E2E + Bruno API state-class (empty / populated / max / form-edge / auth / network / a11y / multi-browser / locale) anchored in ISTQB-FL + Playwright Best Practices + WCAG 2.2; also walks `coverage-matrix.json` flips | scope contains `playwright/typescript/tests/**/*.spec.ts`, `playwright/typescript/tests/**/*.setup.ts`, `bruno/**/*.bru`, `playwright/typescript/fixtures/**`, or `playwright/typescript/test-data/**` | pass/fail/N/A | `Failures: none.` | fail | Walk the documented state-class checklist (empty / populated / max / form-edge / auth / network / accessibility / multi-browser / locale) plus the coverage-matrix walk against every changed test file, citing REFERENCES.md short IDs. |
-| `deep-review-unit-test` | Vitest (TS) + pytest (Python) boundary-class (null / numeric edges / collection sizes / string content / error paths / configuration boundaries) anchored in ISTQB-FL + Google Code Review; enforces ≥ 90% changed-line coverage on `scripts/` and `mcp/*/` | scope contains `scripts/**/*.py`, `mcp/**/*.ts` (excluding `*.spec.ts`; including `*.test.ts`), or `playwright/typescript/utils/**/*.ts` | pass/fail/N/A | `Failures: none.` | fail | Walk the documented boundary-class checklist (null / numeric edges / collection sizes / string content / error paths / configuration boundaries) plus the changed-line coverage walk against every changed file in scope, citing REFERENCES.md short IDs. |
-
-Roadmap — all sibling stories under epic #436 have landed; the orchestrator's specialist family is complete for now. Add new specialists by appending rows to the table above.
+| Agent | Domain | Dispatch | Format | Empty-state sentinel | Blocking | Tool grant | Task instruction |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `deep-review-security` | OWASP Top 10:2021 / CWE Top 25 (2024) / OWASP ASVS 4.0.3 vulnerability review | always | H/M/L | `findings: none` | HIGH + MEDIUM | `Read, Grep, Glob` | Review for vulnerabilities, citing REFERENCES.md short IDs. |
+| `deep-review-project-checklist` | orwellstat-specific Playwright / POM / fixture / tag / CI-workflow conventions | always | pass/fail/N/A | `Failures: none.` | fail | `Read, Grep, Glob` | Apply the orwellstat-specific Playwright / POM / fixture / tag / CI conventions. |
+| `deep-review-simplification` | DRY / SOLID / Fowler smells and efficiency review — paraphrases public sources | always | pass/fail/N/A | `Failures: none.` | fail | `Read, Grep, Glob` | Review for missed reuse, quality (DRY/SOLID/Fowler smells), and efficiency. |
+| `deep-review-code` | Google Code Review Developer Guide (CC BY 3.0) — functionality / tests / naming / comments / dead code | always | H/M/L | `findings: none` | HIGH + MEDIUM | `Read, Grep, Glob` | Review for functionality, tests, naming, comments, and dead code, citing REFERENCES.md short IDs. |
+| `deep-review-architecture` | SOLID, "Clean Architecture" (Martin), GoF, DDD (Evans) — dependency direction / coupling / cohesion / abstraction boundaries | always | H/M/L | `findings: none` | HIGH + MEDIUM | `Read, Grep, Glob` | Review for SOLID violations, coupling, cohesion, dependency direction, and abstraction-boundary leaks, citing `[SOLID-*]` vocabulary tokens and `[GOOG-CR]` short IDs. |
+| `deep-review-docs` | README / CLAUDE.md / skill-file consistency against the project's documented split rules | always | pass/fail/N/A | `Failures: none.` | fail | `Read, Grep, Glob` | Verify README / CLAUDE.md / skill-file consistency against the documented split rules. |
+| `deep-review-typescript` | TS Handbook + typescript-eslint idiom (`as any`, missing `satisfies`, narrowing, `as const`, `!` non-null) | scope contains `*.ts` or `*.tsx` | H/M/L | `findings: none` | HIGH + MEDIUM | `Read, Grep, Glob` | Review for `as any`, missing `satisfies`, missing narrowing, `!` non-null assertions, and named typescript-eslint rule violations, citing REFERENCES.md short IDs. |
+| `deep-review-python` | PEP 8 / 20 / 257 + ruff-equivalent issues (style / idiom / docstring / bug-risk) | scope contains `*.py` | H/M/L | `findings: none` | HIGH + MEDIUM | `Read, Grep, Glob` | Review for PEP 8 / 20 / 257 violations and ruff-equivalent issues (style, idiom, docstring, bug-risk), citing REFERENCES.md short IDs. |
+| `deep-review-ci` | GitHub Actions — `actionlint` + `shellcheck` static pass first (zero LLM tokens), LLM semantic pass for non-trivial workflows | scope contains `.github/workflows/**.yml`, `.github/workflows/**.yaml`, `action.yml`, or `action.yaml` | H/M/L | `findings: none` | HIGH + MEDIUM | `Read, Grep, Glob, Bash(actionlint *), Bash(shellcheck *)` | Run actionlint static pass on every changed workflow first; escalate to the LLM semantic pass only for non-trivial workflows (if conditions, multi-job orchestration, head_sha-style refs, pull_request_target / workflow_run triggers, secret writes, concurrency, schedule). Cite REFERENCES.md short IDs. |
+| `deep-review-qa` | Playwright E2E + Bruno API state-class (empty / populated / max / form-edge / auth / network / a11y / multi-browser / locale) anchored in ISTQB-FL + Playwright Best Practices + WCAG 2.2; also walks `coverage-matrix.json` flips | scope contains `playwright/typescript/tests/**/*.spec.ts`, `playwright/typescript/tests/**/*.setup.ts`, `bruno/**/*.bru`, `playwright/typescript/fixtures/**`, or `playwright/typescript/test-data/**` | pass/fail/N/A | `Failures: none.` | fail | `Read, Grep, Glob` | Walk the documented state-class checklist (empty / populated / max / form-edge / auth / network / accessibility / multi-browser / locale) plus the coverage-matrix walk against every changed test file, citing REFERENCES.md short IDs. |
+| `deep-review-unit-test` | Vitest (TS) + pytest (Python) boundary-class (null / numeric edges / collection sizes / string content / error paths / configuration boundaries) anchored in ISTQB-FL + Google Code Review; enforces ≥ 90% changed-line coverage on `scripts/` and `mcp/*/` | scope contains `scripts/**/*.py`, `mcp/**/*.ts` (excluding `*.spec.ts`; including `*.test.ts`), or `playwright/typescript/utils/**/*.ts` | pass/fail/N/A | `Failures: none.` | fail | `Read, Grep, Glob` | Walk the documented boundary-class checklist (null / numeric edges / collection sizes / string content / error paths / configuration boundaries) plus the changed-line coverage walk against every changed file in scope, citing REFERENCES.md short IDs. |
 
 ## Step 0 — Argument parsing and scope resolution
+
+### Scope-variable glossary
+
+Each scope variable appears in three forms across the spec — these are the same variable, not three concepts. The shell-name column names the variable Step 0 sets; the placeholder and fence-tag columns name the surface forms Step 1 consumes:
+
+| Shell name (Step 0)   | Template placeholder (Step 1) | Fence tag (Step 1)             |
+| --------------------- | ----------------------------- | ------------------------------ |
+| `DIFF`                | `{{DIFF}}`                    | `<untrusted-diff>`             |
+| `UNTRACKED`           | `{{UNTRACKED}}`               | `<untrusted-paths>`            |
+| (PR description, US2) | `{{PR_DESC}}`                 | `<untrusted-pr-description>`   |
+| (freeform bias)       | `{{BIAS}}`                    | `<reviewer-bias>`              |
+
+### Rules
 
 Trim leading/trailing whitespace from `$ARGUMENTS`. Apply the rules below in order; the first match wins. Whatever the mode, the scope is captured as **`DIFF`** (the literal text the agents will review) and **`UNTRACKED`** (paths only of new untracked files; agents fetch content with `Read`):
 
@@ -61,7 +72,13 @@ Trim leading/trailing whitespace from `$ARGUMENTS`. Apply the rules below in ord
    UNTRACKED=
    ```
 
-4. **Path** — `test -e '<arg>'` succeeds → **US3b file/dir mode**: scope is the file or directory tree's contents (no diff). Concatenate the file's contents (or each file under the directory) into `DIFF`; leave `UNTRACKED` empty.
+4. **Path** — `test -e '<arg>'` succeeds → **US3b file/dir mode**: scope is the file or directory tree's contents (no diff). For each file (or each file under the directory), prepend a synthetic diff header so Step 1's path-based dispatch tests can match the file's path:
+   ```
+   --- /dev/null
+   +++ b/<relative-path>
+   <file contents, line-by-line, prefixed with "+ ">
+   ```
+   Concatenate these synthetic hunks into `DIFF`; leave `UNTRACKED` empty.
 
 5. **Otherwise** → **US3c freeform mode**: scope is the local diff (same as US1) AND the freeform string is recorded as a `Reviewer bias:` for every agent.
 
@@ -134,7 +151,7 @@ Task(subagent_type="deep-review-security",
 
 All `Task(...)` calls — both unconditional and conditional rows — go in **the same single parallel-Task message**; do not open a second dispatch pass.
 
-Most specialist agents are granted `Read, Grep, Glob` only and cannot run `git diff` themselves — `deep-review-ci` is the exception: it additionally whitelists `Bash(actionlint *)` and `Bash(shellcheck *)` because its first pass is a static analyzer run, not an LLM call. Capture the scope once in this orchestrator and inject it into each dispatch.
+See the **Tool grant** column of the master roster for each agent's permission set; capture the scope once in this orchestrator and inject it into each dispatch.
 
 **Agent error handling** — if a Task call times out or errors, retry it once **sequentially** (single Task call, not bundled with others). If it still fails, mark the agent as `UNAVAILABLE: <reason>` for the aggregate report and continue with the others.
 
@@ -148,10 +165,7 @@ For each row in the master roster, in roster order, emit one section in the row'
 <summary line>
 ```
 
-Summary line per format family:
-
-- **H/M/L family:** `summary: <agent-H> high / <agent-M> medium / <agent-L> low`
-- **pass/fail/N/A family:** `Summary: <agent-pass> pass / <agent-fail> fail / <agent-N/A> N/A`
+The summary line shape is determined by the row's **Format** column: `H/M/L` rows emit `summary: <agent-H> high / <agent-M> medium / <agent-L> low`; `pass/fail/N/A` rows emit `Summary: <agent-pass> pass / <agent-fail> fail / <agent-N/A> N/A`. New format families add one bullet here when the column gains a new value.
 
 `<agent-…>` placeholders take the row's agent name as the per-domain prefix (e.g. `<security-H>`, `<security-M>`, `<security-L>`, `<project-checklist-pass>`, `<project-checklist-fail>`, `<project-checklist-N/A>`). Each placeholder is unambiguous across the whole aggregate block.
 
@@ -161,7 +175,7 @@ After every per-agent section, emit:
 ### aggregate
 [UNAVAILABLE: <Agent>: <reason>   ← one line per UNAVAILABLE agent, if any]
 total: <enumerate every non-skipped row's format-relevant placeholders, in roster order, separated by " / ", e.g. "<security-H> security HIGH / <security-M> security MEDIUM / <security-L> security LOW / <project-checklist-fail> checklist fail / …">
-status: ready if every metric named in the master roster's Blocking column is zero; otherwise blocked.
+status: ready iff every metric named in each row's Blocking column is zero (a SKIPPED row contributes 0); otherwise blocked.
 ```
 
 A `SKIPPED:` agent contributes 0 to all counts and never blocks. The **Blocking** column of the master roster is the sole source of truth for which counts gate `status: ready` — for example, with `deep-review-security` Blocking = `HIGH + MEDIUM`, `<security-H>` and `<security-M>` must be zero; `<security-L>` is informational.

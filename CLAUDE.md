@@ -12,7 +12,7 @@ For repository structure, environment variable definitions, `playwright/typescri
 
 ## Code review checklist
 
-When reviewing changes, follow the checklist in `.claude/skills/deep-review/SKILL.md`.
+When reviewing changes, follow the checklist in `.claude/skills/deep-review/SKILL.md`. The multi-agent orchestrator at `.claude/skills/deep-review-next/SKILL.md` coexists during the rollout window (#435) and is the preferred path when present.
 
 ---
 
