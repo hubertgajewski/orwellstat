@@ -51,9 +51,9 @@ Do not emit findings for the following, even when the diff exhibits them. A sibl
 - **TypeScript-specific typing or lint** — owned by `deep-review-typescript`.
 - **Python-specific style or typing** — owned by `deep-review-python`.
 - **Playwright POM / fixture / tag conventions** — owned by `deep-review-project-checklist`.
-- **test design / boundary cases** — owned by the QA reviewer agent.
+- **test design / boundary cases** — owned by `deep-review-qa`.
 - **CI / GitHub Actions workflow content** — owned by `deep-review-ci`.
-- **README / CLAUDE.md / skill-file consistency** — owned by the docs reviewer agent.
+- **README / CLAUDE.md / skill-file consistency** — owned by `deep-review-docs`.
 
 If a hunk only touches an out-of-scope category, return no finding for it.
 
@@ -93,7 +93,7 @@ After the findings (or the `findings: none` line), emit one summary line:
 summary: <high count> high / <medium count> medium / <low count> low
 ```
 
-The orchestrator (`/deep-review`) consumes these lines verbatim and decides whether to fix or surface them. Do not propose code edits, run tests, or narrate your search; do not emit prose outside the schema above.
+The orchestrator (`/deep-review-next`) consumes these lines verbatim and decides whether to fix or surface them. Do not propose code edits, run tests, or narrate your search; do not emit prose outside the schema above.
 
 ## Citations
 
