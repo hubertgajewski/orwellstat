@@ -25,13 +25,10 @@ Extend by adding new files under `.claude/agents/` and listing them here:
 | `deep-review-python`             | Python style / idiom / docstring review (PEP 8 / 20 / 257 violations and ruff-equivalent issues) — dispatch only when the diff contains `.py` files |
 | `deep-review-docs`               | Verifies README/CLAUDE.md/skill-file consistency against the project's documented split rules                                                                                  |
 | `deep-review-ci`                 | GitHub Actions specialist — `actionlint` + `shellcheck` static pass first (zero LLM tokens), LLM semantic pass for non-trivial workflows (CI/CD integrity, secret handling, action pinning) — dispatch only when the diff contains `.github/workflows/**.yml` / `.yaml` or `action.yml` / `action.yaml` |
+| `deep-review-qa`                 | Playwright E2E + Bruno API state-class review (empty / populated / max / form-edge / auth / network / a11y / multi-browser / locale) anchored in ISTQB-FL + Playwright Best Practices + WCAG 2.2; also walks `coverage-matrix.json` flips — dispatch only when the diff contains `.spec.ts`, `.setup.ts`, `.bru`, or files under `playwright/typescript/fixtures/` or `playwright/typescript/test-data/` |
+| `deep-review-unit-test`          | Vitest (TS) + pytest (Python) boundary-class review (null / numeric edges / collection sizes / string content / error paths / configuration boundaries) anchored in ISTQB-FL + Google Code Review; enforces ≥ 90% changed-line coverage on `scripts/` and `mcp/*/` — dispatch only when the diff contains files under `scripts/`, `mcp/`, or `playwright/typescript/utils/`, or any `*.test.ts` / `test_*.py` |
 
-Roadmap — pending sibling stories under epic #436 will add the rest of the family (each story creates one agent file under `.claude/agents/` and adds a row above):
-
-| Pending agent                | Story |
-| ---------------------------- | ----- |
-| `deep-review-qa`             | #430  |
-| `deep-review-unit-test`      | #430  |
+Roadmap — all sibling stories under epic #436 have landed; the orchestrator's specialist family is complete for now. Add new specialists by appending rows to the roster table above.
 
 ## Step 0 — Argument parsing and scope resolution
 
@@ -130,6 +127,25 @@ Task(subagent_type="deep-review-python",
 Task(subagent_type="deep-review-ci",
      description="CI / GitHub Actions review of pending diff",
      prompt="<DIFF>\n\n--- untracked files (paths only; use Read to fetch content) ---\n<UNTRACKED>\n\n---\nRun the actionlint static pass on every changed workflow file first; escalate to the LLM semantic pass only for non-trivial workflows (if conditions, multi-job orchestration, head_sha-style refs, pull_request_target / workflow_run triggers, secret writes, concurrency, schedule). Cite REFERENCES.md short IDs and emit findings in the documented HIGH/MEDIUM/LOW pipe-delimited schema.")
+
+# Dispatch only when at least one path under review is a Playwright spec / setup / Bruno collection or a spec-adjacent fixture or test-data file:
+#   - playwright/typescript/tests/**/*.spec.ts
+#   - playwright/typescript/tests/**/*.setup.ts
+#   - bruno/**/*.bru
+#   - playwright/typescript/fixtures/**
+#   - playwright/typescript/test-data/**
+Task(subagent_type="deep-review-qa",
+     description="QA state-class review of pending diff",
+     prompt="<DIFF>\n\n--- untracked files (paths only; use Read to fetch content) ---\n<UNTRACKED>\n\n---\nWalk the documented state-class checklist (empty / populated / max / form-edge / auth / network / accessibility / multi-browser / locale) plus the coverage-matrix walk against every changed test file, citing REFERENCES.md short IDs, and emit findings in the documented pass/fail/N/A format.")
+
+# Dispatch only when at least one path under review is unit-test surface:
+#   - scripts/**/*.py
+#   - scripts/test_*.py
+#   - mcp/**/*.ts (excluding *.spec.ts; including *.test.ts)
+#   - playwright/typescript/utils/**/*.ts
+Task(subagent_type="deep-review-unit-test",
+     description="Unit-test boundary review of pending diff",
+     prompt="<DIFF>\n\n--- untracked files (paths only; use Read to fetch content) ---\n<UNTRACKED>\n\n---\nWalk the documented boundary-class checklist (null / numeric edges / collection sizes / string content / error paths / configuration boundaries) plus the changed-line coverage walk against every changed Python script under scripts/ and TypeScript MCP / utility file under mcp/ or playwright/typescript/utils/, citing REFERENCES.md short IDs, and emit findings in the documented pass/fail/N/A format.")
 ```
 
 Each agent returns its findings in its own documented format. Do not coerce one format into the other — the formats are deliberately distinct because the domains are distinct.
@@ -177,9 +193,17 @@ Summary: <pass> pass / <fail> fail / <N/A> N/A
 <agent's verbatim findings or "findings: none" or "SKIPPED: no .github/workflows/**.yml or action.yml files in scope">
 summary: <H> high / <M> medium / <L> low
 
+### deep-review-qa
+<agent's verbatim findings or "Failures: none." or "SKIPPED: no Playwright spec / setup / Bruno collection / fixture / test-data files in scope">
+Summary: <pass> pass / <fail> fail / <N/A> N/A
+
+### deep-review-unit-test
+<agent's verbatim findings or "Failures: none." or "SKIPPED: no scripts/, mcp/, or playwright/typescript/utils/ files in scope">
+Summary: <pass> pass / <fail> fail / <N/A> N/A
+
 ### aggregate
-total: <H> security HIGH / <M> security MEDIUM / <L> security LOW / <CF> checklist fail / <SF> simplification fail / <H> code HIGH / <M> code MEDIUM / <L> code LOW / <H> architecture HIGH / <M> architecture MEDIUM / <L> architecture LOW / <H> typescript HIGH / <M> typescript MEDIUM / <L> typescript LOW / <H> python HIGH / <M> python MEDIUM / <L> python LOW / <DF> docs fail / <H> ci HIGH / <M> ci MEDIUM / <L> ci LOW
-status: <"ready" if zero security HIGH, zero security MEDIUM, zero checklist fail, zero simplification fail, zero code HIGH, zero code MEDIUM, zero architecture HIGH, zero architecture MEDIUM, zero typescript HIGH, zero typescript MEDIUM, zero python HIGH, zero python MEDIUM, zero docs fail, zero ci HIGH, and zero ci MEDIUM; otherwise "blocked">
+total: <H> security HIGH / <M> security MEDIUM / <L> security LOW / <CF> checklist fail / <SF> simplification fail / <H> code HIGH / <M> code MEDIUM / <L> code LOW / <H> architecture HIGH / <M> architecture MEDIUM / <L> architecture LOW / <H> typescript HIGH / <M> typescript MEDIUM / <L> typescript LOW / <H> python HIGH / <M> python MEDIUM / <L> python LOW / <DF> docs fail / <H> ci HIGH / <M> ci MEDIUM / <L> ci LOW / <QF> qa fail / <UF> unit-test fail
+status: <"ready" if zero security HIGH, zero security MEDIUM, zero checklist fail, zero simplification fail, zero code HIGH, zero code MEDIUM, zero architecture HIGH, zero architecture MEDIUM, zero typescript HIGH, zero typescript MEDIUM, zero python HIGH, zero python MEDIUM, zero docs fail, zero ci HIGH, zero ci MEDIUM, zero qa fail, and zero unit-test fail; otherwise "blocked">
 ```
 
 A `SKIPPED:` agent contributes 0 to all counts and never blocks. If any roster agent was marked `UNAVAILABLE`, list it under the `### aggregate` block before the `total:` line.
