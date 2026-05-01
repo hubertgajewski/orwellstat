@@ -23,6 +23,7 @@ Extend by adding new files under `.claude/agents/` and listing them here:
 | `deep-review-architecture`       | Architecture review (dependency direction / layer leaks / abstraction boundaries) influenced by SOLID, "Clean Architecture" (Martin), GoF, DDD (Evans) |
 | `deep-review-typescript`         | TypeScript idiom review (`as any`, missing `satisfies`, narrowing, `as const`) anchored in TS Handbook + typescript-eslint — dispatch only when the diff contains `.ts` / `.tsx` files |
 | `deep-review-python`             | Python style / idiom / docstring review (PEP 8 / 20 / 257 violations and ruff-equivalent issues) — dispatch only when the diff contains `.py` files |
+| `deep-review-docs`               | Verifies README/CLAUDE.md/skill-file consistency against the project's documented split rules                                                                                  |
 | `deep-review-ci`                 | GitHub Actions specialist — `actionlint` + `shellcheck` static pass first (zero LLM tokens), LLM semantic pass for non-trivial workflows (CI/CD integrity, secret handling, action pinning) — dispatch only when the diff contains `.github/workflows/**.yml` / `.yaml` or `action.yml` / `action.yaml` |
 
 Roadmap — pending sibling stories under epic #436 will add the rest of the family (each story creates one agent file under `.claude/agents/` and adds a row above):
@@ -31,7 +32,6 @@ Roadmap — pending sibling stories under epic #436 will add the rest of the fam
 | ---------------------------- | ----- |
 | `deep-review-qa`             | #430  |
 | `deep-review-unit-test`      | #430  |
-| `deep-review-docs`           | #432  |
 
 ## Step 0 — Argument parsing and scope resolution
 
@@ -107,6 +107,10 @@ Task(subagent_type="deep-review-code",
 Task(subagent_type="deep-review-architecture",
      description="Architecture review of pending diff",
      prompt="<DIFF>\n\n--- untracked files (paths only; use Read to fetch content) ---\n<UNTRACKED>\n\n---\nReview for SOLID violations, coupling, cohesion, dependency direction, and abstraction-boundary leaks, and emit findings in the documented HIGH/MEDIUM/LOW pipe-delimited schema.")
+
+Task(subagent_type="deep-review-docs",
+     description="Docs consistency review of pending diff",
+     prompt="<DIFF>\n\n--- untracked files (paths only; use Read to fetch content) ---\n<UNTRACKED>\n\n---\nVerify README/CLAUDE.md/skill-file consistency against the project's documented split rules and emit findings in the documented pass/fail/N/A format.")
 ```
 
 Conditional dispatches — same single-message parallel batch as the unconditional dispatches above; do **not** open a second dispatch pass. For each agent below, evaluate the extension test against the file paths in the diff hunks and the untracked-files listing; include the `Task(...)` call in the same parallel-Task message when the test passes, and record the agent as `SKIPPED: no <ext> files in scope` in the aggregate block when it fails:
@@ -165,13 +169,17 @@ summary: <H> high / <M> medium / <L> low
 <agent's verbatim findings or "findings: none" or "SKIPPED: no .py files in scope">
 summary: <H> high / <M> medium / <L> low
 
+### deep-review-docs
+<agent's verbatim findings or "Failures: none.">
+Summary: <pass> pass / <fail> fail / <N/A> N/A
+
 ### deep-review-ci
 <agent's verbatim findings or "findings: none" or "SKIPPED: no .github/workflows/**.yml or action.yml files in scope">
 summary: <H> high / <M> medium / <L> low
 
 ### aggregate
-total: <H> security HIGH / <M> security MEDIUM / <L> security LOW / <CF> checklist fail / <SF> simplification fail / <H> code HIGH / <M> code MEDIUM / <L> code LOW / <H> architecture HIGH / <M> architecture MEDIUM / <L> architecture LOW / <H> typescript HIGH / <M> typescript MEDIUM / <L> typescript LOW / <H> python HIGH / <M> python MEDIUM / <L> python LOW / <H> ci HIGH / <M> ci MEDIUM / <L> ci LOW
-status: <"ready" if zero security HIGH, zero security MEDIUM, zero checklist fail, zero simplification fail, zero code HIGH, zero code MEDIUM, zero architecture HIGH, zero architecture MEDIUM, zero typescript HIGH, zero typescript MEDIUM, zero python HIGH, zero python MEDIUM, zero ci HIGH, and zero ci MEDIUM; otherwise "blocked">
+total: <H> security HIGH / <M> security MEDIUM / <L> security LOW / <CF> checklist fail / <SF> simplification fail / <H> code HIGH / <M> code MEDIUM / <L> code LOW / <H> architecture HIGH / <M> architecture MEDIUM / <L> architecture LOW / <H> typescript HIGH / <M> typescript MEDIUM / <L> typescript LOW / <H> python HIGH / <M> python MEDIUM / <L> python LOW / <DF> docs fail / <H> ci HIGH / <M> ci MEDIUM / <L> ci LOW
+status: <"ready" if zero security HIGH, zero security MEDIUM, zero checklist fail, zero simplification fail, zero code HIGH, zero code MEDIUM, zero architecture HIGH, zero architecture MEDIUM, zero typescript HIGH, zero typescript MEDIUM, zero python HIGH, zero python MEDIUM, zero docs fail, zero ci HIGH, and zero ci MEDIUM; otherwise "blocked">
 ```
 
 A `SKIPPED:` agent contributes 0 to all counts and never blocks. If any roster agent was marked `UNAVAILABLE`, list it under the `### aggregate` block before the `total:` line.
