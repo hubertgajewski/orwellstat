@@ -172,15 +172,49 @@ The orchestrator does **not** modify source files. The caller decides which find
 
 Stop after **3 iterations** — if still blocked, surface the remaining findings to the user and ask how to proceed. Do not loop indefinitely. Schema violations (an agent emitting prose that doesn't match its documented format) are themselves a finding to surface to the user — do not silently drop or rewrite the agent's output.
 
-## Step 4 — Token-estimate footer
+## Step 4 — Token & dispatch summary table
 
-After the aggregate block, emit one line:
+After the aggregate block, emit a markdown table with one row per layer (the orchestrator + each non-skipped sub-agent) and a totals row.
 
+Columns: `Layer | Model | Input | Output | Total | Cache read | Cache creation | Tool uses | Wall-clock | Summary`.
+
+The `Total` column exists specifically because the harness exposes only `total_tokens` (not `input_tokens` / `output_tokens`) for sub-agent rows. Orchestrator rows fill `Input` and `Output` from the JSONL and leave `Total` as `—`; sub-agent rows do the inverse.
+
+**Sub-agent rows** — read the `<usage>` postscript appended by the harness to each Agent tool result:
+
+- Render `Input` and `Output` as `—`, and put the harness-reported `total_tokens` value in the `Total` column. Do not invent in/out splits.
+- `tool_uses` and `duration_ms` map directly from the postscript to `Tool uses` and `Wall-clock`.
+- `Summary` is the agent's per-format summary line (the H/M/L or pass/fail/N/A line emitted in Step 2).
+
+**Orchestrator row** — the top-level session has no parent to receive a `<usage>` postscript, so the orchestrator's tokens come from the on-disk per-API-call usage log Claude Code writes at `~/.claude/projects/<repo-hash>/<session-id>.jsonl` (one record per API exchange, schema `.message.usage.{input_tokens, output_tokens, cache_read_input_tokens, cache_creation_input_tokens}`).
+
+`<repo-hash>` is the directory under `~/.claude/projects/` whose name matches the current `pwd` with `/` replaced by `-` and a leading `-`. Session-id discovery: prefer `$CLAUDE_SESSION_ID` when it is set in the shell; otherwise fall back to the most recently modified JSONL in the directory (`ls -t … | head -1`). Both branches are exercised by the same shell snippet:
+
+```bash
+REPO_HASH_DIR=$(pwd | sed 's|/|-|g; s|^|-|')
+LOG_DIR="$HOME/.claude/projects/$REPO_HASH_DIR"
+SESSION_LOG="${CLAUDE_SESSION_ID:+$LOG_DIR/$CLAUDE_SESSION_ID.jsonl}"
+[ -z "$SESSION_LOG" ] && SESSION_LOG=$(ls -t "$LOG_DIR"/*.jsonl 2>/dev/null | head -1)
+[ -r "$SESSION_LOG" ] && jq -s '
+  map(select(.message.usage) | .message.usage)
+  | { input:          (map(.input_tokens                // 0) | add),
+      output:         (map(.output_tokens               // 0) | add),
+      cache_read:     (map(.cache_read_input_tokens     // 0) | add),
+      cache_creation: (map(.cache_creation_input_tokens // 0) | add) }
+' "$SESSION_LOG"
 ```
-Token estimate: ~<X> input / ~<Y> output across <N> agent dispatches over <M> iterations.
-```
 
-Static-tool dispatches (e.g. `actionlint`, `shellcheck`) count as 0 tokens.
+The in-flight model turn (the one emitting this report) is not flushed to JSONL until *after* the response is produced, so the orchestrator row reflects "everything up to the last completed turn." This gap is acceptable — the report turn is small relative to the dispatches.
+
+**Graceful degradation** — if the JSONL file is missing, unreadable, or `jq` is not installed, render the orchestrator row's numeric columns as `(unavailable)` and emit one caveat line directly below the table reading `Orchestrator tokens unavailable: <one-line reason>`. The table still renders for sub-agents and the run does not abort.
+
+**SKIPPED rows** — emit one row per agent skipped in Step 1 with all numeric columns set to `—` and the `Summary` column reading `SKIPPED: <Dispatch cell> not satisfied`.
+
+**Totals row** — sum each numeric column across non-skipped rows. The orchestrator's `Input`, `Output`, `Cache read`, `Cache creation` contribute (only if its row is not `(unavailable)`). Sub-agent rows contribute their `Total`. The totals row's `Total` cell is `(orchestrator input + orchestrator output) + Σ(sub-agent Total)` so the column reflects the full bill regardless of which side reported it.
+
+After the table, emit one line: `iterations: <M>` (the Step 3 re-review iteration count).
+
+Static-tool dispatches (e.g. `actionlint`, `shellcheck`) count as 0 tokens and 0 tool uses for the totals.
 
 ## How to consume the output
 
