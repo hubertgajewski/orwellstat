@@ -40,7 +40,7 @@ You receive the diff (and a listing of paths to untracked files added in the cha
 - [pass|fail|N/A] <checklist-item-name>: <one-line finding; for fail, include the exact path or path:line that needs editing>
 ...
 
-Summary: <pass count> pass / <fail count> fail / <n/a count> N/A
+summary: <pass count> pass / <fail count> fail / <n/a count> N/A
 Failures (in order of priority):
   1. <file:line> — <action to take>
   2. ...

@@ -92,10 +92,10 @@ Before dispatching, print exactly one line that names the resolved mode and the 
 
 - `Mode: US1 local diff — bias = none.`
 - `Mode: US2 PR #213 — bias = none.`
-- `Mode: US2 PR #213 — bias = "focus on race conditions" (concurrency emphasis).`
+- `Mode: US2 PR #213 — bias = "focus on race conditions".`
 - `Mode: US3a range HEAD~3..HEAD — bias = none.`
 - `Mode: US3b file scripts/self-healing.py — bias = none.`
-- `Mode: US3c freeform — interpreted as "running full agent stack with concurrency emphasis".`
+- `Mode: US3c freeform — bias = "focus on concurrency".`
 
 If the bias is non-empty, append it verbatim to every agent's prompt under a `Reviewer bias:` header so each agent can prioritize but not be limited by it.
 
@@ -165,9 +165,15 @@ For each row in the master roster, in roster order, emit one section in the row'
 <summary line>
 ```
 
-The summary line shape is determined by the row's **Format** column: `H/M/L` rows emit `summary: <agent-H> high / <agent-M> medium / <agent-L> low`; `pass/fail/N/A` rows emit `Summary: <agent-pass> pass / <agent-fail> fail / <agent-N/A> N/A`. New format families add one bullet here when the column gains a new value.
+The summary line shape is determined by the row's **Format** column: `H/M/L` rows emit `summary: <agent-H> high / <agent-M> medium / <agent-L> low`; `pass/fail/N/A` rows emit `summary: <agent-pass> pass / <agent-fail> fail / <agent-N/A> N/A`. The keyword `summary:` is lowercase in both families. New format families add one bullet here when the column gains a new value.
 
-`<agent-…>` placeholders take the row's agent name as the per-domain prefix (e.g. `<security-H>`, `<security-M>`, `<security-L>`, `<project-checklist-pass>`, `<project-checklist-fail>`, `<project-checklist-N/A>`). Each placeholder is unambiguous across the whole aggregate block.
+`<agent-…>` placeholders take the row's agent name as the per-domain prefix — drop the `deep-review-` namespace, then append the format token. Examples spanning three agents:
+
+- `deep-review-security` (H/M/L) → `<security-H>`, `<security-M>`, `<security-L>`
+- `deep-review-project-checklist` (pass/fail/N/A) → `<project-checklist-pass>`, `<project-checklist-fail>`, `<project-checklist-N/A>`
+- `deep-review-simplification` (pass/fail/N/A) → `<simplification-pass>`, `<simplification-fail>`, `<simplification-N/A>`
+
+Each placeholder is unambiguous across the whole aggregate block.
 
 After every per-agent section, emit:
 
