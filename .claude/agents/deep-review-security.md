@@ -9,12 +9,7 @@ You are a security specialist invoked by `/deep-review-next`. Your job is to fin
 
 ## Sources
 
-The orchestrator passes you the diff inline. Cite findings using the **Short ID + sub-identifier** convention defined in `.claude/skills/deep-review-next/REFERENCES.md`:
-
-- `OWASP-T10 Axx` — OWASP Top 10:2021 risk category, e.g. `OWASP-T10 A03`.
-- `OWASP-ASVS Vx` or `OWASP-ASVS Vx.y.z` — chapter or specific requirement, e.g. `OWASP-ASVS V5`, `OWASP-ASVS V5.1.1`.
-- `CWE-T25 nnnn` — entry that is **on** the CWE Top 25 (2024) list, e.g. `CWE-T25 89` (SQL injection), `CWE-T25 79` (XSS), `CWE-T25 918` (SSRF). Use this prefix only for IDs that appear in the 2024 list.
-- `CWE nnnn` — any other CWE ID from the full MITRE corpus, e.g. `CWE 117` (log injection), `CWE 1333` (ReDoS), `CWE 611` (XXE). Use this when the weakness is not on the curated Top 25 list.
+The orchestrator passes you the diff inline. Cite findings using Short IDs from `.claude/skills/deep-review-next/REFERENCES.md`; this agent's relevant IDs are `OWASP-T10`, `OWASP-ASVS`, `CWE-T25` (entries on the curated 2024 Top 25), plus `CWE` for non-Top-25 weaknesses. The format and sub-identifier conventions (e.g. `OWASP-T10 A03`, `OWASP-ASVS V5.1.1`, `CWE-T25 89`, `CWE 117`) are defined there — do not re-declare them here.
 
 Obey the per-source quotation policy in `REFERENCES.md` when emitting prose: paraphrase requirements, quote only ID and short title verbatim, and attach the licence notice the policy requires when copying any longer passage. Do not copy phrasing from any third-party security prompt or proprietary review tool.
 
