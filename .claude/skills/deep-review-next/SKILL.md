@@ -6,27 +6,27 @@ Argument: $ARGUMENTS
 
 `/deep-review-next` is a meta-orchestrator. It does not perform any review itself. Instead, it dispatches every project-scoped specialist agent that lives under `.claude/agents/` and aggregates their findings.
 
-The bibliography of public sources cited by the specialist agents lives next to this skill at `.claude/skills/deep-review-next/REFERENCES.md`. Each agent must cite findings using the **Short ID** convention defined there (e.g. `OWASP-T10 A03`, `CWE-T25 89`, `OWASP-ASVS V5.1.1`, `WCAG-2.2 1.4.3`).
+The bibliography of public sources cited by the specialist agents lives next to this skill at `.claude/skills/deep-review-next/REFERENCES.md`. Each agent must cite findings using the **Short ID** convention defined there (e.g. `OWASP-T10 A03`, `CWE-T25 89`, `OWASP-ASVS V5.1.1`, `WCAG-2.2 1.4.3`). An individual agent may additionally use **private vocabulary tokens** that are intentionally *not* bound to `REFERENCES.md` — e.g. `deep-review-architecture` cites SOLID-principle violations as `[SOLID-SRP]`, `[SOLID-OCP]`, `[SOLID-LSP]`, `[SOLID-ISP]`, `[SOLID-DIP]` (stable principle names, not bibliography entries). When an agent introduces such tokens, the agent file itself is the single source of truth for them and must declare them explicitly.
 
-This orchestrator must complete every step below within a **single invocation**. Silent termination after any step is a defect — finish the run, or surface an explicit failure line. Specialist agent reply-shape constraints (e.g. *"your final reply must contain the markdown report and nothing else"*) apply only to the agent's reply and never halt this orchestrator.
+This orchestrator must complete every step below within a **single invocation**. Silent termination after any step is a defect — finish the run, or surface an explicit failure line. Specialist agent reply-shape constraints (e.g. an agent file instructing *"return `findings: none` and stop"* when its scope is empty) apply only to the agent's reply and never halt this orchestrator.
 
 ## Master roster
 
-Adding a new agent is a single new row in this table plus a new file under `.claude/agents/`. The **Parallel agent dispatch** and **Aggregate output** sections below read from this table; the `status:` rule in **Aggregate output** reads the **Blocking** column. The dispatch description for each agent is derived from its file's `description:` frontmatter — a single source of truth — so the roster carries no per-agent task string.
+Adding a new agent is a single new row in this table plus a new file under `.claude/agents/`. The **Parallel agent dispatch** and **Aggregate output** sections below read from this table; the `status:` rule in **Aggregate output** reads the **Blocking** column. The dispatch description for each agent is the **Domain** column of this table, passed verbatim — a single source of truth — so the per-agent task string lives in exactly one place.
 
 | Agent | Domain | Dispatch | Format | Empty-state sentinel | Blocking | Tool grant |
 | --- | --- | --- | --- | --- | --- | --- |
-| `deep-review-security` | OWASP Top 10:2021 / CWE Top 25 (2024) / OWASP ASVS 4.0.3 vulnerability review | always | H/M/L | `findings: none` | HIGH + MEDIUM | `Read, Grep, Glob` |
+| `deep-review-security` | OWASP Top 10 / CWE Top 25 / OWASP ASVS vulnerability review | always | H/M/L | `findings: none` | HIGH + MEDIUM | `Read, Grep, Glob` |
 | `deep-review-project-checklist` | orwellstat-specific Playwright / POM / fixture / tag / CI-workflow conventions | always | pass/fail/N/A | `Failures: none.` | fail | `Read, Grep, Glob` |
-| `deep-review-simplification` | DRY / SOLID / Fowler smells and efficiency review — paraphrases public sources | always | pass/fail/N/A | `Failures: none.` | fail | `Read, Grep, Glob` |
-| `deep-review-code` | Google Code Review Developer Guide (CC BY 3.0) — functionality / tests / naming / comments / dead code | always | H/M/L | `findings: none` | HIGH + MEDIUM | `Read, Grep, Glob` |
-| `deep-review-architecture` | SOLID, "Clean Architecture" (Martin), GoF, DDD (Evans) — dependency direction / coupling / cohesion / abstraction boundaries | always | H/M/L | `findings: none` | HIGH + MEDIUM | `Read, Grep, Glob` |
+| `deep-review-simplification` | DRY / Fowler smells and efficiency review (duplication, dead code, complexity) — paraphrases public sources | always | pass/fail/N/A | `Failures: none.` | fail | `Read, Grep, Glob` |
+| `deep-review-code` | Google Code Review Developer Guide — functionality / tests / naming / comments / dead code | always | H/M/L | `findings: none` | HIGH + MEDIUM | `Read, Grep, Glob` |
+| `deep-review-architecture` | SOLID / "Clean Architecture" (Martin) / GoF / DDD (Evans) — dependency direction / coupling / cohesion / abstraction boundaries; sole owner of `[SOLID-*]` vocabulary tokens | always | H/M/L | `findings: none` | HIGH + MEDIUM | `Read, Grep, Glob` |
 | `deep-review-docs` | README / CLAUDE.md / skill-file consistency against the project's documented split rules | always | pass/fail/N/A | `Failures: none.` | fail | `Read, Grep, Glob` |
 | `deep-review-typescript` | TS Handbook + typescript-eslint idiom (`as any`, missing `satisfies`, narrowing, `as const`, `!` non-null) | scope contains `*.ts` or `*.tsx` | H/M/L | `findings: none` | HIGH + MEDIUM | `Read, Grep, Glob` |
 | `deep-review-python` | PEP 8 / 20 / 257 + ruff-equivalent issues (style / idiom / docstring / bug-risk) | scope contains `*.py` | H/M/L | `findings: none` | HIGH + MEDIUM | `Read, Grep, Glob` |
 | `deep-review-ci` | GitHub Actions — `actionlint` + `shellcheck` static pass first (zero LLM tokens), LLM semantic pass for non-trivial workflows | scope contains `.github/workflows/**.yml`, `.github/workflows/**.yaml`, `action.yml`, or `action.yaml` | H/M/L | `findings: none` | HIGH + MEDIUM | `Read, Grep, Glob, Bash(actionlint *), Bash(shellcheck *)` |
 | `deep-review-qa` | Playwright E2E + Bruno API state-class (empty / populated / max / form-edge / auth / network / a11y / multi-browser / locale) anchored in ISTQB-FL + Playwright Best Practices + WCAG 2.2; also walks `coverage-matrix.json` flips | scope contains `playwright/typescript/tests/**/*.spec.ts`, `playwright/typescript/tests/**/*.setup.ts`, `bruno/**/*.bru`, `playwright/typescript/fixtures/**`, or `playwright/typescript/test-data/**` | pass/fail/N/A | `Failures: none.` | fail | `Read, Grep, Glob` |
-| `deep-review-unit-test` | Vitest (TS) + pytest (Python) boundary-class (null / numeric edges / collection sizes / string content / error paths / configuration boundaries) anchored in ISTQB-FL + Google Code Review; enforces ≥ 90% changed-line coverage on `scripts/`, `mcp/*/`, and `playwright/typescript/scripts/` | scope contains `scripts/**/*.py`, `mcp/**/*.ts`, `playwright/typescript/utils/**/*.ts`, or `playwright/typescript/scripts/**/*.ts` (each TS glob excludes `*.spec.ts`; includes `*.test.ts`) | pass/fail/N/A | `Failures: none.` | fail | `Read, Grep, Glob` |
+| `deep-review-unit-test` | Vitest (TS) + pytest (Python) boundary-class (null / numeric edges / collection sizes / string content / error paths / configuration boundaries) anchored in ISTQB-FL + Google Code Review on `scripts/`, `mcp/`, `playwright/typescript/utils/`, and `playwright/typescript/scripts/`; **additionally** enforces ≥ 90% changed-line coverage on `scripts/`, `mcp/*/`, and `playwright/typescript/scripts/` only (the `playwright/typescript/utils/` glob is reviewed for boundary classes but excluded from changed-line coverage) | scope contains `scripts/**/*.py`, `mcp/**/*.ts`, `playwright/typescript/utils/**/*.ts`, or `playwright/typescript/scripts/**/*.ts` (each TS glob excludes `*.spec.ts`; includes `*.test.ts`) | pass/fail/N/A | `Failures: none.` | fail | `Read, Grep, Glob` |
 
 ## Argument parsing and quoting
 
@@ -147,7 +147,7 @@ Example concrete dispatch (security):
 
 ```
 Task(subagent_type="deep-review-security",
-     description="OWASP Top 10:2021 / CWE Top 25 (2024) / OWASP ASVS 4.0.3 vulnerability review",
+     description="OWASP Top 10 / CWE Top 25 / OWASP ASVS vulnerability review",
      prompt=PROMPT_FRAME)
 ```
 
@@ -236,7 +236,7 @@ The in-flight model turn (the one emitting this report) is not flushed to JSONL 
 
 After the table, emit one line: `iterations: <M>` (the re-review loop iteration count).
 
-Static-tool dispatches (e.g. `actionlint`, `shellcheck`) count as 0 tokens and 0 tool uses for the totals.
+Static-tool dispatches (e.g. `actionlint`, `shellcheck`) consume 0 LLM tokens — they run as `Bash` calls inside `deep-review-ci` and contribute only to that agent's `Tool uses` count via the harness `<usage>` aggregate, not to its `Total` token column. The harness exposes a single aggregate `tool_uses` per sub-agent with no per-tool breakdown, so the orchestrator cannot subtract them from the per-agent total; treat the `Tool uses` cell as inclusive of static-tool calls.
 
 ## How to consume the output
 
@@ -251,6 +251,7 @@ This orchestrator MUST finish in one invocation. Each step ends in a transition,
 1. **Aggregate emitted with status `ready`** (zero blocking findings).
 2. **Aggregate emitted with status `blocked`** AND, if the iteration cap was hit, the prompt asking how to proceed.
 3. **An explicit failure line**: `Failed at <section>: <reason>.`
+4. **`aggregate: no changes`** — emitted by scope-resolution rules 1 and 5 when both `DIFF` and `UNTRACKED` are empty; the orchestrator stops cleanly without dispatching any agent.
 
 Stopping after argument parsing, scope resolution, the resolved-mode echo, or dispatch without entering the aggregate output is a defect — proceed.
 
