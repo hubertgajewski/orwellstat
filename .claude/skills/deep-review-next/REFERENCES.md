@@ -1,8 +1,13 @@
 # Bibliography for `/deep-review-next`
 
-This file is the single source of truth for the public standards and documentation cited by `/deep-review-next`'s specialist agents. Each agent must reference findings by **Short ID** (e.g. "OWASP-T10 A01" or "WCAG-2.2 1.4.3") and obey the **Quotation policy** column when copying text from the source.
+This file is the single source of truth for the **public, openly-licensed** standards and documentation cited by `/deep-review-next`'s specialist agents. Each agent must reference findings by **Short ID** (e.g. "OWASP-T10 A01" or "WCAG-2.2 1.4.3") and obey the **Quotation policy** column when copying text from the source.
 
 The list deliberately excludes ISO/IEC/IEEE 29119: it is paywalled and the procedural ground it covers is already covered by ISTQB-FL.
+
+Two classes of agent-internal references are intentionally **not** carried in this bibliography, and the agent file is the single source of truth for them instead:
+
+- **Private vocabulary tokens** — stable principle names that are not bibliography entries (e.g. `deep-review-architecture`'s `[SOLID-SRP]`, `[SOLID-OCP]`, `[SOLID-LSP]`, `[SOLID-ISP]`, `[SOLID-DIP]`).
+- **Commercial-book influences** — sources that an agent paraphrases by author and concept name only, never quoting prose, because they are commercial publications without a redistribution licence (e.g. `deep-review-simplification` paraphrasing Hunt & Thomas's *The Pragmatic Programmer* for DRY, Beck's *Extreme Programming Explained* for YAGNI, and Fowler's *Refactoring* for code smells).
 
 When the upstream version of a cited source changes, update the **Version** and **Retrieved** columns in the same PR that re-pulls the agent prose; do not let agents cite a version newer than what is recorded here.
 

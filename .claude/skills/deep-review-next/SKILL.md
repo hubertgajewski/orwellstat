@@ -156,7 +156,7 @@ Task(subagent_type="deep-review-security",
 
 All `Task(...)` calls — both unconditional and conditional rows — go in **the same single parallel-Task message**; do not open a second dispatch pass.
 
-See the **Tool grant** column of the master roster for each agent's permission set; capture the scope once in this orchestrator and inject it into each dispatch.
+Tool grants are **not** passed by the orchestrator — the `Task(…)` API has no `tools=` parameter. Each agent declares its grant in its own `tools:` frontmatter field, which the harness reads and enforces automatically when the agent is dispatched. The **Tool grant** column of the master roster is documentation of those frontmatter values, kept in sync so a single source (the master roster) is human-readable; the runtime mechanism is the agent file itself.
 
 **Agent error handling** — if a Task call times out or errors, retry it once **sequentially** (single Task call, not bundled with others). If it still fails, mark the agent as `UNAVAILABLE: <reason>` for the aggregate report and continue with the others.
 
@@ -185,7 +185,7 @@ After every per-agent section, emit:
 ```
 ### aggregate
 [UNAVAILABLE: <Agent>: <reason>   ← one line per UNAVAILABLE agent, if any]
-total: <enumerate every non-skipped row's format-relevant placeholders, in roster order, separated by " / ", e.g. "<security-H> security HIGH / <security-M> security MEDIUM / <security-L> security LOW / <project-checklist-fail> checklist fail / …">
+total: <enumerate every non-skipped row's format-relevant placeholders, in roster order, separated by " / ". Both format families contribute all of their counts. Example fragment spanning one row of each: "<security-H> security HIGH / <security-M> security MEDIUM / <security-L> security LOW / <project-checklist-pass> checklist pass / <project-checklist-fail> checklist fail / <project-checklist-N/A> checklist N/A / …">
 status: ready if every metric named in each row's Blocking column is zero (a SKIPPED row contributes 0); otherwise blocked.
 ```
 
@@ -230,6 +230,8 @@ LOG_DIR="$HOME/.claude/projects/$REPO_HASH_DIR"
 ```
 
 The in-flight model turn (the one emitting this report) is not flushed to JSONL until *after* the response is produced, so the orchestrator row reflects "everything up to the last completed turn." This gap is acceptable — the report turn is small relative to the dispatches.
+
+**The orchestrator row is cumulative since session start, not per-iteration.** The JSONL file is append-only over the whole session; the `jq` aggregation above sums every record, so on re-review iterations 2 and 3 the orchestrator row already includes the tokens spent during iteration 1 (and iteration 2). Sub-agent rows do not have this problem — each sub-agent's `<usage>` postscript is per-dispatch. To get a per-iteration orchestrator delta, snapshot the four counts before the first dispatch of each iteration and subtract; otherwise label the orchestrator counts in the table caveat as "cumulative across iterations 1..M".
 
 **Graceful degradation** — if the JSONL file is missing, unreadable, or `jq` is not installed, render the orchestrator row's numeric columns as `(unavailable)` and emit one caveat line directly below the table reading `Orchestrator tokens unavailable: <one-line reason>`. The table still renders for sub-agents and the run does not abort. If `$CLAUDE_SESSION_ID` is unset and parallel Claude Code sessions are running against the same repo (a routine setup in this project), the `ls -t … | head -1` fallback may select a sibling session's JSONL; the orchestrator row in that case attributes tokens to the wrong session. Treat the orchestrator counts as best-effort whenever the fallback path is exercised.
 
