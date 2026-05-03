@@ -6,7 +6,7 @@ Argument: $ARGUMENTS
 
 `/deep-review-next` is a meta-orchestrator. It does not perform any review itself. Instead, it dispatches every project-scoped specialist agent that lives under `.claude/agents/` and aggregates their findings.
 
-The bibliography of public sources cited by the specialist agents lives next to this skill at `.claude/skills/deep-review-next/REFERENCES.md`. Each agent must cite findings using the **Short ID** convention defined there (e.g. `OWASP-T10 A03`, `CWE-T25 89`, `OWASP-ASVS V5.1.1`, `WCAG-2.2 1.4.3`). An individual agent may additionally use **private vocabulary tokens** that are intentionally *not* bound to `REFERENCES.md` — e.g. `deep-review-architecture` cites SOLID-principle violations as `[SOLID-SRP]`, `[SOLID-OCP]`, `[SOLID-LSP]`, `[SOLID-ISP]`, `[SOLID-DIP]` (stable principle names, not bibliography entries). When an agent introduces such tokens, the agent file itself is the single source of truth for them and must declare them explicitly.
+The bibliography of public sources cited by the specialist agents lives next to this skill at `.claude/skills/deep-review-next/REFERENCES.md`. Each agent must cite findings using the **Short ID** convention defined there (e.g. `OWASP-T10 A03`, `CWE-T25 89`, `OWASP-ASVS V5.1.1`, `WCAG-2.2 1.4.3`). An individual agent may additionally use **private vocabulary tokens** that are intentionally *not* bound to `REFERENCES.md` — e.g. `deep-review-architecture`'s SOLID-principle citation tokens. When an agent introduces such tokens, the agent file itself is the single source of truth for them and must declare them explicitly; this skill does not enumerate them.
 
 This orchestrator must complete every step below within a **single invocation**. Silent termination after any step is a defect — finish the run, or surface an explicit failure line. Specialist agent reply-shape constraints (e.g. an agent file instructing *"return `findings: none` and stop"* when its scope is empty) apply only to the agent's reply and never halt this orchestrator.
 
@@ -60,11 +60,14 @@ Apply the rules in order; the first match wins. Whatever the mode, the scope is 
 
 2. **PR number with optional bias** — matches the regex `^#?(\d+)(\s+(.+))?$` → **US2 PR mode**. PR number = group 1, freeform bias = group 3 (may be empty).
    ```bash
-   PR_META=$(gh pr view <PR> --json body,state,baseRefOid,baseRefName)   # one round trip; description, state, base SHA, base branch
+   PR_META=$(gh pr view <PR> --json body,baseRefOid,baseRefName)         # one round trip; description, base SHA, base branch
+   PR_BODY=$(jq -r .body         <<<"$PR_META")
+   BASE_REF_OID=$(jq -r .baseRefOid  <<<"$PR_META")
+   BASE_REF_NAME=$(jq -r .baseRefName <<<"$PR_META")
    DIFF=$(gh pr diff <PR>)
    UNTRACKED=                                                            # PR diff already includes new files
    ```
-   Pass `$(jq -r .body <<<"$PR_META")` as the PR description verbatim to every agent prompt. Compare `$(jq -r .baseRefOid <<<"$PR_META")` to `git rev-parse "origin/$(jq -r .baseRefName <<<"$PR_META")"`; if they differ, emit one warning line:
+   Pass `"$PR_BODY"` as the PR description verbatim to every agent prompt. Capturing each `jq` extraction into its own shell variable (rather than inlining `$(jq …)` into a command string) mirrors the **Argument parsing and quoting** section's variable-indirection pattern. Compare `"$BASE_REF_OID"` to `"$(git rev-parse "origin/$BASE_REF_NAME")"`; if they differ, emit one warning line:
    ```
    ⚠ PR base SHA <oid> differs from current origin/<base-branch> <oid> — file context may have drifted from PR review time.
    ```
@@ -77,7 +80,7 @@ Apply the rules in order; the first match wins. Whatever the mode, the scope is 
    ```
    To force path mode for an argument that is also a valid git ref (e.g. a local file literally named `main` or `HEAD`), prefix it with `./` (e.g. `./main`) — `./main` fails `git rev-parse`, so this rule does not match and rule 4 takes over.
 
-4. **Path** — `test -e "$ARG"` succeeds AND the canonical resolved path lies under `$(git rev-parse --show-toplevel)` → **US3b file/dir mode**: scope is the file or directory tree's contents (no diff). Reject any path that resolves outside the repo root with `Failed at scope resolution: path "$ARG" resolves outside the repo root.` and stop — do not read the file. **Also reject** any path whose basename or any path component matches `.env`, `**/credentials*`, `**/*.key`, `**/*.pem`, `**/*.pfx`, `**/*secret*`, or `**/*password*` with `Failed at scope resolution: path "$ARG" matches a sandbox-deny pattern.` and stop. The platform sandbox already blocks reads of these patterns; the explicit reject list keeps the design correct without that backstop and makes the failure deterministic instead of surfacing as a permission error mid-run. For each in-scope file (or each file under the directory), prepend a synthetic diff header so path-based dispatch tests can match the file's path:
+4. **Path** — `test -e "$ARG"` succeeds AND the canonical resolved path lies under `$(git rev-parse --show-toplevel)` → **US3b file/dir mode**: scope is the file or directory tree's contents (no diff). Reject any path that resolves outside the repo root with `Failed at scope resolution: path "$ARG" resolves outside the repo root.` and stop — do not read the file. **Also reject** any path whose basename or any path component matches `.env`, `**/*credentials*`, `**/*.key`, `**/*.p12`, `**/*.pem`, `**/*.pfx`, `**/*secret*`, or `**/*password*` with `Failed at scope resolution: path "$ARG" matches a sandbox-deny pattern.` and stop. The list mirrors the Claude Code platform sandbox's `denyOnly` patterns — keep the two aligned when the sandbox config changes, since the platform sandbox already blocks reads of these patterns; the explicit reject list keeps the design correct without that backstop and makes the failure deterministic instead of surfacing as a permission error mid-run. For each in-scope file (or each file under the directory), prepend a synthetic diff header so path-based dispatch tests can match the file's path:
    ```
    --- /dev/null
    +++ b/<relative-path>
@@ -86,9 +89,9 @@ Apply the rules in order; the first match wins. Whatever the mode, the scope is 
    ```
    `<N>` is the line count of the file. The hunk header is required: agents that strictly parse unified-diff format treat lines after `+++ b/<path>` as context unless preceded by `@@ … @@`, so omitting it would silently hide every file from format-aware tooling. Concatenate these synthetic hunks into `DIFF`; leave `UNTRACKED` empty.
 
-5. **Otherwise** → **US3c freeform mode**: the freeform string is recorded as a `Reviewer bias:` for every agent, and the scope is the local diff (computed exactly as in rule 1). Apply rule 1's empty-diff halt: if both `DIFF` and `UNTRACKED` are empty, return `aggregate: no changes` and stop without dispatching.
+5. **Otherwise** → **US3c freeform mode**: the **entire trimmed `$ARG` value** is recorded as a `Reviewer bias:` for every agent, and the scope is the local diff (computed exactly as in rule 1). Apply rule 1's empty-diff halt.
 
-A non-empty freeform bias must be propagated in modes 2–4 if it is supplied (e.g. `213 focus on race conditions` parses as US2 PR=213 with bias `focus on race conditions`).
+A non-empty freeform bias must be propagated to every agent in modes 2–5 if it is supplied (e.g. `213 focus on race conditions` parses as US2 PR=213 with bias `focus on race conditions`; in US3c the entire trimmed argument is the bias).
 
 ## Resolved-mode echo
 
@@ -147,7 +150,7 @@ Example concrete dispatch (security):
 
 ```
 Task(subagent_type="deep-review-security",
-     description="OWASP Top 10 / CWE Top 25 / OWASP ASVS vulnerability review",
+     description=<Domain cell for deep-review-security, pasted verbatim from the master roster>,
      prompt=PROMPT_FRAME)
 ```
 
