@@ -80,8 +80,11 @@ CLAUDE.md                   # repository-specific behavioral guidance for Claude
 AGENTS.md                   # Codex entrypoint; delegates shared repository guidance to CLAUDE.md
 GEMINI.md                   # Gemini entrypoint; delegates shared repository guidance to CLAUDE.md
 QUALITY_METRICS.md          # auto-generated quality metrics report (escape rate, MTTR, coverage, trends)
-SECURITY.md                 # security policy and vulnerability reporting
+SECURITY.md                 # security policy, vulnerability reporting, and AI diagnosis data-egress policy
 quality-metrics-history.json  # historical quality metrics data points (auto-committed by workflow)
+docs/
+  CI_LOCAL.md               # self-hosted runner setup and running GitHub Actions locally with act
+  FORK.md                   # guide for forking and adapting the suite to a different deployment target
 scripts/
   generate-quality-metrics.py  # generates QUALITY_METRICS.md and updates quality-metrics-history.json
   self-healing.py              # self-healing selector fix: parses test artifacts, posts PR comments or creates draft PRs
@@ -153,31 +156,7 @@ The following variables are set in **GitHub → Settings → Variables → Actio
 
 ### AI diagnosis data egress
 
-When `AI_DIAGNOSIS=true`, every failed test POSTs its error messages, up to 30 000 chars of DOM, and its browser console logs to the configured provider (Anthropic or Gemini). Before transport, `redactSensitive()` in `utils/diagnosis.util.ts` masks the following well-known secrets:
-
-| Category                            | Pattern (case-insensitive unless noted)                                                                                                  | Replacement                        |
-| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
-| Cookie header value                 | `Cookie: <name>=<value>` (value until `;"<>` or newline)                                                                                 | `Cookie: <name>=[REDACTED]`        |
-| Set-Cookie header value             | `Set-Cookie: <name>=<value>`                                                                                                             | `Set-Cookie: <name>=[REDACTED]`    |
-| Multi-pair cookie chain             | `; <name>=<value>` (catches the 2nd–Nth segment of a `Cookie:` chain; intentionally also masks `Path=` / `Domain=` etc. on `Set-Cookie`) | `; <name>=[REDACTED]`              |
-| Bearer token (with header)          | `Authorization: Bearer <token>`                                                                                                          | `Authorization: Bearer [REDACTED]` |
-| Bearer token (standalone)           | `bearer <token>` where token is 12+ chars of `A-Za-z0-9._-`                                                                              | `bearer [REDACTED]`                |
-| API key header / JSON               | `x-api-key`, `apikey` followed by `:` or `=`, optional surrounding quotes, value 8+ chars                                                | `<key><sep>[REDACTED]`             |
-| API key / token in URL query string | `?apikey=…`, `?api_key=…`, `?token=…` (and the `&…` variants)                                                                            | `?<key>=[REDACTED]`                |
-| JWT (anywhere)                      | `eyJ….eyJ….[A-Za-z0-9_-]+` (case-sensitive — base64url JWT shape, 8+ chars per segment)                                                  | `[REDACTED_JWT]`                   |
-| Email local-part                    | `<local>@<domain>`                                                                                                                       | `<first-char>***@<domain>`         |
-
-**What still crosses the provider boundary after redaction:**
-
-- Full XHTML DOM structure (tag names, attribute names, data-\* attributes, CSS class names), which can fingerprint the application.
-- Test metadata: test title, browser project name, status, expected status.
-- Error messages verbatim apart from the redactions above — assertion diffs, stack traces, and any locator strings are forwarded.
-- Base URL, request paths, and non-redacted query strings visible in the DOM or console logs.
-- Session IDs, CSRF tokens, or secrets that **do not** match one of the patterns above (e.g. a CSRF token in a hidden `<input>` not named `apikey`/`api_key`/`token`, or an opaque session token outside any of the recognized header/query-string contexts).
-
-If a test can render data that falls outside those patterns, keep `AI_DIAGNOSIS` unset for that suite, or extend `REDACT_PATTERNS` before enabling it.
-
-The local `dom.xhtml` Playwright attachment is **not** redacted — it is only ever saved to the test's output directory (and any published Playwright report artifact). Redaction happens in memory on the copy sent to the AI provider.
+For the full redaction-pattern table and a description of what data still crosses the provider boundary after redaction, see [SECURITY.md — AI diagnosis data egress](SECURITY.md#ai-diagnosis-data-egress).
 
 ## Getting started
 
@@ -200,7 +179,7 @@ The `Bash` hook parses the first non-flag positional argument after `add` (skipp
 
 ## Adapting to your own environment
 
-For adapting this repo to a different deployment target, see [FORK.md](FORK.md).
+For adapting this repo to a different deployment target, see [docs/FORK.md](docs/FORK.md).
 
 ---
 
@@ -233,25 +212,9 @@ To intentionally bypass (e.g. for a WIP checkpoint), use `git commit --no-verify
 # All tests
 npx playwright test
 
-# Single test file
+# Single test file (any file under tests/ — full list in the Architecture section below)
 npx playwright test tests/navigation.spec.ts
-npx playwright test tests/api.spec.ts
-npx playwright test tests/accessibility.spec.ts
-npx playwright test tests/home.spec.ts
-npx playwright test tests/about-system.spec.ts
-npx playwright test tests/contact.spec.ts
-npx playwright test tests/statistics.spec.ts
-npx playwright test tests/validation.spec.ts
-npx playwright test tests/visual.spec.ts
-npx playwright test tests/network-mocking.spec.ts
-npx playwright test tests/register.spec.ts
-npx playwright test tests/password-reset.spec.ts
-npx playwright test tests/zone-information.spec.ts
-npx playwright test tests/zone-stats.spec.ts
-npx playwright test tests/zone-hits.spec.ts
-npx playwright test tests/zone-scripts.spec.ts
 npx playwright test tests/zone-admin.spec.ts
-npx playwright test tests/forms.spec.ts
 
 # Specific browser
 npx playwright test --project=chromium
@@ -268,12 +231,6 @@ npx playwright test --grep @smoke
 
 # Regression tests only (table content, SVG analysis, link hrefs, accessibility, visual)
 npx playwright test --grep @regression
-
-# All tests except smoke (equivalent to regression-only when all tests are tagged)
-npx playwright test --grep-invert @smoke
-
-# All tests except regression
-npx playwright test --grep-invert @regression
 
 # HTML report
 npx playwright show-report
@@ -336,12 +293,12 @@ Use `--grep` to run a subset and `--grep-invert` to exclude it (see [Running tes
   - `visual.spec.ts` — Full-page visual regression snapshots for home (default and Purple Rain style), about system, contact, and statistics pages using `toHaveScreenshot()` with `maxDiffPixelRatio: 0.01`; home page masks `#statsbar` lists (dynamic new-browser/OS list items) via `getByRole('list')`; statistics page masks `getByRole('table')` (live data) and `object[type="image/svg+xml"]` (dynamic SVG chart), removes all but the first 5 rows from the statistics table via `page.evaluate()` to keep the footer at a stable position regardless of how many browser/OS rows live data contains (CSS height/overflow tricks are ineffective here: Playwright's `fullPage` screenshot and mask both use the element's full bounding box, not the clipped visual; physically removing rows is the only reliable fix), waits for `<object>` to be visible before screenshotting to stabilise layout, and disables animations; baselines stored in `tests/visual.spec.ts-snapshots/` with per-platform suffixes (`-darwin`, `-linux`); also holds `test.fixme` stubs for the register, password reset, previously added, information, stats, hits, scripts, and admin pages (coverage matrix gaps — see `coverage-matrix.json`); tagged `@regression`
   - `register.spec.ts` — public `/register/` page content: heading, the four registration-form fields (`#newuser`, `#newpassword`, `#newpassword2`, `#email`) editable inside the `Dane potrzebne do rejestracji` fieldset, the `Rejestruj` submit button enabled, and the unique `Logowanie` nav link visible; tagged `@regression`
   - `password-reset.spec.ts` — public `/password_reset/` content: heading visible, recovery-form `#username` input editable inside the `Dane potrzebne do zresetowania hasła` fieldset (scoped to disambiguate from the duplicate-id login form below), `Resetuj hasło` submit button enabled, and the `#menubar` `Strona główna` link points at `/`; tagged `@regression`
-  - `zone-information.spec.ts` — authenticated `/zone/` (Information) page content: populated-account test asserts both section headings, the visit-frequency line (both numbers present), every ranking line (label + non-empty value + percentage + count via per-line regex), the footer prose, and that the `odsłon` link inside the peak-day label points at `/zone/hits/`; empty-account test (`storageState: EMPTY_STORAGE_STATE`) negates the empty-state heading plus all populated-only locators; tagged `@regression`
-  - `zone-stats.spec.ts` — Authenticated `/zone/stats/` page: SVG chart load (per-user `chart.php`) with structural analysis (animation counts, timing, browser-name labels); a `user statistics` test mirroring the public `system statistics` test that covers heading + dimension/period controls + period round-trip + table column headers + data-row format + footer rows; and one consolidated `every Parametr` test that walks all 12 Parametr options (six shared with `/statistics/` plus six user-only — `glebia`, `strona`, `odsylacz`, `ip`, `host`, `http_user_agent`), asserts the chart's label/percent pairs match the data table's top-N rows for each dimension (with rank-number labels expected on the long-text dimensions where the chart substitutes `1, 2, 3, …` for legibility), and asserts each dimension renders a distinct chart (so switching the Parametr is not a server-side no-op); tagged `@regression`
-  - `zone-hits.spec.ts` — authenticated `/zone/hits/` static content + filter form. A `hits page - content` test asserts the document title, the page-specific h2 (`Filtr`; the page renders no h-element with text `Odsłony` — that string lives only in the document title, the active nav link, and the col2 `<th>`), every filter-form label getter (period, IP, host, browser, OS, language, country, color depth, row-limit), and the two real `<th>` column headers in `table.fixed_table` (`Lp.` and `Odsłony`). A `hits page - filter form` describe walks every text input (IP, Host, Przeglądarka, System operacyjny, Język przeglądarki, Kraj, Głębia barw) with three parameterised tests each — (a) seed a fresh hit via `fireTrackingHit()` (HTML5 variant), read the matching `<span title>` value from the seeded row, fill the field with that value, and assert the seeded row plus every visible row contains it; (b) fill the field with `'x'.repeat(maxlength)` and assert no `table.fixed_table` renders (the page omits the table entirely on zero matches); (c) read the live `maxlength` attribute, fill `maxlength + 1` characters (boundary check — the smallest input that should engage maxlength enforcement), and assert truncation via `toHaveJSProperty('value', ...)` (XHTML breaks `toHaveValue` on `<input>` for the same lowercase-nodeName reason it breaks on `<textarea>`); plus a row-limit combobox test that seeds all three tracking variants and verifies the `Maksymalna ilość wyświetlanych pozycji` select renders exactly the chosen number of rows for limits 10 and 20. Tagged `@regression`
-  - `zone-scripts.spec.ts` — authenticated scripts page content (three section headings visible; each snippet textarea matches the canonical snippet body in `test-data/scripts/snippet-{html5,html4,xhtml}.txt`) plus three E2E tracking tests that materialise a thin HTML/HTML4/XHTML shell from `test-data/scripts/`, inject the matching canonical snippet and the active Playwright `baseURL`, navigate Playwright to the resulting `file://` URL, wait for the tracking request to fire against `${baseURL}/scripts/`, then assert a row with a unique per-run marker appears in `/zone/hits/`; tagged `@regression`
-  - `zone-admin.spec.ts` — authenticated `/zone/admin/` settings form. The `admin page - content` describe asserts the static page surface (heading `Twoje dane` visible; every read-only label as actually rendered on the live page — `Nazwa użytkownika`, `Aktualne hasło`, `Nowe hasło`, `Powtórz hasło`, `E-mail`, `Blokada IP (odsłony z tego IP nie będą zliczane)` — present in the fieldset's `innerText` so the assertion is XHTML-safe; SMS-tracking fields absent for non-allowlisted accounts). The `admin page - settings form` describe asserts default state (heading visible, email field non-empty via `.value` JS read since XHTML breaks `toHaveValue`, cookie radio "Nie" checked, every text field editable, SMS-tracking fields absent for the non-allowlisted populated user), a parameterised `maxlength` test per text field (oldpassword/newpassword/newpassword2 = 64, email = 255, block_ip = 15) using `'a'.repeat(max + 1)` + `toHaveJSProperty('value', ...)`, a wrong-current-password test (`'test'` + dummy new/confirm) asserting the "incorrect password" error, and an example.com placeholder-email test asserting the literal blocklist message — all four flows are non-mutating because the server short-circuits validation before the profile UPDATE. The `admin page - password mismatch (real credential)` describe sends the real `ORWELLSTAT_PASSWORD` to reach the new!=confirm comparison branch (also non-mutating; the residual risk of a retried-CI trace recording the password is documented inline because Playwright rejects per-describe `test.use({ trace })`). The `admin page - mutating settings (Chromium project only)` describe skips on every project except the desktop "Chromium" via `test.skip(() => test.info().project.name !== 'Chromium', '...')` (Mobile Chrome shares `browserName === 'chromium'` so the skip is keyed on `test.info().project.name` rather than the usual `({ browserName })` predicate, to keep the 5-browser parallel matrix from racing on the shared populated account) and runs serially through change-email-to-`@example.com`, set-block_ip-to-the-runner's-public-IP-and-verify-the-next-tracking-hit-is-absent (the IP-block test temporarily clears `block_ip` before asserting absence so the assertion is not tautological — `/zone/hits/` filters its own visible rows on the user's current `block_ip`), and set-block_cookie=Tak-and-verify-the-next-tracking-hit-is-absent — block_ip and cookie state captured at `beforeEach` and restored at `afterEach`; the email anchor is `ORWELLSTAT_EMAIL` (read via `requireRealEmail()`), and the `beforeEach` automatically rewrites the canonical address when it finds the account stuck at the `@example.com` placeholder from a prior cancelled teardown. Tagged `@regression`
-  - `forms.spec.ts` — `test.fixme` stub for the `login` form (coverage matrix gap — see the `forms` section of `coverage-matrix.json`); the `hitsFilter` form is covered in `zone-hits.spec.ts` and the `adminSettings` form is covered in `zone-admin.spec.ts` (both page-organised, mirroring `zone-scripts.spec.ts`); the verifier rules for `forms["hitsFilter"]` and `forms["adminSettings"]` key off the `hits page - filter form` and `admin page - settings form` describe blocks respectively. Tagged `@regression`
+  - `zone-information.spec.ts` — authenticated `/zone/` page: populated-account asserts headings, visit-frequency, every ranking line, footer prose, and the `odsłon` link; empty-account asserts empty-state heading and absence of populated-only locators; tagged `@regression`
+  - `zone-stats.spec.ts` — authenticated `/zone/stats/`: SVG chart structural analysis, user-statistics table, and a parameterised `every Parametr` loop that verifies chart label/percent pairs match the data table for all 12 dimensions and that each dimension renders a distinct chart; tagged `@regression`
+  - `zone-hits.spec.ts` — authenticated `/zone/hits/`: static content assertions plus a parameterised filter-form suite (seed → filter → assert match; max-length boundary; zero-result boundary) for every text input, and a row-limit combobox test; tagged `@regression`
+  - `zone-scripts.spec.ts` — authenticated `/zone/scripts/`: snippet-textarea content assertions against `test-data/scripts/snippet-*.txt` and three E2E tracking tests that fire each embed variant and verify the run-marker UUID appears in `/zone/hits/`; tagged `@regression`
+  - `zone-admin.spec.ts` — authenticated `/zone/admin/`: static page-surface assertions, settings-form default state, per-field maxlength, wrong-password and placeholder-email non-mutating flows, real-credential mismatch path, and Chromium-only mutating tests (email, block_ip, block_cookie) with `beforeEach`/`afterEach` restore; tagged `@regression`
+  - `forms.spec.ts` — `test.fixme` stub for the `login` form (coverage gap); `hitsFilter` and `adminSettings` are covered in their respective zone spec files; tagged `@regression`
 - `auth.setup.ts` — Playwright auth setup: logs in via UI as both the **populated** and **empty** accounts, saving `.auth/populated.json` and `.auth/empty.json`. The two logins run sequentially within a non-parallel `setup` project to avoid back-to-back login throttling. After landing on `/zone/`, each setup asserts that the rendered username (read from `#statsbar` via `AbstractPage.loggedInUsername`) equals the env var (`ORWELLSTAT_USER` / `ORWELLSTAT_USER_EMPTY`) it just tried to authenticate as, so a swapped credential pair fails fast instead of silently producing two valid storage states pointed at the wrong accounts.
 - `pages/` — Page Object Model classes
   - `base.page.ts` — `BasePage` interface (`url`, `title`, `goto()`, `heading`, optional `accessKey`)
@@ -360,7 +317,7 @@ Use `--grep` to run a subset and `--grep-invert` to exclude it (see [Running tes
 - `utils/validation.util.ts` — `expectValidXhtml(request, xhtml)` validates XHTML 1.0 Strict against the DTD. Default path shells out to local `xmllint --valid --noout` (libxml2, installed via `apt install libxml2-utils` in CI) — no network traffic, no authenticated HTML POSTed to a third party. Remote path (`VALIDATE_REMOTE=true`) POSTs to the classic W3C Markup Validation Service (`validator.w3.org/check`) and asserts no errors; kept available for a periodic official cross-check (the classic W3C validator is correct for XHTML 1.0 Strict; Nu is HTML5-only and gives false positives). `expectValidCss(request, cssUrl)` validates stylesheets against CSS standards. Default path fetches the stylesheet and runs `csstree-validator` locally (offline, no dependency on the W3C jigsaw service which has flaked with 403/429/5xx on CI — see #340) and asserts no errors, emitting a per-line `CSS errors in ${cssUrl}:` report on failure. Remote path (`VALIDATE_REMOTE=true`) queries `jigsaw.w3.org/css-validator` by URI for the official cross-check
 - `utils/track-hit.util.ts` — `fireTrackingHit(page, baseURL, variant, testInfo)`: seeds one identifiable tracking hit by reading the live snippet from `/zone/scripts/`, materialising the matching `test-data/scripts/tracking-{html5,html4}.html|tracking.xhtml` shell with that snippet, navigating Playwright to the resulting `file://` URL with a `randomUUID()` `?run=` marker, and waiting for the tracking request to fire against `${baseURL}/scripts/`. Returns the run marker so callers can locate the resulting row in `/zone/hits/`. Both `zone-scripts.spec.ts` (asserts the hit registers) and `zone-hits.spec.ts` (uses the hit as a known-value source for the filter form) reuse this primitive instead of duplicating the seeding flow. Also exports `TRACKING_FIXTURES` (the three variant descriptors) and `TEST_DATA_BASE` (the `test-data/scripts/` URL, shared with the canonical-snippet reader in `zone-scripts.spec.ts`).
 - `utils/env.util.ts` — `loadEnv(importMetaUrl, levelsUp)` loads `.env` relative to the calling file; `requireCredentials(account?: 'populated' | 'empty')` validates and returns the correct credentials for the requested account, defaulting to populated. The populated account reads `ORWELLSTAT_USER` / `ORWELLSTAT_PASSWORD`; the empty account requires `ORWELLSTAT_USER_EMPTY` / `ORWELLSTAT_PASSWORD_EMPTY`. Throws a descriptive error if either pair is missing. `requireRealEmail()` returns `ORWELLSTAT_EMAIL` (the real address currently stored on the populated account) and is used by the zone-admin mutating-settings tests as the anchor for their post-test restore — see #397.
-- `utils/diagnosis.util.ts` — `attachAiDiagnosis(testInfo, logs, domContent)`: calls the configured AI provider (Anthropic or Gemini, selected by `AI_PROVIDER`) to produce a diagnosis and optional selector-fix attachment on test failure; model names default to a per-provider map but can be overridden via `AI_MODEL_FAST` (diagnosis) and `AI_MODEL_STRONG` (selector fix); pipes the DOM snapshot, console logs, and error messages through `redactSensitive()` before they cross the provider boundary; the `REDACT_PATTERNS` array is the authoritative source — see the [AI diagnosis data egress](#ai-diagnosis-data-egress) section for the full pattern list (cookie / set-cookie / multi-pair cookie / bearer / x-api-key / query-string apikey · token / JWT / email); no-ops when `AI_DIAGNOSIS=true` is absent or the provider's API key is missing; errors are caught and warned so diagnosis never fails a test
+- `utils/diagnosis.util.ts` — `attachAiDiagnosis(testInfo, logs, domContent)`: calls the configured AI provider (Anthropic or Gemini, selected by `AI_PROVIDER`) to produce a diagnosis and optional selector-fix attachment on test failure; model names default to a per-provider map but can be overridden via `AI_MODEL_FAST` (diagnosis) and `AI_MODEL_STRONG` (selector fix); pipes the DOM snapshot, console logs, and error messages through `redactSensitive()` before they cross the provider boundary; the `REDACT_PATTERNS` array is the authoritative source — see [SECURITY.md — AI diagnosis data egress](SECURITY.md#ai-diagnosis-data-egress) for the full pattern list (cookie / set-cookie / multi-pair cookie / bearer / x-api-key / query-string apikey · token / JWT / email); no-ops when `AI_DIAGNOSIS=true` is absent or the provider's API key is missing; errors are caught and warned so diagnosis never fails a test
 - `utils/diagnosis.util.test.ts` — `node:test` unit suite for `redactSensitive`, co-located with `diagnosis.util.ts`, exercising every `REDACT_PATTERNS` rule (cookie / set-cookie / multi-pair cookie / bearer / x-api-key / query-string apikey · token / JWT / email) plus mixed / no-match / char-budget / XHTML-structure / multi-line / order-sensitivity / per-rule bypass-attempt cases (case variants, whitespace variants, mixed quoting, length-threshold guards); runs via `npm run test:unit` locally and on every PR through `playwright-typescript-lint.yml`
 - `utils/css-validator.util.ts` — pure helpers around `csstree-validator` (`getCssErrors`, `formatCssErrors`) used by `expectValidCssLocal`; split out of `validation.util.ts` so they are importable from the node-native unit suite without dragging in the Playwright fixture path aliases
 - `utils/css-validator.util.test.ts` — `node:test` unit suite for `getCssErrors` and `formatCssErrors`, proving that intentionally broken CSS (invalid property values, unknown properties, unknown at-rules, aggregated across lines) still reports per-line errors with line numbers and the source URL; runs via `npm run test:unit` locally and on every PR through `playwright-typescript-lint.yml`
@@ -606,213 +563,6 @@ In `.bru` files:
 
 ---
 
-## Self-hosted runner
+## Self-hosted runner and local CI
 
-A self-hosted runner lets `quality-metrics.yml` and `update-visual-baselines.yml` push back to the repository from your local Mac (something `act` cannot do — it has no real `GITHUB_TOKEN`).
-
-### Setup
-
-Download the runner package from **GitHub → Settings → Actions → Runners → New self-hosted runner** and follow the on-screen instructions to place the files in a directory **outside** the repository (e.g. `~/actions-runner`). Then register in ephemeral mode — the runner de-registers after each job, giving clean-state behaviour similar to GitHub-hosted runners:
-
-```bash
-cd ~/actions-runner
-./config.sh \
-  --url https://github.com/hubertgajewski/orwellstat \
-  --token $(gh api -X POST repos/hubertgajewski/orwellstat/actions/runners/registration-token --jq '.token') \
-  --ephemeral
-./run.sh
-```
-
-Because `--ephemeral` de-registers the runner after every job, you must re-run `./config.sh` (with a freshly generated token) before each subsequent job. To run the runner as a persistent macOS service instead (recommended for regular use):
-
-```bash
-./svc.sh install
-./svc.sh start
-```
-
-> **`svc.sh` is generated by `config.sh`** — it will not exist in the downloaded package. Run `./config.sh` first.
-
-> **Token expiry:** Registration tokens expire after 1 hour. Always generate a fresh token via `gh api -X POST repos/hubertgajewski/orwellstat/actions/runners/registration-token --jq '.token'` immediately before running `./config.sh`.
-
-### Multiple parallel workers
-
-To run parallel jobs (e.g. the full Playwright matrix), register multiple runner instances. `scripts/setup-runners.sh` automates this for 8 workers:
-
-```bash
-# 1. Download and extract the runner package to ~/actions-runner-src
-#    (GitHub → Settings → Actions → Runners → New self-hosted runner)
-
-# 2. Run the setup script
-./scripts/setup-runners.sh
-```
-
-The script copies the package into `~/actions-runner-1` … `~/actions-runner-8`, configures each with a unique name (`mac-runner-1` … `mac-runner-8`), and installs + starts a launchd service for each. Re-running the script is safe — it stops and reinstalls existing services before reconfiguring.
-
-### Routing jobs to the self-hosted runner
-
-All jobs resolve their runner via `${{ inputs.runner || vars.RUNNER || 'ubuntu-latest' }}`:
-
-| Priority | Source                               | How to set                                                     |
-| -------- | ------------------------------------ | -------------------------------------------------------------- |
-| 1        | `inputs.runner` (dispatch override)  | Select in the "Run workflow" dropdown                          |
-| 2        | `vars.RUNNER` (repo-wide default)    | GitHub → Settings → Variables → Actions → `RUNNER=self-hosted` |
-| 3        | `ubuntu-latest` (hardcoded fallback) | Automatic when `vars.RUNNER` is unset                          |
-
-To activate the self-hosted runner for all push/PR/schedule jobs, set the repository variable once:
-
-```bash
-gh variable set RUNNER --body self-hosted
-```
-
-To switch everything back to GitHub-hosted:
-
-```bash
-gh variable set RUNNER --body ubuntu-latest
-# or delete the variable entirely:
-gh variable delete RUNNER
-```
-
-Each workflow also exposes a `runner` text input on `workflow_dispatch` to override the repo variable for a single run — leave it empty (the default) to respect `vars.RUNNER`:
-
-```bash
-# Override to github-hosted for a single run even when RUNNER=self-hosted
-gh workflow run quality-metrics.yml --field runner=ubuntu-latest
-
-# Override to self-hosted for a single run when RUNNER is unset
-gh workflow run quality-metrics.yml --field runner=self-hosted
-```
-
-### Security model
-
-Three hardening measures are in place regardless of repo visibility:
-
-- **Ephemeral mode** — `--ephemeral` de-registers the runner after each job so no state persists between runs. Applies to the manual single-run setup; the persistent launchd services created by `setup-runners.sh` do not use `--ephemeral` (a service runner would de-register after the first job and stop).
-- **Repo identity guard** — every self-hosted-routable job carries `if: github.repository == 'hubertgajewski/orwellstat'`, which prevents execution if the repo is ever forked on GitHub and the fork's workflow_dispatch tries to reach this runner.
-- **Write-access-only override** — the `runner` input is on `workflow_dispatch` only; only collaborators with write access can dispatch workflows, so only they can switch to `ubuntu-latest`. Non-GitHub forks (GitLab, Bitbucket, local clones) cannot reach the runner at all — it only accepts jobs dispatched by GitHub's own infrastructure.
-
-> **Runner offline:** When `vars.RUNNER=self-hosted` and the runner is unavailable, jobs queue indefinitely. To unblock: run `gh variable set RUNNER --body ubuntu-latest` (affects all future runs) or dispatch with `--field runner=ubuntu-latest` (single run only).
-
----
-
-## Running GitHub Actions locally
-
-Use [`act`](https://github.com/nektos/act) to run workflows locally before pushing.
-
-> **Note:** The commands in this section were verified on macOS only. Linux and Windows 11 equivalents are provided as a best-effort guide and may require adjustments.
-
-> **Push-back workflows:** Workflows that commit and push results back to the repository (e.g. `quality-metrics.yml`) will always fail the `git push` step in `act`. This is expected — `act` containers have no GitHub credentials, so the push falls back to SSH and is rejected. All other steps (tool installation, script execution, git commit) run and can be verified locally. The push itself only works in real GitHub Actions, where `actions/checkout` injects `GITHUB_TOKEN` as a HTTPS credential automatically.
-
-### Requirements
-
-- **Docker Desktop** — must be running ([docker.com](https://www.docker.com/products/docker-desktop/))
-- **act**
-  - macOS: requires [Homebrew](https://brew.sh), then `brew install act`
-  - Linux: run the official install script (`curl https://raw.githubusercontent.com/nektos/act/master/install.sh | sudo bash`), or download a binary from [nektos/act releases](https://github.com/nektos/act/releases) and add it to `PATH`
-  - Windows 11: `winget install nektos.act` (winget is included with Windows 11)
-
-### Usage
-
-```bash
-# Run the default push trigger
-act push
-
-# Run a specific workflow
-act push -W .github/workflows/playwright-typescript.yml
-act push -W .github/workflows/bruno.yml
-```
-
-On first run, `act` will ask for a Docker image size — choose **Medium** (~500MB). The Playwright workflow installs browsers via `npx playwright install --with-deps`; the Bruno workflow only needs Node and `npm ci`.
-
-> **Credentials and platform config:** The repo root contains `.actrc` which automatically passes `--secret-file .env`, `--var-file .vars`, and `--container-architecture linux/amd64` to every `act` invocation. The architecture flag is required on Apple Silicon (M-series) Macs and is a no-op on x86-64 hardware. `ORWELLSTAT_USER` and `ORWELLSTAT_PASSWORD` from `.env` are loaded as secrets with no extra flags needed. Copy `.vars.example` to `.vars` and set variables to `true` to enable the corresponding workflow jobs and features — without this, all gated jobs are skipped.
-
-### workflow_dispatch
-
-To trigger a workflow that uses `workflow_dispatch` inputs (e.g. run a single browser project):
-
-```bash
-# Single browser via workflow_dispatch project input
-act workflow_dispatch -W .github/workflows/playwright-typescript.yml \
-  --input project=chromium
-
-# With explicit matrix filter (alternative — skips the setup-matrix job)
-act push -W .github/workflows/playwright-typescript.yml --matrix id:chromium
-```
-
-> **Note:** Use `--input project=chromium|firefox|webkit` to limit which browser projects run.
-
-### Credential hygiene
-
-`act` containers are ephemeral but stopped containers persist on the host filesystem until pruned. Run after sensitive sessions:
-
-```bash
-docker container prune
-```
-
-### Workflow compatibility
-
-| Workflow                         | `act` support    | Notes                                                                                                                   |
-| -------------------------------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `playwright-typescript.yml`      | ✅ Full          | `detect-act` step skips artifact upload                                                                                 |
-| `playwright-typescript-lint.yml` | ✅ Full          | No artifacts; pass `-e PLAYWRIGHT_TYPESCRIPT=true` or `--var PLAYWRIGHT_TYPESCRIPT=true` so the job's `if:` guard opens |
-| `bruno.yml`                      | ✅ Full          | No artifacts; credentials injected via `--secret-file`                                                                  |
-| `test-coverage.yml`              | ✅ Partial       | Script runs; no push-back needed                                                                                        |
-| `verify-coverage-matrix.yml`     | ✅ Full          | Pure Node check; no third-party deps; pass `--var PLAYWRIGHT_TYPESCRIPT=true` so the `if:` guard opens                  |
-| `quality-metrics.yml`            | ⚠️ Partial       | All steps run; `gh pr create` fails — no `GITHUB_TOKEN` in `act` containers                                             |
-| `update-visual-baselines.yml`    | ⚠️ Partial       | Baselines generated locally; `git push` fails                                                                           |
-| `claude-code-review.yml`         | ❌ Not supported | Requires real GitHub PR context (`gh pr review` cannot target a real PR)                                                |
-
-### Docker RAM requirements for the Playwright matrix
-
-The matrix strategy runs 5 browser projects in parallel, each in its own container. Every container installs Chromium (required by the auth setup project) plus its own browser:
-
-| Job           | Browsers installed | RAM                                        |
-| ------------- | ------------------ | ------------------------------------------ |
-| Chromium      | chromium           | ~1.0 GB                                    |
-| Mobile Chrome | chromium           | ~1.0 GB                                    |
-| Firefox       | chromium + firefox | ~1.4 GB                                    |
-| WebKit        | chromium + webkit  | ~1.2 GB                                    |
-| Mobile Safari | chromium + webkit  | ~1.2 GB                                    |
-| **Total**     |                    | **~5.8 GB active + ~2 GB Docker overhead** |
-
-**8 GB Docker RAM (default) — run a single browser only**
-
-With the default Docker Desktop memory limit (~8 GB), running all 5 matrix jobs simultaneously causes container OOM kills. Run Chromium only:
-
-```bash
-act push -W .github/workflows/playwright-typescript.yml --matrix id:chromium
-```
-
-**16 GB+ Docker RAM — full matrix run**
-
-With 16 GB allocated to Docker, all 5 browser containers fit in memory and can run in parallel, matching CI exactly:
-
-```bash
-act push -W .github/workflows/playwright-typescript.yml
-```
-
-**macOS** — quit Docker Desktop first, then run (requires `jq` — `brew install jq`, which itself requires [Homebrew](https://brew.sh)):
-
-```bash
-jq '.MemoryMiB = 16384' \
-  ~/Library/Group\ Containers/group.com.docker/settings-store.json \
-  > /tmp/docker-settings.json \
-  && mv /tmp/docker-settings.json \
-     ~/Library/Group\ Containers/group.com.docker/settings-store.json
-```
-
-**Linux** — Docker Engine on Linux does not impose a separate memory limit; containers share the host's available RAM directly. Ensure your system has at least 16 GB of physical RAM to run the full matrix.
-
-**Windows 11** — quit Docker Desktop first, then run in PowerShell:
-
-```powershell
-$path = "$env:APPDATA\Docker\settings-store.json"
-$s = Get-Content $path | ConvertFrom-Json
-$s.memoryMiB = 16384
-$s | ConvertTo-Json -Depth 10 | Set-Content $path
-```
-
-Then restart Docker Desktop and verify on any platform with:
-
-```bash
-docker info --format '{{.MemTotal}}' | awk '{printf "%.0f GB\n", $1/1073741824}'
-```
+For self-hosted runner setup (single and multi-worker), routing configuration, security model, and running workflows locally with `act` (requirements, usage, Docker RAM requirements, per-workflow compatibility), see [docs/CI_LOCAL.md](docs/CI_LOCAL.md).

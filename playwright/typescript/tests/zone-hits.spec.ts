@@ -1,3 +1,9 @@
+/**
+ * Authenticated /zone/hits/ page.
+ * Static content assertions plus a parameterised filter-form suite for every text input:
+ * seed a hit, assert match; fill maxlength, assert zero results; fill maxlength+1, assert truncation.
+ * Also covers the row-limit combobox (limits 10 and 20 against seeded hits).
+ */
 import { test, expect, type Locator } from '@fixtures/base.fixture';
 import { HitsPage } from '@pages/authenticated/hits.page';
 import { fireTrackingHit, TRACKING_FIXTURES } from '@utils/track-hit.util';

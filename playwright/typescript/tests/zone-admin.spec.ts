@@ -1,3 +1,9 @@
+/**
+ * Authenticated /zone/admin/ settings form.
+ * Covers: static page surface, default form state, per-field maxlength, wrong-password and
+ * placeholder-email non-mutating error paths, real-credential mismatch path (@real-credential),
+ * and Chromium-only mutating tests (email, block_ip, block_cookie) with beforeEach/afterEach restore.
+ */
 import { test, expect, type Locator } from '@fixtures/base.fixture';
 import { AdminPage } from '@pages/authenticated/admin.page';
 import { HitsPage } from '@pages/authenticated/hits.page';

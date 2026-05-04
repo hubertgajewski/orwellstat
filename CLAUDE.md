@@ -6,7 +6,7 @@ This file provides behavioral instructions to Claude Code (claude.ai/code) when 
 
 > **Skill files are the source of truth for their workflows.** `.claude/skills/fix-issue/SKILL.md` owns the issue fix workflow; `.claude/skills/create-issue/SKILL.md` owns the GitHub issue format and the operational steps for adding new items to Project #1; `.claude/skills/deep-review/SKILL.md` owns the code review checklist. `CLAUDE.md` only points to them. When changing those workflows, formats, or the checklist, edit the skill file — not this file. Project #1 board conventions live in `README.md`.
 
-For repository structure, environment variable definitions, `playwright/typescript` architecture (directory layout, POM conventions, path aliases, Playwright config, CI workflows), and Bruno documentation, see [README.md](README.md). That file is the single source of truth for all reference material.
+For repository structure, environment variable definitions, `playwright/typescript` architecture (directory layout, POM conventions, path aliases, Playwright config, CI workflows), and Bruno documentation, see [README.md](README.md) and the `docs/` directory. These are the single source of truth for all reference material — `README.md` for the core project reference, `docs/` for operational guides (self-hosted runner setup, local CI with `act`, and the fork adaptation guide).
 
 ---
 
