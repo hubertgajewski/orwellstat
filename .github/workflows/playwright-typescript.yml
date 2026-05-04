@@ -171,6 +171,10 @@ jobs:
           path: playwright/typescript/.auth/
           retention-days: 1
           if-no-files-found: error
+          # `.auth/` is a dotted directory; `upload-artifact@v7` skips hidden entries by
+          # default and would publish an empty archive even after auth.setup.ts wrote the
+          # JSON files (auth tests pass, but the upload step then trips `if-no-files-found`).
+          include-hidden-files: true
 
   test:
     needs: [setup-matrix, auth-setup]
