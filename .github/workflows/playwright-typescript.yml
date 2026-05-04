@@ -53,6 +53,7 @@ jobs:
     timeout-minutes: 2
     outputs:
       matrix: ${{ steps.compute.outputs.matrix }}
+      projects: ${{ steps.compute.outputs.projects }}
       total-shards: ${{ steps.compute.outputs.total-shards }}
     steps:
       - name: Compute matrix
@@ -99,12 +100,81 @@ jobs:
           MATRIX=$(echo "$BASE" | jq -c \
             --argjson total "$TOTAL_SHARDS" \
             '{include: [.[] as $entry | range(1; $total + 1) | $entry + {shard: ., total: $total}]}')
+          # Per-project (un-sharded) variant feeds the auth-setup matrix so auth.setup.ts runs
+          # exactly once per project regardless of shard count (#472).
+          PROJECTS=$(echo "$BASE" | jq -c '{include: .}')
           echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
+          echo "projects=$PROJECTS" >> "$GITHUB_OUTPUT"
           echo "total-shards=$TOTAL_SHARDS" >> "$GITHUB_OUTPUT"
 
-  test:
+  auth-setup:
+    # Decouples the auth login count from the shard count: one auth-setup leg per project
+    # uploads `.auth/{populated,empty}.json` as `auth-state-<id>`; the test matrix downloads
+    # them and runs with `--no-deps`, so adding shards no longer multiplies staging-side
+    # logins. See #412 for the regression this restores parity against.
     needs: setup-matrix
     if: github.repository == 'hubertgajewski/orwellstat' && vars.PLAYWRIGHT_TYPESCRIPT == 'true' && needs.setup-matrix.result == 'success'
+    name: auth-setup (${{ matrix.id }})
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.setup-matrix.outputs.projects) }}
+    runs-on: ${{ inputs.runner || vars.RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 5
+    environment: ${{ inputs.env || 'staging' }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.inputs.ref || github.ref }}
+      - uses: actions/setup-node@v6
+        with:
+          node-version: lts/*
+          cache: "npm"
+          cache-dependency-path: playwright/typescript/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+        working-directory: playwright/typescript
+      - name: Cache Playwright browsers
+        # `auth.setup.ts` has no `use` block in `playwright.config.ts` so it always runs in
+        # default Chromium — every auth-setup leg shares the same chromium cache regardless of
+        # `matrix.browser`. Test-leg caches (keyed on each leg's actual browser) are populated
+        # separately by `playwright-run.yml`.
+        id: cache-playwright
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ms-playwright-${{ runner.os }}-chromium-${{ hashFiles('playwright/typescript/package-lock.json') }}
+      - name: Install Playwright Browsers
+        run: |
+          if [ "${CACHE_HIT}" = "true" ]; then
+            npx playwright install-deps chromium
+          else
+            npx playwright install --with-deps chromium
+          fi
+        working-directory: playwright/typescript
+        env:
+          CACHE_HIT: ${{ steps.cache-playwright.outputs.cache-hit }}
+      - name: Run auth.setup.ts
+        run: npx playwright test --project=setup
+        working-directory: playwright/typescript
+        env:
+          ENV: ${{ vars.ENV }}
+          ORWELLSTAT_USER: ${{ secrets.ORWELLSTAT_USER }}
+          ORWELLSTAT_PASSWORD: ${{ secrets.ORWELLSTAT_PASSWORD }}
+          ORWELLSTAT_USER_EMPTY: ${{ secrets.ORWELLSTAT_USER_EMPTY }}
+          ORWELLSTAT_PASSWORD_EMPTY: ${{ secrets.ORWELLSTAT_PASSWORD_EMPTY }}
+          BASIC_AUTH_USER: ${{ (inputs.env || 'staging') == 'staging' && secrets.BASIC_AUTH_USER || '' }}
+          BASIC_AUTH_PASSWORD: ${{ (inputs.env || 'staging') == 'staging' && secrets.BASIC_AUTH_PASSWORD || '' }}
+      - name: Upload storage states
+        uses: actions/upload-artifact@v7
+        with:
+          name: auth-state-${{ matrix.id }}
+          path: playwright/typescript/.auth/
+          retention-days: 1
+          if-no-files-found: error
+
+  test:
+    needs: [setup-matrix, auth-setup]
+    if: github.repository == 'hubertgajewski/orwellstat' && vars.PLAYWRIGHT_TYPESCRIPT == 'true' && needs.setup-matrix.result == 'success' && needs.auth-setup.result == 'success'
     # Shard suffix in the job name so the Checks tab disambiguates the per-shard legs at a glance.
     name: test (${{ matrix.id }} ${{ matrix.shard }}/${{ matrix.total }})
     strategy:

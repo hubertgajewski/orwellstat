@@ -104,16 +104,14 @@ jobs:
           path: ~/.cache/ms-playwright
           key: ms-playwright-${{ runner.os }}-${{ inputs.browser }}-${{ hashFiles('playwright/typescript/package-lock.json') }}
       - name: Install Playwright Browsers
-        # chromium is always installed because the auth setup project (auth.setup.ts) has no
-        # explicit browser configured and therefore defaults to Chromium. Every matrix job needs
-        # it available to run the setup dependency. For Chromium/Mobile Chrome jobs the duplicate
-        # is idempotent and harmless. On cache hit only OS deps are reinstalled (apt packages
-        # are not in the cached path).
+        # Tests run with `--no-deps` (#472), so the `setup` project is skipped and only the
+        # leg's own browser binary is needed. On cache hit only the OS-level apt packages are
+        # reinstalled (binaries are restored from `~/.cache/ms-playwright`).
         run: |
           if [ "${CACHE_HIT}" = "true" ]; then
-            npx playwright install-deps chromium "${BROWSER}"
+            npx playwright install-deps "${BROWSER}"
           else
-            npx playwright install --with-deps chromium "${BROWSER}"
+            npx playwright install --with-deps "${BROWSER}"
           fi
         working-directory: playwright/typescript
         env:
@@ -123,6 +121,15 @@ jobs:
         # xmllint provides local XHTML DTD validation used by validation.spec.ts — the default
         # path; avoids POSTing authenticated pages to validator.w3.org on every CI run.
         run: sudo apt-get install -y libxml2-utils
+      - name: Download auth state
+        # `playwright-typescript.yml`'s `auth-setup` job authenticates once per project and
+        # uploads `.auth/{populated,empty}.json` as `auth-state-<id>` (#472). Downloading them
+        # here lets the test command pass `--no-deps`, which skips the in-leg `setup` project
+        # so the matrix legs do not re-authenticate against staging on every shard.
+        uses: actions/download-artifact@v8
+        with:
+          name: auth-state-${{ inputs.id }}
+          path: playwright/typescript/.auth/
       - name: Run Playwright tests
         run: |
           SHARD_ARGS=()
@@ -130,9 +137,9 @@ jobs:
             SHARD_ARGS+=("--shard=${SHARD}/${TOTAL_SHARDS}")
           fi
           if [ "${UPDATE_BASELINES}" = "true" ]; then
-            npx playwright test tests/visual.spec.ts --update-snapshots --project="${PROJECT}" "${SHARD_ARGS[@]}"
+            npx playwright test tests/visual.spec.ts --update-snapshots --no-deps --project="${PROJECT}" "${SHARD_ARGS[@]}"
           else
-            npx playwright test --project="${PROJECT}" "${SHARD_ARGS[@]}"
+            npx playwright test --no-deps --project="${PROJECT}" "${SHARD_ARGS[@]}"
           fi
         working-directory: playwright/typescript
         env:
