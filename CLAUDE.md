@@ -73,7 +73,11 @@ This repository defines MCP (Model Context Protocol) servers in `.mcp.json` at t
 | `playwright-report-mcp` | Run the Playwright test suite and retrieve structured results (pass/fail, errors, attachments) |
 | `playwright`            | Browser automation — navigate pages, take screenshots, interact with UI elements               |
 | `MCP_DOCKER`            | Docker MCP gateway — interact with containers (used with `act` for local CI)                   |
+| `quality-metrics`       | Query defect escape rate, MTTR, and metrics history without running `quality-metrics.yml`      |
+| `coverage-matrix`       | Query and update `playwright/typescript/coverage-matrix.json` through typed tools              |
 
 - Use `playwright-report-mcp` when you need to run or inspect test results programmatically — e.g. during self-healing workflows, verifying a fix, or checking which tests are failing. Prefer it over invoking `npx playwright test` via shell and parsing stdout. Every tool call must include `workingDirectory`: `"playwright/typescript"` for the main worktree, or `"../<worktree-name>/playwright/typescript"` (e.g. `"../orwellstat-330/playwright/typescript"`) for a sibling worktree. Omitting it defaults to the repo root, which has no `playwright.config.*` and will fail. The allowlist (`PW_ALLOWED_DIRS=".."` in `.mcp.json`) authorizes the repo root's parent, covering every sibling worktree under the same directory.
 - Use `playwright` for exploratory or diagnostic tasks that benefit from live browser interaction — e.g. inspecting the running application, verifying a UI fix, taking screenshots. Prefer it over describing what the page looks like from memory.
 - Use `MCP_DOCKER` when interacting with Docker containers started by `act` — e.g. running a command inside a container or finding a container by name.
+- Use `quality-metrics` when you need defect escape rate, MTTR, or historical metrics on demand. Prefer it over re-running `scripts/generate-quality-metrics.py` or waiting for the monthly `quality-metrics.yml` workflow.
+- Use `coverage-matrix` when you need to query coverage gaps or summary percentages, or to flip a single page-category cell to covered. Prefer it over reading or editing `playwright/typescript/coverage-matrix.json` by hand.
