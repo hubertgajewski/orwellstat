@@ -1,3 +1,9 @@
+/**
+ * Authenticated /zone/stats/ page.
+ * SVG chart structural analysis, user-statistics table, and a parameterised every-Parametr loop
+ * that verifies chart label/percent pairs match the data table for all 12 dimensions and that
+ * each dimension renders a distinct chart (switching Parametr is not a server-side no-op).
+ */
 import { test, expect } from '@fixtures/base.fixture';
 import { AbstractPage } from '@pages/abstract.page';
 import { StatsPage, USER_PARAMETER_OPTIONS } from '@pages/authenticated/stats.page';

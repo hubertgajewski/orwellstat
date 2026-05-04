@@ -1,3 +1,8 @@
+/**
+ * Authenticated /zone/ (Information) page.
+ * Populated account: headings, visit-frequency line, every ranking line, footer prose, odsłon link.
+ * Empty account (EMPTY_STORAGE_STATE): empty-state heading; populated-only locators absent.
+ */
 import { test, expect } from '@fixtures/base.fixture';
 import { EMPTY_STORAGE_STATE } from '@fixtures/storage-state';
 import { InformationPage } from '@pages/authenticated/information.page';

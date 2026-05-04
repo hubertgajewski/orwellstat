@@ -2,11 +2,11 @@
 
 This file provides behavioral instructions to Claude Code (claude.ai/code) when working with code in this repository.
 
-> **Keep `README.md` up to date.** Whenever the project structure changes — new directories, renamed files, new sub-projects, changed commands, updated CI, modified environment variables — update `README.md` before finishing the task. `CLAUDE.md` documents behavioral instructions only; update it only when adding, changing, or removing behavioral guidance for Claude — such as the commit message convention or any other conventions Claude should follow. For the code review checklist, issue format, and issue fix workflow, edit the relevant skill file instead.
+> **Keep `README.md` and `docs/` up to date.** Whenever the project structure changes — new directories, renamed files, new sub-projects, changed commands, updated CI, modified environment variables — update `README.md` (and the relevant file under `docs/` if the change affects operational content there) before finishing the task. `CLAUDE.md` documents behavioral instructions only; update it only when adding, changing, or removing behavioral guidance for Claude — such as the commit message convention or any other conventions Claude should follow. For the code review checklist, issue format, and issue fix workflow, edit the relevant skill file instead.
 
 > **Skill files are the source of truth for their workflows.** `.claude/skills/fix-issue/SKILL.md` owns the issue fix workflow; `.claude/skills/create-issue/SKILL.md` owns the GitHub issue format and the operational steps for adding new items to Project #1; `.claude/skills/deep-review/SKILL.md` owns the code review checklist. `CLAUDE.md` only points to them. When changing those workflows, formats, or the checklist, edit the skill file — not this file. Project #1 board conventions live in `README.md`.
 
-For repository structure, environment variable definitions, `playwright/typescript` architecture (directory layout, POM conventions, path aliases, Playwright config, CI workflows), and Bruno documentation, see [README.md](README.md). That file is the single source of truth for all reference material.
+For repository structure, environment variable definitions, `playwright/typescript` architecture (directory layout, POM conventions, path aliases, Playwright config, CI workflows), and Bruno documentation, see [README.md](README.md) and the `docs/` directory. `README.md` is authoritative for core project reference; `docs/` is authoritative for operational guides (self-hosted runner setup, local CI with `act`, and the fork adaptation guide).
 
 ---
 

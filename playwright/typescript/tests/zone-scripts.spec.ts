@@ -1,3 +1,9 @@
+/**
+ * Authenticated /zone/scripts/ page.
+ * Snippet-textarea content assertions against test-data/scripts/snippet-*.txt, plus three E2E
+ * tracking tests that fire each embed variant (HTML5, HTML4, XHTML) and verify the run-marker
+ * UUID appears as a new row in /zone/hits/.
+ */
 import { readFileSync } from 'node:fs';
 import { test, expect } from '@fixtures/base.fixture';
 import { ScriptsPage } from '@pages/authenticated/scripts.page';

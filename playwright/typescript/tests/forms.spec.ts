@@ -1,3 +1,7 @@
+/**
+ * Login form coverage (test.fixme stub — coverage gap, see forms entry in coverage-matrix.json).
+ * hitsFilter and adminSettings forms are covered in zone-hits.spec.ts and zone-admin.spec.ts.
+ */
 import { test } from '@fixtures/base.fixture';
 import { HomePage } from '@pages/public/home.page';
 
