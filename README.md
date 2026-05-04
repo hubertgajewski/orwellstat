@@ -457,24 +457,24 @@ Five MCP servers are declared in `.mcp.json` and loaded automatically by any MCP
 
 An MCP server that runs the Playwright test suite and returns structured JSON results, enabling agentic workflows (self-healing, test generation verification) to act on test outcomes without parsing shell output.
 
-**Setup:** No setup required — runs via `npx playwright-report-mcp@2.0.1` from the official npm registry. The version is pinned in `.mcp.json` so upstream releases don't silently change behavior between runs.
+**Setup:** No setup required — runs via `npx playwright-report-mcp@3.1.0` from the official npm registry. The version is pinned in `.mcp.json` so upstream releases don't silently change behavior between runs.
 
-**Configuration:** The following environment variables can be set in `.mcp.json` (unset variables use their defaults):
+**Configuration:** Each tool call accepts an optional `workingDirectory` argument naming the Playwright project directory; the `PW_ALLOWED_DIRS` environment variable in `.mcp.json` defines which paths that argument is allowed to resolve to:
 
-| Variable          | Default                              | Description                                                                                                                                |
-| ----------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `PW_DIR`          | `process.cwd()`                      | Root of the Playwright project. Relative paths are resolved against the directory from which the AI assistant is launched (the repo root). |
-| `PW_RESULTS_FILE` | `<PW_DIR>/test-results/results.json` | Path to the JSON reporter output file. Override if your `playwright.config.ts` writes results elsewhere.                                   |
+| Setting             | Where                | Default | Description                                                                                                                                                                                                                                              |
+| ------------------- | -------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `workingDirectory`  | per tool-call arg    | `"."`   | Playwright project directory, absolute or relative to the MCP server launch directory (the repo root). The default `.` points at the repo root, which has no `playwright.config.*` and will fail — every call must pass an explicit `workingDirectory`. |
+| `PW_ALLOWED_DIRS`   | `.mcp.json` env var  | unset   | Colon-separated allowlist of directories `workingDirectory` is permitted to resolve under. This repo sets `".."` (the repo root's parent) so sibling worktrees like `../orwellstat-<N>/playwright/typescript` are reachable.                              |
 
-This repo sets `PW_DIR` to `playwright/typescript` so the server targets the correct sub-project:
+This repo sets `PW_ALLOWED_DIRS` to `..` so the repo root's parent and every sibling worktree under it are reachable from a single allowlist entry:
 
 ```json
 "playwright-report-mcp": {
   "command": "npx",
-  "args": ["playwright-report-mcp@2.0.1"],
+  "args": ["--min-release-age=0", "playwright-report-mcp@3.1.0"],
   "type": "stdio",
   "env": {
-    "PW_DIR": "playwright/typescript"
+    "PW_ALLOWED_DIRS": ".."
   }
 }
 ```
