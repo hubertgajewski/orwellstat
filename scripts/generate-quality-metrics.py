@@ -22,8 +22,26 @@ COVERAGE_MATRIX = REPO_ROOT / "playwright" / "typescript" / "coverage-matrix.jso
 HISTORY_FILE = REPO_ROOT / "quality-metrics-history.json"
 REPORT_FILE = REPO_ROOT / "QUALITY_METRICS.md"
 
-CATEGORIES = ["title", "content", "accessibility", "visualRegression", "api"]
-CATEGORY_HEADERS = ["Title", "Content", "Accessibility", "Visual Regression", "API"]
+CATEGORIES = [
+    "title",
+    "content",
+    "accessibility",
+    "visualRegression",
+    "api",
+    "securityHeaders",
+    "negativePath",
+    "tracking",
+]
+CATEGORY_HEADERS = [
+    "Title",
+    "Content",
+    "Accessibility",
+    "Visual Regression",
+    "API",
+    "Security Headers",
+    "Negative Path",
+    "Tracking",
+]
 
 
 def gh_issues(labels, state="all", extra_fields=None):
@@ -66,13 +84,31 @@ def mttr(issues, na_label="N/A"):
     return f"{days:.1f} days" if days >= 1 else f"{avg / 3600:.1f} hours"
 
 
+def reportable_categories_for_page(matrix, page_url):
+    active_categories = matrix.get("activePageCategories", CATEGORIES)
+    applicable_categories = matrix.get("pageApplicableCategories", {})
+    default_applicable_categories = matrix.get("defaultApplicablePageCategories", active_categories)
+    return [
+        category
+        for category in applicable_categories.get(page_url, default_applicable_categories)
+        if category in active_categories
+    ]
+
+
 def compute_coverage(matrix):
     pages = matrix.get("pages", {})
     forms = matrix.get("forms", {})
-    total = len(pages) * len(CATEGORIES) + len(forms)
+    total = sum(
+        len(reportable_categories_for_page(matrix, page_url))
+        for page_url in pages
+    ) + len(forms)
     covered = sum(
-        sum(1 for cat in CATEGORIES if page.get(cat, False))
-        for page in pages.values()
+        sum(
+            1
+            for cat in reportable_categories_for_page(matrix, page_url)
+            if page.get(cat, False)
+        )
+        for page_url, page in pages.items()
     ) + sum(1 for v in forms.values() if v)
     pct = round(covered * 100 / total) if total else 0
     return pct, covered, total, pages, forms
@@ -80,6 +116,12 @@ def compute_coverage(matrix):
 
 def icon(val):
     return ":white_check_mark:" if val else ":x:"
+
+
+def coverage_cell_icon(matrix, page_url, category, value):
+    if category not in reportable_categories_for_page(matrix, page_url):
+        return ":heavy_minus_sign:"
+    return icon(value)
 
 
 def write_step_summary(lines):
@@ -256,7 +298,14 @@ def main():
         separator = "|------|" + "|".join(["---"] * len(CATEGORY_HEADERS)) + "|"
         lines += [header, separator]
         for page_url, vals in sorted(pages.items()):
-            row = f"| `{page_url}` | " + " | ".join(icon(vals.get(cat, False)) for cat in CATEGORIES) + " |"
+            row = (
+                f"| `{page_url}` | "
+                + " | ".join(
+                    coverage_cell_icon(matrix, page_url, cat, vals.get(cat, False))
+                    for cat in CATEGORIES
+                )
+                + " |"
+            )
             lines.append(row)
         lines.append("")
 

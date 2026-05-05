@@ -5,85 +5,163 @@
       "content": true,
       "accessibility": true,
       "visualRegression": true,
-      "api": true
+      "api": true,
+      "securityHeaders": false,
+      "negativePath": false,
+      "tracking": false
     },
     "/about/": {
       "title": true,
       "content": true,
       "accessibility": true,
       "visualRegression": true,
-      "api": true
+      "api": true,
+      "securityHeaders": false,
+      "negativePath": false,
+      "tracking": false
     },
     "/statistics/": {
       "title": true,
       "content": true,
       "accessibility": true,
       "visualRegression": true,
-      "api": true
+      "api": true,
+      "securityHeaders": false,
+      "negativePath": false,
+      "tracking": false
     },
     "/contact/": {
       "title": true,
       "content": true,
       "accessibility": true,
       "visualRegression": true,
-      "api": true
+      "api": true,
+      "securityHeaders": false,
+      "negativePath": false,
+      "tracking": false
     },
     "/register/": {
       "title": true,
       "content": true,
       "accessibility": true,
       "visualRegression": false,
-      "api": true
+      "api": true,
+      "securityHeaders": false,
+      "negativePath": false,
+      "tracking": false
     },
     "/2/": {
       "title": true,
       "content": true,
       "accessibility": false,
       "visualRegression": false,
-      "api": false
+      "api": false,
+      "securityHeaders": false,
+      "negativePath": false,
+      "tracking": false
     },
     "/password_reset/": {
       "title": true,
       "content": true,
       "accessibility": true,
       "visualRegression": false,
-      "api": true
+      "api": true,
+      "securityHeaders": false,
+      "negativePath": false,
+      "tracking": false
     },
     "/zone/": {
       "title": true,
       "content": true,
       "accessibility": true,
       "visualRegression": false,
-      "api": true
+      "api": true,
+      "securityHeaders": false,
+      "negativePath": true,
+      "tracking": false
     },
     "/zone/stats/": {
       "title": true,
       "content": true,
       "accessibility": true,
       "visualRegression": false,
-      "api": true
+      "api": true,
+      "securityHeaders": false,
+      "negativePath": false,
+      "tracking": false
     },
     "/zone/hits/": {
       "title": true,
       "content": true,
       "accessibility": true,
       "visualRegression": false,
-      "api": true
+      "api": true,
+      "securityHeaders": false,
+      "negativePath": true,
+      "tracking": false
     },
     "/zone/scripts/": {
       "title": true,
       "content": true,
       "accessibility": true,
       "visualRegression": false,
-      "api": true
+      "api": true,
+      "securityHeaders": false,
+      "negativePath": false,
+      "tracking": false
     },
     "/zone/admin/": {
       "title": true,
       "content": true,
       "accessibility": true,
       "visualRegression": false,
-      "api": true
+      "api": true,
+      "securityHeaders": false,
+      "negativePath": true,
+      "tracking": false
+    },
+    "/scripts/*.php": {
+      "title": false,
+      "content": false,
+      "accessibility": false,
+      "visualRegression": false,
+      "api": false,
+      "securityHeaders": false,
+      "negativePath": false,
+      "tracking": true
     }
+  },
+  "activePageCategories": [
+    "title",
+    "content",
+    "accessibility",
+    "visualRegression",
+    "api",
+    "negativePath",
+    "tracking"
+  ],
+  "defaultApplicablePageCategories": [
+    "title",
+    "content",
+    "accessibility",
+    "visualRegression",
+    "api"
+  ],
+  "pageApplicableCategories": {
+    "/zone/": ["title", "content", "accessibility", "visualRegression", "api", "negativePath"],
+    "/zone/hits/": ["title", "content", "accessibility", "visualRegression", "api", "negativePath"],
+    "/zone/admin/": [
+      "title",
+      "content",
+      "accessibility",
+      "visualRegression",
+      "api",
+      "negativePath"
+    ],
+    "/scripts/*.php": ["tracking"]
+  },
+  "pageNotes": {
+    "/scripts/*.php": "Wildcard tracker contract entry for the public /scripts/*.php endpoints exercised via fireTrackingHit()."
   },
   "forms": {
     "login": false,

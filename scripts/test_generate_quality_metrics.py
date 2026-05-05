@@ -211,10 +211,9 @@ class ComputeCoverageTests(unittest.TestCase):
             "forms": {"form1": True, "form2": False},
         }
         pct, covered, total, pages, forms = gen.compute_coverage(matrix)
-        # pages: 5 + 1 = 6 covered out of 10; forms: 1 of 2. total = 12, covered = 7 -> 58%
         self.assertEqual(covered, 7)
-        self.assertEqual(total, 12)
-        self.assertEqual(pct, round(7 * 100 / 12))
+        self.assertEqual(total, 18)
+        self.assertEqual(pct, round(7 * 100 / 18))
         self.assertIs(pages, matrix["pages"])
         self.assertIs(forms, matrix["forms"])
 
@@ -228,6 +227,55 @@ class ComputeCoverageTests(unittest.TestCase):
         self.assertEqual(covered, 0)
         self.assertEqual(total, len(gen.CATEGORIES))
         self.assertEqual(pct, 0)
+
+    def test_respects_active_and_page_applicable_categories(self):
+        matrix = {
+            "pages": {
+                "/page": {
+                    "title": True,
+                    "content": False,
+                    "accessibility": True,
+                    "visualRegression": False,
+                    "api": True,
+                    "securityHeaders": True,
+                    "negativePath": False,
+                    "tracking": False,
+                },
+                "/scripts/*.php": {
+                    "title": False,
+                    "content": False,
+                    "accessibility": False,
+                    "visualRegression": False,
+                    "api": False,
+                    "securityHeaders": False,
+                    "negativePath": False,
+                    "tracking": True,
+                },
+            },
+            "activePageCategories": [
+                "title",
+                "content",
+                "accessibility",
+                "visualRegression",
+                "api",
+                "tracking",
+            ],
+            "defaultApplicablePageCategories": [
+                "title",
+                "content",
+                "accessibility",
+                "visualRegression",
+                "api",
+            ],
+            "pageApplicableCategories": {
+                "/scripts/*.php": ["tracking"],
+            },
+            "forms": {"form1": True, "form2": False},
+        }
+        pct, covered, total, _pages, _forms = gen.compute_coverage(matrix)
+        self.assertEqual(covered, 5)
+        self.assertEqual(total, 8)
+        self.assertEqual(pct, round(5 * 100 / 8))
 
 
 class IconTests(unittest.TestCase):

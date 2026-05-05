@@ -13,10 +13,21 @@ import { readFile, readdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, basename } from 'node:path';
 
-export type Category = 'title' | 'content' | 'accessibility' | 'visualRegression' | 'api';
+export type Category =
+  | 'title'
+  | 'content'
+  | 'accessibility'
+  | 'visualRegression'
+  | 'api'
+  | 'securityHeaders'
+  | 'negativePath'
+  | 'tracking';
 
 export type CoverageMatrix = {
   pages: Record<string, Record<Category, boolean>>;
+  activePageCategories?: Category[];
+  defaultApplicablePageCategories?: Category[];
+  pageApplicableCategories?: Record<string, Category[]>;
   forms: Record<string, boolean>;
 };
 
@@ -50,6 +61,7 @@ const AUTHENTICATED_URLS = [
   '/zone/admin/',
 ] as const;
 const PREVIOUSLY_ADDED_URL = '/2/';
+const TRACKING_URL = '/scripts/*.php';
 
 // Predicate per (spec file, test title) → which matrix cells it covers when active.
 // Keep it conservative: false-positives in the rules become false-negatives in the
@@ -135,6 +147,56 @@ export function computeCovered(tests: ActiveTest[]): Set<CellKey> {
     }
   }
 
+  // negativePath — tests that assert empty, error, mismatch, or zero-result behaviour.
+  if (
+    has(
+      'zone-information.spec.ts',
+      (t) => t.title === 'shows "no hits in last 30 days" empty-state message'
+    )
+  ) {
+    covered.add(pageCell('/zone/', 'negativePath'));
+  }
+  if (has('zone-hits.spec.ts', (t) => /^nonsense .* input produces zero results$/.test(t.title))) {
+    covered.add(pageCell('/zone/hits/', 'negativePath'));
+  }
+  if (
+    has(
+      'zone-admin.spec.ts',
+      (t) =>
+        t.title === 'wrong current password shows the "incorrect password" error' ||
+        t.title === 'the literal example.com placeholder email is rejected' ||
+        t.title ===
+          'correct current password with non-matching new passwords shows the mismatch error'
+    )
+  ) {
+    covered.add(pageCell('/zone/admin/', 'negativePath'));
+  }
+
+  // tracking — any active test that exercises the public /scripts/ tracker contract via
+  // the shared fireTrackingHit() primitive counts. The matrix key uses a wildcarded PHP
+  // label because the live snippets hit both /scripts/?id=... and concrete PHP routes
+  // (e.g. sms.php, noscript.php, 06.php) under the same public contract.
+  if (
+    has('zone-scripts.spec.ts', (t) =>
+      /snippet fires tracking and registers a hit$/.test(t.title)
+    ) ||
+    has(
+      'zone-hits.spec.ts',
+      (t) =>
+        t.title === 'row-limit combobox controls the visible row count' ||
+        /^.* filters results to rows containing the seeded value$/.test(t.title)
+    ) ||
+    has(
+      'zone-admin.spec.ts',
+      (t) =>
+        t.title ===
+          "block_ip set to the test runner's public IP suppresses subsequent tracking hits" ||
+        t.title === 'block_cookie=Tak suppresses tracking hits from the same browser session'
+    )
+  ) {
+    covered.add(pageCell(TRACKING_URL, 'tracking'));
+  }
+
   // forms — derived from existing active tests.
   if (has('statistics.spec.ts', (t) => t.title === 'system statistics')) {
     covered.add(formCell('statisticsParameter'));
@@ -175,11 +237,16 @@ export function verify(matrix: CoverageMatrix, tests: ActiveTest[]): VerifyResul
   // the failure mode this verifier exists to prevent. Set-equality check catches both
   // sides in one pass.
   const matrixUrls = new Set(Object.keys(matrix.pages));
-  const knownUrls = new Set<string>([...PUBLIC_URLS, ...AUTHENTICATED_URLS, PREVIOUSLY_ADDED_URL]);
+  const knownUrls = new Set<string>([
+    ...PUBLIC_URLS,
+    ...AUTHENTICATED_URLS,
+    PREVIOUSLY_ADDED_URL,
+    TRACKING_URL,
+  ]);
   for (const url of matrixUrls) {
     if (!knownUrls.has(url)) {
       errors.push(
-        `unknown URL in matrix: "${url}" — add it to PUBLIC_URLS, AUTHENTICATED_URLS, or PREVIOUSLY_ADDED_URL in scripts/verify-coverage-matrix.ts.`
+        `unknown URL in matrix: "${url}" — add it to PUBLIC_URLS, AUTHENTICATED_URLS, PREVIOUSLY_ADDED_URL, or TRACKING_URL in scripts/verify-coverage-matrix.ts.`
       );
     }
   }
@@ -191,7 +258,16 @@ export function verify(matrix: CoverageMatrix, tests: ActiveTest[]): VerifyResul
     }
   }
 
-  const categories: Category[] = ['title', 'content', 'accessibility', 'visualRegression', 'api'];
+  const categories: Category[] = [
+    'title',
+    'content',
+    'accessibility',
+    'visualRegression',
+    'api',
+    'securityHeaders',
+    'negativePath',
+    'tracking',
+  ];
   for (const [url, cells] of Object.entries(matrix.pages)) {
     for (const category of categories) {
       const claimed = cells[category];
