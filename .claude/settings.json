@@ -1,6 +1,16 @@
 {
   "enableAllProjectMcpServers": true,
   "permissions": {
+    "sandbox": {
+      "filesystem": {
+        "read": {
+          "allowWithinDeny": [
+            "playwright/typescript/tests/password-reset.spec.ts",
+            "playwright/typescript/pages/public/password-reset.page.ts"
+          ]
+        }
+      }
+    },
     "allow": [
       "Bash(bru run*)",
       "Bash(gh alias list*)",
@@ -60,7 +70,6 @@
       "mcp__playwright-report-mcp__get_test_attachment",
       "mcp__playwright-report-mcp__list_tests",
       "mcp__playwright-report-mcp__run_tests",
-      "Read(**/password-reset.page.ts)",
       "WebFetch(domain:docs.usebruno.com)",
       "WebFetch(domain:orwellstat.hubertgajewski.com)",
       "WebFetch(domain:playwright.dev)",
