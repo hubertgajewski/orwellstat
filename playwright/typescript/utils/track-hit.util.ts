@@ -3,6 +3,9 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import { type Page, type TestInfo } from '@fixtures/base.fixture';
 import { ScriptsPage } from '@pages/authenticated/scripts.page';
+import { loadEnv } from '@utils/env.util';
+
+loadEnv(import.meta.url, 3);
 
 // Re-exported so spec files reading sibling fixtures (e.g. the canonical-snippet
 // templates in zone-scripts.spec.ts) point at the same directory the helper does — a
@@ -60,6 +63,34 @@ export async function fireTrackingHit(
     page.waitForRequest((req) => req.url().startsWith(trackingUrlPrefix), { timeout: 10_000 }),
     page.goto(fixtureUrl.href),
   ]);
+
+  // Hits are now written to a log file and drained by cron. POST to the drain
+  // endpoint with the shared-secret token so the cron is forced to flush the
+  // log into the DB before the caller asserts on /zone/hits/. The custom
+  // header is the primary CSRF defence on the server side; tests carry the
+  // matching token via ORWELLSTAT_DRAIN_TOKEN (CI secret / .env locally).
+  const drainToken = process.env.ORWELLSTAT_DRAIN_TOKEN;
+  if (!drainToken) {
+    throw new Error(
+      'ORWELLSTAT_DRAIN_TOKEN missing — set it in .env (local) or repo secrets (CI).'
+    );
+  }
+  // Retry on 429: parallel workers share an egress IP and may collide on the
+  // server-side per-IP cooldown window. Jitter prevents thundering-herd on retry.
+  const drainHeaders = { 'X-Orwellstat-Test-Token': drainToken };
+  let drainResponse = await page.request.post(`${baseURL}/scripts/drain.php`, {
+    headers: drainHeaders,
+  });
+  for (let attempt = 0; drainResponse.status() === 429 && attempt < 10; attempt++) {
+    const retryAfter = parseInt(drainResponse.headers()['retry-after'] ?? '5', 10) * 1000;
+    await page.waitForTimeout(retryAfter + Math.floor(Math.random() * 3000));
+    drainResponse = await page.request.post(`${baseURL}/scripts/drain.php`, {
+      headers: drainHeaders,
+    });
+  }
+  if (!drainResponse.ok()) {
+    throw new Error(`drain.php returned ${drainResponse.status()} — hit may not be in DB yet.`);
+  }
 
   return { runMarker };
 }
