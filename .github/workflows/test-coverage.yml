@@ -26,18 +26,33 @@ jobs:
 
           pages = matrix['pages']
           forms = matrix['forms']
+          active_categories = matrix.get('activePageCategories', [
+              'title',
+              'content',
+              'accessibility',
+              'visualRegression',
+              'api',
+              'negativePath',
+              'tracking',
+              'securityHeaders',
+          ])
+          default_applicable_categories = matrix.get('defaultApplicablePageCategories', active_categories)
+          applicable_categories = matrix.get('pageApplicableCategories', {})
 
           categories = {
               'title': [],
               'content': [],
               'accessibility': [],
               'visualRegression': [],
-              'api': []
+              'api': [],
+              'securityHeaders': [],
+              'negativePath': [],
+              'tracking': []
           }
 
           for url, coverage in pages.items():
-              for cat in categories:
-                  if cat in coverage:
+              for cat in active_categories:
+                  if cat in applicable_categories.get(url, default_applicable_categories) and cat in coverage:
                       categories[cat].append(coverage[cat])
 
           print(f'## Test Coverage Matrix Report — {datetime.now(timezone.utc).strftime(\"%Y-%m-%d\")}')

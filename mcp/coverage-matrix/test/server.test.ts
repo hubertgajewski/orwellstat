@@ -25,6 +25,29 @@ function makeRepo(matrix: unknown): string {
   return root;
 }
 
+// Shared category-filtering config used by the three tests that exercise
+// activePageCategories / defaultApplicablePageCategories / pageApplicableCategories.
+const FILTERED_CATEGORY_CONFIG = {
+  activePageCategories: [
+    'title',
+    'content',
+    'accessibility',
+    'visualRegression',
+    'api',
+    'tracking',
+  ],
+  defaultApplicablePageCategories: [
+    'title',
+    'content',
+    'accessibility',
+    'visualRegression',
+    'api',
+  ],
+  pageApplicableCategories: {
+    '/scripts/*.php': ['tracking'],
+  },
+};
+
 const SAMPLE_MATRIX = {
   pages: {
     '/a/': {
@@ -33,6 +56,9 @@ const SAMPLE_MATRIX = {
       accessibility: true,
       visualRegression: false,
       api: true,
+      securityHeaders: false,
+      negativePath: true,
+      tracking: false,
     },
     '/b/': {
       title: true,
@@ -40,6 +66,9 @@ const SAMPLE_MATRIX = {
       accessibility: true,
       visualRegression: true,
       api: false,
+      securityHeaders: false,
+      negativePath: false,
+      tracking: true,
     },
     '/c/': {
       title: false,
@@ -47,6 +76,9 @@ const SAMPLE_MATRIX = {
       accessibility: false,
       visualRegression: false,
       api: false,
+      securityHeaders: false,
+      negativePath: false,
+      tracking: false,
     },
   },
   forms: {
@@ -76,8 +108,16 @@ describe('coverage-matrix MCP', () => {
         forms: string[];
       };
       expect(data.pages).toEqual({
-        '/a/': ['content', 'visualRegression'],
-        '/c/': ['content', 'accessibility', 'visualRegression'],
+        '/a/': ['content', 'visualRegression', 'securityHeaders', 'tracking'],
+        '/b/': ['securityHeaders', 'negativePath'],
+        '/c/': [
+          'content',
+          'accessibility',
+          'visualRegression',
+          'securityHeaders',
+          'negativePath',
+          'tracking',
+        ],
       });
       expect(data.forms).toEqual(['f2']);
     });
@@ -91,6 +131,9 @@ describe('coverage-matrix MCP', () => {
             accessibility: true,
             visualRegression: true,
             api: true,
+            securityHeaders: true,
+            negativePath: true,
+            tracking: true,
           },
           '/api-only-gap/': {
             title: true,
@@ -98,6 +141,9 @@ describe('coverage-matrix MCP', () => {
             accessibility: true,
             visualRegression: true,
             api: false,
+            securityHeaders: true,
+            negativePath: true,
+            tracking: true,
           },
         },
         forms: {},
@@ -108,6 +154,46 @@ describe('coverage-matrix MCP', () => {
           pages: Record<string, string[]>;
         };
         expect(data.pages).toEqual({});
+      } finally {
+        rmSync(root, { recursive: true, force: true });
+      }
+    });
+
+    it('omits inactive and page-inapplicable categories from gaps', async () => {
+      const root = makeRepo({
+        pages: {
+          '/page/': {
+            title: true,
+            content: false,
+            accessibility: true,
+            visualRegression: false,
+            api: true,
+            securityHeaders: false,
+            negativePath: false,
+            tracking: false,
+          },
+          '/scripts/*.php': {
+            title: false,
+            content: false,
+            accessibility: false,
+            visualRegression: false,
+            api: false,
+            securityHeaders: false,
+            negativePath: false,
+            tracking: true,
+          },
+        },
+        ...FILTERED_CATEGORY_CONFIG,
+        forms: {},
+      });
+      process.env.REPO_ROOT = root;
+      try {
+        const data = parseOk(await getCoverageGaps()) as {
+          pages: Record<string, string[]>;
+        };
+        expect(data.pages).toEqual({
+          '/page/': ['content', 'visualRegression'],
+        });
       } finally {
         rmSync(root, { recursive: true, force: true });
       }
@@ -148,9 +234,12 @@ describe('coverage-matrix MCP', () => {
         accessibility: { covered: 2, total: 3, percentage: 67 },
         visualRegression: { covered: 1, total: 3, percentage: 33 },
         api: { covered: 1, total: 3, percentage: 33 },
+        securityHeaders: { covered: 0, total: 3, percentage: 0 },
+        negativePath: { covered: 1, total: 3, percentage: 33 },
+        tracking: { covered: 1, total: 3, percentage: 33 },
       });
       expect(data.forms).toEqual({ covered: 1, total: 2, percentage: 50 });
-      expect(data.overall).toEqual({ covered: 8, total: 17, percentage: 47 });
+      expect(data.overall).toEqual({ covered: 10, total: 26, percentage: 38 });
     });
 
     it('matches values produced by the test-coverage.yml workflow logic', async () => {
@@ -162,6 +251,9 @@ describe('coverage-matrix MCP', () => {
             accessibility: false,
             visualRegression: false,
             api: true,
+            securityHeaders: false,
+            negativePath: false,
+            tracking: true,
           },
           '/y/': {
             title: true,
@@ -169,6 +261,9 @@ describe('coverage-matrix MCP', () => {
             accessibility: true,
             visualRegression: false,
             api: true,
+            securityHeaders: false,
+            negativePath: true,
+            tracking: false,
           },
         },
         forms: { a: true, b: true, c: false, d: false },
@@ -192,6 +287,47 @@ describe('coverage-matrix MCP', () => {
         expect(data.categories.title.percentage).toBe(100);
         expect(data.categories.content.percentage).toBe(50);
         expect(data.forms.percentage).toBe(50);
+      } finally {
+        rmSync(root, { recursive: true, force: true });
+      }
+    });
+
+    it('counts only active and page-applicable categories in totals', async () => {
+      const root = makeRepo({
+        pages: {
+          '/page/': {
+            title: true,
+            content: false,
+            accessibility: true,
+            visualRegression: false,
+            api: true,
+            securityHeaders: true,
+            negativePath: false,
+            tracking: false,
+          },
+          '/scripts/*.php': {
+            title: false,
+            content: false,
+            accessibility: false,
+            visualRegression: false,
+            api: false,
+            securityHeaders: false,
+            negativePath: false,
+            tracking: true,
+          },
+        },
+        ...FILTERED_CATEGORY_CONFIG,
+        forms: { f1: true, f2: false },
+      });
+      process.env.REPO_ROOT = root;
+      try {
+        const data = parseOk(await getCoverageSummary()) as {
+          categories: Record<string, { covered: number; total: number; percentage: number }>;
+          overall: { covered: number; total: number; percentage: number };
+        };
+        expect(data.categories.securityHeaders).toEqual({ covered: 0, total: 0, percentage: 0 });
+        expect(data.categories.tracking).toEqual({ covered: 1, total: 1, percentage: 100 });
+        expect(data.overall).toEqual({ covered: 5, total: 8, percentage: 63 });
       } finally {
         rmSync(root, { recursive: true, force: true });
       }
@@ -278,6 +414,33 @@ describe('coverage-matrix MCP', () => {
         'utf8'
       );
       expect(after).toBe(before);
+    });
+
+    it('returns a descriptive error for a category that is not applicable to that page', async () => {
+      const root = makeRepo({
+        pages: {
+          '/scripts/*.php': {
+            title: false,
+            content: false,
+            accessibility: false,
+            visualRegression: false,
+            api: false,
+            securityHeaders: false,
+            negativePath: false,
+            tracking: true,
+          },
+        },
+        ...FILTERED_CATEGORY_CONFIG,
+        forms: {},
+      });
+      process.env.REPO_ROOT = root;
+      try {
+        const result = await markCovered({ pageUrl: '/scripts/*.php', category: 'content' });
+        expect(result.isError).toBe(true);
+        expect(result.content[0].text).toMatch(/not applicable/);
+      } finally {
+        rmSync(root, { recursive: true, force: true });
+      }
     });
 
     it('serialises ≥5 concurrent markCovered calls; every flip lands', async () => {

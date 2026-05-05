@@ -25,6 +25,7 @@ const ALL_URLS = [
   '/zone/hits/',
   '/zone/scripts/',
   '/zone/admin/',
+  '/scripts/*.php',
 ] as const;
 
 // Build a fully-shaped coverage matrix with every URL × category cell set to a default.
@@ -46,6 +47,9 @@ function makeMatrix(
       accessibility: pageDefault,
       visualRegression: pageDefault,
       api: pageDefault,
+      securityHeaders: pageDefault,
+      negativePath: pageDefault,
+      tracking: pageDefault,
       ...(pageOverrides[url] ?? {}),
     };
   }
@@ -102,9 +106,24 @@ function makeAllCoveredTests(): ActiveTest[] {
       title: 'visit-frequency and ranking sections with data',
       describe: null,
     },
+    {
+      file: 'zone-information.spec.ts',
+      title: 'shows "no hits in last 30 days" empty-state message',
+      describe: null,
+    },
     { file: 'zone-scripts.spec.ts', title: 'scripts page - content', describe: null },
+    {
+      file: 'zone-scripts.spec.ts',
+      title: '${variant.label} snippet fires tracking and registers a hit',
+      describe: null,
+    },
     { file: 'password-reset.spec.ts', title: 'password reset page - content', describe: null },
     { file: 'zone-hits.spec.ts', title: 'hits page - content', describe: null },
+    {
+      file: 'zone-hits.spec.ts',
+      title: 'nonsense IP input produces zero results',
+      describe: null,
+    },
     // The "hits page - filter form" describe block in zone-hits.spec.ts is what the
     // hitsFilter rule keys off (parseSpec emits each describe call as its own top-level
     // entry with describe: null because it doesn't track nesting).
@@ -112,6 +131,11 @@ function makeAllCoveredTests(): ActiveTest[] {
     // adminSettings rule keys off the primary "admin page - settings form" describe in
     // zone-admin.spec.ts; same parser convention as hitsFilter.
     { file: 'zone-admin.spec.ts', title: 'admin page - settings form', describe: null },
+    {
+      file: 'zone-admin.spec.ts',
+      title: 'wrong current password shows the "incorrect password" error',
+      describe: null,
+    },
   ]);
 }
 
@@ -149,11 +173,18 @@ function makeInSyncMatrix(): CoverageMatrix {
       '/register/': { title: true, content: true, accessibility: true, api: true },
       '/password_reset/': { title: true, content: true, accessibility: true, api: true },
       '/2/': { title: true, content: true },
-      '/zone/': { title: true, content: true, accessibility: true, api: true },
+      '/zone/': { title: true, content: true, accessibility: true, api: true, negativePath: true },
       '/zone/stats/': { title: true, accessibility: true, api: true },
-      '/zone/hits/': { title: true, content: true, accessibility: true, api: true },
+      '/zone/hits/': {
+        title: true,
+        content: true,
+        accessibility: true,
+        api: true,
+        negativePath: true,
+      },
       '/zone/scripts/': { title: true, content: true, accessibility: true, api: true },
-      '/zone/admin/': { title: true, accessibility: true, api: true },
+      '/zone/admin/': { title: true, accessibility: true, api: true, negativePath: true },
+      '/scripts/*.php': { tracking: true },
     },
     {
       statisticsParameter: true,
@@ -209,6 +240,9 @@ test('verify: drift guard flags an unknown URL added to the matrix', () => {
     accessibility: false,
     visualRegression: false,
     api: false,
+    securityHeaders: false,
+    negativePath: false,
+    tracking: false,
   };
   const result = verify(matrix, makeAllCoveredTests());
   assert.equal(result.ok, false);
@@ -323,6 +357,42 @@ test('computeCovered: content rules — primary spec per URL', () => {
   assert.ok(covered.has('/2/|content'));
   assert.ok(covered.has('/zone/scripts/|content'));
   assert.ok(!covered.has('/about/|content'));
+});
+
+test('computeCovered: negativePath rules map empty/error/zero-result tests to the right pages', () => {
+  const covered = computeCovered([
+    {
+      file: 'zone-information.spec.ts',
+      title: 'shows "no hits in last 30 days" empty-state message',
+      describe: null,
+    },
+    {
+      file: 'zone-hits.spec.ts',
+      title: 'nonsense IP input produces zero results',
+      describe: null,
+    },
+    {
+      file: 'zone-admin.spec.ts',
+      title: 'wrong current password shows the "incorrect password" error',
+      describe: null,
+    },
+  ]);
+  assert.ok(covered.has('/zone/|negativePath'));
+  assert.ok(covered.has('/zone/hits/|negativePath'));
+  assert.ok(covered.has('/zone/admin/|negativePath'));
+  assert.ok(!covered.has('/zone/stats/|negativePath'));
+});
+
+test('computeCovered: tracking rule maps tracker-contract tests to /scripts/*.php', () => {
+  const covered = computeCovered([
+    {
+      file: 'zone-scripts.spec.ts',
+      title: '${variant.label} snippet fires tracking and registers a hit',
+      describe: null,
+    },
+  ]);
+  assert.ok(covered.has('/scripts/*.php|tracking'));
+  assert.ok(!covered.has('/zone/scripts/|tracking'));
 });
 
 test('computeCovered: forms — statisticsParameter requires statistics.spec.ts active', () => {
