@@ -36,11 +36,12 @@ jobs:
       - name: Validate reviewer configuration
         env:
           BASE_URL: ${{ vars.ANTHROPIC_BASE_URL }}
-          SONNET: ${{ vars.ANTHROPIC_DEFAULT_SONNET_MODEL }}
           HAIKU: ${{ vars.ANTHROPIC_DEFAULT_HAIKU_MODEL }}
+          SONNET: ${{ vars.ANTHROPIC_DEFAULT_SONNET_MODEL }}
+          OPUS: ${{ vars.ANTHROPIC_DEFAULT_OPUS_MODEL }}
         run: |
-          if [ -n "$BASE_URL" ] && { [ -z "$SONNET" ] || [ -z "$HAIKU" ]; }; then
-            echo "::error::ANTHROPIC_BASE_URL is set, so both ANTHROPIC_DEFAULT_SONNET_MODEL and ANTHROPIC_DEFAULT_HAIKU_MODEL must also be set. Claude Code's defaults (claude-sonnet-4-6, claude-haiku-4-5) don't exist on proxies like OpenRouter."
+          if [ -n "$BASE_URL" ] && { [ -z "$HAIKU" ] || [ -z "$SONNET" ] || [ -z "$OPUS" ]; }; then
+            echo "::error::ANTHROPIC_BASE_URL is set, so ANTHROPIC_DEFAULT_HAIKU_MODEL, ANTHROPIC_DEFAULT_SONNET_MODEL, and ANTHROPIC_DEFAULT_OPUS_MODEL must all be set. Claude Code's defaults (claude-haiku-4-5, claude-sonnet-4-6, claude-opus-4-7) don't exist on proxies like OpenRouter."
             exit 1
           fi
 
@@ -68,8 +69,9 @@ jobs:
         env:
           ANTHROPIC_BASE_URL: ${{ vars.ANTHROPIC_BASE_URL }}
           ANTHROPIC_AUTH_TOKEN: ${{ vars.ANTHROPIC_BASE_URL != '' && secrets.OPENROUTER_API_KEY || '' }}
-          ANTHROPIC_DEFAULT_SONNET_MODEL: ${{ vars.ANTHROPIC_DEFAULT_SONNET_MODEL }}
           ANTHROPIC_DEFAULT_HAIKU_MODEL: ${{ vars.ANTHROPIC_DEFAULT_HAIKU_MODEL }}
+          ANTHROPIC_DEFAULT_SONNET_MODEL: ${{ vars.ANTHROPIC_DEFAULT_SONNET_MODEL }}
+          ANTHROPIC_DEFAULT_OPUS_MODEL: ${{ vars.ANTHROPIC_DEFAULT_OPUS_MODEL }}
         with:
           anthropic_api_key: ${{ (vars.ANTHROPIC_BASE_URL != '' && secrets.OPENROUTER_API_KEY) || (vars.ANTHROPIC_BASE_URL == '' && secrets.ANTHROPIC_API_KEY) || '' }}
           track_progress: false
@@ -161,8 +163,9 @@ jobs:
           # Clear proxy config so the Anthropic SDK hits the native endpoint.
           ANTHROPIC_BASE_URL: ''
           ANTHROPIC_AUTH_TOKEN: ''
-          ANTHROPIC_DEFAULT_SONNET_MODEL: ''
           ANTHROPIC_DEFAULT_HAIKU_MODEL: ''
+          ANTHROPIC_DEFAULT_SONNET_MODEL: ''
+          ANTHROPIC_DEFAULT_OPUS_MODEL: ''
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           track_progress: false
@@ -295,8 +298,9 @@ jobs:
         if: always()
         env:
           BASE_URL: ${{ vars.ANTHROPIC_BASE_URL }}
-          SONNET: ${{ vars.ANTHROPIC_DEFAULT_SONNET_MODEL }}
           HAIKU: ${{ vars.ANTHROPIC_DEFAULT_HAIKU_MODEL }}
+          SONNET: ${{ vars.ANTHROPIC_DEFAULT_SONNET_MODEL }}
+          OPUS: ${{ vars.ANTHROPIC_DEFAULT_OPUS_MODEL }}
           FALLBACK_RAN: ${{ steps.claude_code_action_fallback.conclusion == 'success' }}
         run: |
           if [ -z "$BASE_URL" ]; then
@@ -304,4 +308,4 @@ jobs:
           else
             provider="proxy"; url="$BASE_URL"
           fi
-          echo "provider=$provider base_url=$url sonnet=${SONNET:-<default>} haiku=${HAIKU:-<default>} fallback_ran=${FALLBACK_RAN}"
+          echo "provider=$provider base_url=$url haiku=${HAIKU:-<default>} sonnet=${SONNET:-<default>} opus=${OPUS:-<default>} fallback_ran=${FALLBACK_RAN}"
