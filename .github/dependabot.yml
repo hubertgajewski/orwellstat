@@ -18,6 +18,24 @@ updates:
     groups:
       all:
         patterns: ["*"]
+  - package-ecosystem: npm
+    directory: /mcp/coverage-matrix
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    labels: [dependencies]
+    groups:
+      all:
+        patterns: ["*"]
+  - package-ecosystem: npm
+    directory: /mcp/quality-metrics
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    labels: [dependencies]
+    groups:
+      all:
+        patterns: ["*"]
   - package-ecosystem: github-actions
     directory: /
     schedule:
