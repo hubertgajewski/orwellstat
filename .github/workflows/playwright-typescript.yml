@@ -139,7 +139,7 @@ jobs:
         # `matrix.browser`. Test-leg caches (keyed on each leg's actual browser) are populated
         # separately by `playwright-run.yml`.
         id: cache-playwright
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.cache/ms-playwright
           key: ms-playwright-${{ runner.os }}-chromium-${{ hashFiles('playwright/typescript/package-lock.json') }}
