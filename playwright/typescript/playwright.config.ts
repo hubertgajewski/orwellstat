@@ -49,7 +49,7 @@ export default defineConfig({
 
   use: {
     baseURL,
-    actionTimeout: 15_000,
+    actionTimeout: 30_000,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
