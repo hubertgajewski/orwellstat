@@ -68,6 +68,8 @@ on:
         required: false
       GEMINI_API_KEY:
         required: false
+      ORWELLSTAT_DRAIN_TOKEN:
+        required: false
 
 jobs:
   run:
@@ -160,6 +162,7 @@ jobs:
           BASIC_AUTH_PASSWORD: ${{ inputs.env == 'staging' && secrets.BASIC_AUTH_PASSWORD || '' }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          ORWELLSTAT_DRAIN_TOKEN: ${{ secrets.ORWELLSTAT_DRAIN_TOKEN }}
           AI_PROVIDER: ${{ vars.AI_PROVIDER }}
           AI_DIAGNOSIS: ${{ vars.AI_DIAGNOSIS }}
           AI_MODEL_FAST: ${{ vars.AI_MODEL_FAST }}
