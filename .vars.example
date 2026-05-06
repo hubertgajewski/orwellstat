@@ -37,8 +37,7 @@ ANTHROPIC_DEFAULT_HAIKU_MODEL=
 # (e.g. qwen/qwen3.6-plus, any qwen3.5-*) break Claude Code SDK's response parser.
 # Examples that work: @preset/minimax-minimax-m2-7-no-thinking, qwen/qwen3-coder-plus.
 ANTHROPIC_DEFAULT_SONNET_MODEL=
-# Override the opus-tier model used by the PR reviewer (Claude Code may invoke Opus internally
-# for high-complexity reasoning calls). Required when ANTHROPIC_BASE_URL is set.
+# Override the opus-tier model used by the PR reviewer. Required when ANTHROPIC_BASE_URL is set.
 # Leave empty to use Claude Code's default (claude-opus-4-7).
 # Use a non-thinking model slug — same constraint as the Sonnet override above.
 # Examples that work: openai/gpt-4.1, qwen/qwen3-coder-plus.

@@ -70,7 +70,7 @@ Size is a coarse roadmap guess for epics, not a mechanical sum of children's poi
 .env                        # credentials (git-ignored); see .env.example
 .env.example                # template: ORWELLSTAT_USER, ORWELLSTAT_PASSWORD, ORWELLSTAT_USER_EMPTY, ORWELLSTAT_PASSWORD_EMPTY, ORWELLSTAT_EMAIL, ENV, BASIC_AUTH_USER, BASIC_AUTH_PASSWORD, ORWELLSTAT_DRAIN_TOKEN, ANTHROPIC_API_KEY, GEMINI_API_KEY, OPENROUTER_API_KEY
 .vars                       # CI repository variables (git-ignored); see .vars.example
-.vars.example               # template: AI_REVIEW, PLAYWRIGHT_TYPESCRIPT, BRUNO, QUALITY_METRICS, AI_DIAGNOSIS, AI_PROVIDER, AI_MODEL_FAST, AI_MODEL_STRONG, ANTHROPIC_BASE_URL, ANTHROPIC_DEFAULT_SONNET_MODEL, ANTHROPIC_DEFAULT_HAIKU_MODEL, SELF_HEALING
+.vars.example               # template: AI_REVIEW, PLAYWRIGHT_TYPESCRIPT, BRUNO, QUALITY_METRICS, AI_DIAGNOSIS, AI_PROVIDER, AI_MODEL_FAST, AI_MODEL_STRONG, ANTHROPIC_BASE_URL, ANTHROPIC_DEFAULT_HAIKU_MODEL, ANTHROPIC_DEFAULT_SONNET_MODEL, ANTHROPIC_DEFAULT_OPUS_MODEL, SELF_HEALING
 .mcp.json                   # MCP server definitions (MCP_DOCKER, playwright, playwright-report-mcp, quality-metrics, coverage-matrix) — loaded by Claude Code and other MCP-compatible AI assistants
 .claude/
   skills/                   # project-scoped slash commands (fix-issue, create-issue, deep-review, deep-review-next, generate-stubs, generate-test)
