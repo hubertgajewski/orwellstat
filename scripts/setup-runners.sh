@@ -13,7 +13,7 @@
 
 set -euo pipefail
 
-WORKERS=8
+WORKERS=4
 REPO_URL="https://github.com/hubertgajewski/orwellstat"
 SRC="${1:-$HOME/actions-runner-src}"
 

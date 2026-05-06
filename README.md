@@ -89,7 +89,7 @@ scripts/
   generate-quality-metrics.py  # generates QUALITY_METRICS.md and updates quality-metrics-history.json
   self-healing.py              # self-healing selector fix: parses test artifacts, posts PR comments or creates draft PRs
   test_self_healing.py         # unit tests for self-healing.py (loop prevention, classification, LLM-bound redaction)
-  setup-runners.sh             # registers and starts 8 self-hosted runner instances as launchd services
+  setup-runners.sh             # registers and starts 4 self-hosted runner instances as launchd services
 playwright/
   typescript/               # Playwright tests in TypeScript
 bruno/                      # Bruno API request collection
