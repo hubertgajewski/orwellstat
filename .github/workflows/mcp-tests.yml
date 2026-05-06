@@ -1,0 +1,50 @@
+name: MCP Tests
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'mcp/**'
+      - '.github/workflows/mcp-tests.yml'
+  pull_request:
+    branches: [main, master]
+    paths:
+      - 'mcp/**'
+      - '.github/workflows/mcp-tests.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    if: github.repository == 'hubertgajewski/orwellstat'
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        package: [coverage-matrix, quality-metrics]
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: lts/*
+
+      - name: Build mcp/shared
+        working-directory: mcp/shared
+        run: |
+          npm ci
+          npm run build
+
+      - name: Install ${{ matrix.package }}
+        working-directory: mcp/${{ matrix.package }}
+        run: npm ci
+
+      - name: Audit ${{ matrix.package }}
+        working-directory: mcp/${{ matrix.package }}
+        run: npm audit --audit-level=high
+
+      - name: Test ${{ matrix.package }}
+        working-directory: mcp/${{ matrix.package }}
+        run: npm test
