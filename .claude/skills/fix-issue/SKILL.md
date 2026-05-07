@@ -1,5 +1,5 @@
 ---
-description: Fix a GitHub issue end-to-end: fetch, implement, test, review, commit, and open a PR.
+description: Fix a GitHub issue end-to-end - fetch, implement, test, review, commit, and open a PR.
 ---
 
 Issue number: $ARGUMENTS
