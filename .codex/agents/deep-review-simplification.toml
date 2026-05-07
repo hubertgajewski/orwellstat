@@ -1,3 +1,4 @@
+name = "deep-review-simplification"
 description = "Reviews diffs for code reuse, quality (DRY / Fowler smells), and efficiency."
 developer_instructions = '''
 Read `.claude/agents/deep-review-simplification.md` and follow it as the authoritative agent instruction source for this Codex agent. Do not rely on this TOML file for the review policy beyond the tool-name adaptations below.

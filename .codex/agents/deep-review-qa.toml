@@ -1,3 +1,4 @@
+name = "deep-review-qa"
 description = "QA specialist — Playwright E2E + Bruno API test review anchored in ISTQB-FL technique-based testing, Playwright Best Practices, and WCAG 2.2. Walks an explicit state-class checklist (empty, populated, max, form-input edges, auth, network, accessibility, multi-browser, locale) so AI-suggested tests cannot ship as happy-path-only."
 developer_instructions = '''
 Read `.claude/agents/deep-review-qa.md` and follow it as the authoritative agent instruction source for this Codex agent. Do not rely on this TOML file for the review policy beyond the tool-name adaptations below.

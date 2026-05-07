@@ -1,3 +1,4 @@
+name = "deep-review-typescript"
 description = "TypeScript specialist — TS-Handbook/typescript-eslint-anchored idiom review of `.ts` / `.tsx` changes. Dispatch only when the diff contains `.ts` or `.tsx` files."
 developer_instructions = '''
 Read `.claude/agents/deep-review-typescript.md` and follow it as the authoritative agent instruction source for this Codex agent. Do not rely on this TOML file for the review policy beyond the tool-name adaptations below.

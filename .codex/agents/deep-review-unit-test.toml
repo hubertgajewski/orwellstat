@@ -1,3 +1,4 @@
+name = "deep-review-unit-test"
 description = "Unit-test specialist — Vitest (TypeScript) + pytest (Python) review anchored in ISTQB-FL boundary value analysis and the test-shape sections of the Google Code Review Developer Guide. Walks an explicit boundary-class checklist (empty/null inputs, numeric edges, collection sizes, string content, error paths, configuration boundaries) so AI-suggested unit tests cannot ship as happy-path-only, and enforces the project's ≥ 90% changed-line coverage rule on `scripts/`, `mcp/*/`, and `playwright/typescript/scripts/`."
 developer_instructions = '''
 Read `.claude/agents/deep-review-unit-test.md` and follow it as the authoritative agent instruction source for this Codex agent. Do not rely on this TOML file for the review policy beyond the tool-name adaptations below.

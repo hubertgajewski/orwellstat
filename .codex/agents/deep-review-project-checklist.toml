@@ -1,3 +1,4 @@
+name = "deep-review-project-checklist"
 description = "Apply orwellstat-specific Playwright/POM/fixture/tag conventions to changed code."
 developer_instructions = '''
 Read `.claude/agents/deep-review-project-checklist.md` and follow it as the authoritative agent instruction source for this Codex agent. Do not rely on this TOML file for the review policy beyond the tool-name adaptations below.

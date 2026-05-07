@@ -1,3 +1,4 @@
+name = "deep-review-security"
 description = "Security specialist — OWASP Top 10:2021 / OWASP ASVS 4.0.3 / CWE Top 25 (2024) anchored vulnerability review of code changes."
 developer_instructions = '''
 Read `.claude/agents/deep-review-security.md` and follow it as the authoritative agent instruction source for this Codex agent. Do not rely on this TOML file for the review policy beyond the tool-name adaptations below.
