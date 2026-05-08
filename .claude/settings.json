@@ -185,7 +185,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "INPUT=$(cat); CMD=$(echo \"$INPUT\" | jq -r '.tool_input.command // empty'); if echo \"$CMD\" | grep -qE '(^|;|&&|\\|\\|)[[:space:]]*(git[[:space:]]+commit)([[:space:]]|$)'; then ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || exit 2; cd \"$ROOT/playwright/typescript\" || exit 2; OUT=$(npx tsc --noEmit 2>&1); TSC_EXIT=$?; if [ $TSC_EXIT -ne 0 ]; then echo \"$OUT\" >&2; exit 2; fi; OUT=$(npm run format:check 2>&1); FMT_EXIT=$?; if [ $FMT_EXIT -ne 0 ]; then echo \"$OUT\" >&2; exit 2; fi; fi",
+            "command": "INPUT=$(cat); CMD=$(printf '%s' \"$INPUT\" | jq -r '.tool_input.command // empty'); case \"$CMD\" in *git*|*commit*|*';'*|*'&'*|*'|'*|*'<'*|*'>'*|*'$'*|*'('*|*')'*|*'{'*|*'}'*|*'='*|*'`'*) ;; *) exit 0;; esac; ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0; SCRIPT=\"$ROOT/scripts/verify_commit_command_hook.py\"; EXPECTED='0c6d499e65f850b8066158c2d8ce548da0756c7f3c83acd5afb2ef453d6aaa95'; ACTUAL=$(shasum -a 256 \"$SCRIPT\" 2>/dev/null | awk '{print $1}') || exit 2; if [ \"$ACTUAL\" != \"$EXPECTED\" ]; then echo 'BLOCKED: commit hook helper hash mismatch; review scripts/verify_commit_command_hook.py and update the pinned hook hash deliberately.' >&2; exit 2; fi; printf '%s' \"$INPUT\" | python3 \"$SCRIPT\"",
             "timeout": 60,
             "statusMessage": "Verifying types and format before commit..."
           },
