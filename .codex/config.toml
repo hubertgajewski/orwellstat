@@ -19,12 +19,24 @@ command = "npx"
 [mcp_servers.playwright-report-mcp]
 args = [
     "--min-release-age=0",
-    "playwright-report-mcp@3.1.0",
+    "playwright-report-mcp@3.1.1",
 ]
 command = "npx"
 
 [mcp_servers.playwright-report-mcp.env]
 PW_ALLOWED_DIRS = ".."
+
+[mcp_servers.playwright-report-mcp.tools.run_tests]
+approval_mode = "approve"
+
+[mcp_servers.playwright-report-mcp.tools.list_tests]
+approval_mode = "approve"
+
+[mcp_servers.playwright-report-mcp.tools.get_failed_tests]
+approval_mode = "approve"
+
+[mcp_servers.playwright-report-mcp.tools.get_test_attachment]
+approval_mode = "approve"
 
 [mcp_servers.quality-metrics]
 args = ["mcp/quality-metrics/dist/index.js"]

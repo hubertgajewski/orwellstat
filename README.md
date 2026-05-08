@@ -432,7 +432,9 @@ Five MCP servers are declared in `.mcp.json` and loaded automatically by any MCP
 
 An MCP server that runs the Playwright test suite and returns structured JSON results, enabling agentic workflows (self-healing, test generation verification) to act on test outcomes without parsing shell output.
 
-**Setup:** No setup required — runs via `npx playwright-report-mcp@3.1.0` from the official npm registry. The version is pinned in `.mcp.json` so upstream releases don't silently change behavior between runs.
+**Setup:** No setup required — runs via `npx playwright-report-mcp@3.1.1` from the official npm registry. The version is pinned in `.mcp.json` so upstream releases don't silently change behavior between runs.
+
+`playwright-report-mcp@3.1.1` declares `node >=22`, so agents running this MCP server need Node.js 22 or newer even though the Playwright test project itself supports Node.js 18+.
 
 **Configuration:** Each tool call accepts an optional `workingDirectory` argument naming the Playwright project directory; the `PW_ALLOWED_DIRS` environment variable in `.mcp.json` defines which paths that argument is allowed to resolve to:
 
@@ -446,7 +448,7 @@ This repo sets `PW_ALLOWED_DIRS` to `..` so the repo root's parent and every sib
 ```json
 "playwright-report-mcp": {
   "command": "npx",
-  "args": ["--min-release-age=0", "playwright-report-mcp@3.1.0"],
+  "args": ["--min-release-age=0", "playwright-report-mcp@3.1.1"],
   "type": "stdio",
   "env": {
     "PW_ALLOWED_DIRS": ".."
