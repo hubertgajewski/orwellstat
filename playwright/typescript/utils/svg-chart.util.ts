@@ -4,6 +4,13 @@ import {
   CHART_TABLE_TOLERANCE_HUNDREDTHS,
   chartTablePercentGapHundredths,
 } from './svg-chart-percent.util.ts';
+import {
+  dataTableTopRowsFromXhtmlSnapshot,
+  type DataTableRow,
+  type XhtmlSnapshotArgs,
+} from './svg-chart-table.util.ts';
+
+export type { DataTableRow } from './svg-chart-table.util.ts';
 
 // Navigate to `pageUrl` and wait for the SVG chart sub-resource (`chart.php` /
 // `chart_all.php`) to load. On staging, Firefox does not cache Basic Auth credentials for
@@ -78,25 +85,20 @@ export async function svgChartPairs(page: Page, svgContent: string): Promise<Svg
   }, svgContent);
 }
 
-// Read the first N data rows of the statistics table — i.e. the rows that the SVG chart
-// visualises. The chart is capped at the top 10 distinct values; the table includes those
+// Read the first N data rows of the statistics table from the captured XHTML response — i.e.
+// the rows that the SVG chart visualises. Orwell Stat serves XHTML, so parse with the XML
+// MIME type and avoid live-DOM table APIs that depend on HTML document parsing. The chart is
+// capped at the top 10 distinct values; the table includes those
 // plus tail entries plus 3 footer rows. Pass N = chart entry count to cross-check.
-export interface DataTableRow {
-  readonly label: string;
-  readonly percent: string;
-}
-
-export async function dataTableTopRows(page: Page, n: number): Promise<DataTableRow[]> {
-  return page.evaluate<DataTableRow[], number>((count) => {
-    const t = document.querySelector('table');
-    if (!t) return [];
-    return Array.from(t.rows)
-      .slice(1, count + 1)
-      .map((r) => ({
-        label: r.cells[1]?.textContent?.trim() ?? '',
-        percent: r.cells[3]?.textContent?.trim() ?? '',
-      }));
-  }, n);
+export async function dataTableTopRowsFromXhtml(
+  page: Page,
+  xhtml: string,
+  n: number
+): Promise<DataTableRow[]> {
+  return page.evaluate<DataTableRow[], XhtmlSnapshotArgs>(dataTableTopRowsFromXhtmlSnapshot, {
+    xhtml,
+    count: n,
+  });
 }
 
 // Walk every `Pokaż statystyki` Parametr option on the current page. For each option:
@@ -148,21 +150,30 @@ export async function expectEveryParametrChartMatchesTableAndIsDistinct(
 
   for (const option of options) {
     await ctx.combobox.selectOption(option.value);
-    const [response] = await Promise.all([
-      page.waitForResponse((r) => r.url().includes(ctx.svgChartUrlFragment), { timeout: 60_000 }),
-      ctx.submit.click(),
-    ]);
+    // The submit navigation and SVG <object> each read live aggregate data. Keep the
+    // table side pinned to the XHTML response body that caused this chart reload instead
+    // of re-reading the live DOM after the SVG request has had time to drift.
+    const tableResponsePromise = page.waitForResponse(
+      (r) => r.request().isNavigationRequest() && !r.url().includes(ctx.svgChartUrlFragment),
+      { timeout: 60_000 }
+    );
+    const responsePromise = page.waitForResponse((r) => r.url().includes(ctx.svgChartUrlFragment), {
+      timeout: 60_000,
+    });
+    await ctx.submit.click();
+    const [tableResponse, response] = await Promise.all([tableResponsePromise, responsePromise]);
+    const [tableXhtml, svgContent] = await Promise.all([tableResponse.text(), response.text()]);
 
     await expect
       .poll(() => ctx.combobox.evaluate((el: HTMLSelectElement) => el.value))
       .toBe(option.value);
     await expect(page.locator('object[type="image/svg+xml"]')).toBeVisible();
 
-    const pairs = await svgChartPairs(page, await response.text());
+    const pairs = await svgChartPairs(page, svgContent);
     expect.soft(pairs.length, `${option.label}: chart has at least one row`).toBeGreaterThan(0);
     if (pairs.length === 0) continue;
 
-    const tableTop = await dataTableTopRows(page, pairs.length);
+    const tableTop = await dataTableTopRowsFromXhtml(page, tableXhtml, pairs.length);
     expect
       .soft(tableTop.length, `${option.label}: table has same top-${pairs.length}`)
       .toBe(pairs.length);
@@ -176,8 +187,8 @@ export async function expectEveryParametrChartMatchesTableAndIsDistinct(
         .soft(
           pairs[i].label,
           option.chartLabelIsRank
-            ? `${option.label} row ${i + 1}: chart label = row Lp (chart shows rank for long-text dimensions)`
-            : `${option.label} row ${i + 1}: chart label = table label`
+            ? `${option.label} row ${i + 1}: chart label matches row rank ${expectedChartLabel}`
+            : `${option.label} row ${i + 1}: chart label matches table label`
         )
         .toBe(expectedChartLabel);
 
