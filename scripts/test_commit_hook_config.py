@@ -380,6 +380,18 @@ class CommitCommandHookTests(unittest.TestCase):
                 self.assertEqual(calls, [])
                 self.assertIn("hash mismatch", stderr)
 
+    def test_blocked_commands_use_platform_specific_messages(self):
+        expectations = {
+            ".claude/settings.json": hook.BLOCK_MESSAGES["claude"],
+            ".codex/hooks.json": hook.BLOCK_MESSAGES["codex"],
+        }
+        for hook_file, expected_message in expectations.items():
+            with self.subTest(hook_file=hook_file):
+                status, calls, stderr = self.run_hook(hook_file, "env git commit -m test")
+                self.assertEqual(status, 2)
+                self.assertEqual(calls, [])
+                self.assertIn(expected_message, stderr)
+
     def test_compound_commit_forms_are_blocked(self):
         for command in (
             "cd /tmp && git commit -m test",
