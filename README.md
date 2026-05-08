@@ -100,7 +100,10 @@ scripts/
   self-healing.py              # self-healing selector fix: parses test artifacts, posts PR comments or creates draft PRs
   verify_commit_command_hook.py # shared pinned Claude/Codex hook check for direct git commit commands
   test_commit_hook_config.py   # unit tests for Claude/Codex git commit command hooks
+  test_runner_scripts.py       # unit tests for self-hosted runner setup/removal scripts
   test_self_healing.py         # unit tests for self-healing.py (loop prevention, classification, LLM-bound redaction)
+  remove-runners.sh            # de-registers and stops 4 self-hosted runner instances
+  runner-lib.sh                # shared helpers for self-hosted runner scripts
   setup-runners.sh             # registers and starts 4 self-hosted runner instances as launchd services
 playwright/
   typescript/               # Playwright tests in TypeScript

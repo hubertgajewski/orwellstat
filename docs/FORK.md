@@ -71,7 +71,7 @@ These are useful for Orwell Stat, but optional for a fork:
 - AI diagnosis in [diagnosis.util.ts](../playwright/typescript/utils/diagnosis.util.ts) if you do not want failed DOM snapshots sent to an external AI provider
 - visual regression snapshots in [tests/visual.spec.ts](../playwright/typescript/tests/visual.spec.ts) until your UI is stable
 - W3C validation checks in [tests/validation.spec.ts](../playwright/typescript/tests/validation.spec.ts) if your app is not XHTML/CSS-validator oriented
-- self-hosted runner automation in [setup-runners.sh](../scripts/setup-runners.sh) if you do not need push-back workflows
+- self-hosted runner automation in [setup-runners.sh](../scripts/setup-runners.sh) and [remove-runners.sh](../scripts/remove-runners.sh) if you do not need push-back workflows
 - quality metrics and issue-label reporting if your repo does not use the same bug taxonomy
 
 ### Workflow adjustments usually needed in a fork
@@ -83,7 +83,7 @@ The most common adjustments are:
 - repository identity guards in files under [.github/workflows](../.github/workflows), such as `github.repository == 'hubertgajewski/orwellstat'`
 - secret names and repository variables if your environment does not use `ORWELLSTAT_*`, `BASIC_AUTH_*`, `PLAYWRIGHT_TYPESCRIPT`, `BRUNO`, or `QUALITY_METRICS`
 - push-back workflows that commit generated files or visual baselines back to the repository
-- self-hosted runner configuration in [setup-runners.sh](../scripts/setup-runners.sh), which is currently hardcoded to this GitHub repository
+- self-hosted runner configuration in [setup-runners.sh](../scripts/setup-runners.sh), [remove-runners.sh](../scripts/remove-runners.sh), and [runner-lib.sh](../scripts/runner-lib.sh), which is currently hardcoded to this GitHub repository
 - optional AI integrations such as AI diagnosis (Anthropic or Gemini) and PR review if you do not want external AI services in your pipeline
 
 Review these files first:
@@ -95,6 +95,8 @@ Review these files first:
 - [update-visual-baselines.yml](../.github/workflows/update-visual-baselines.yml)
 - [claude-code-review.yml](../.github/workflows/claude-code-review.yml)
 - [setup-runners.sh](../scripts/setup-runners.sh)
+- [remove-runners.sh](../scripts/remove-runners.sh)
+- [runner-lib.sh](../scripts/runner-lib.sh)
 
 ### Recommended migration order
 

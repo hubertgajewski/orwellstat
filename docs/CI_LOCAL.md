@@ -44,20 +44,15 @@ The script copies the package into `~/actions-runner-1` … `~/actions-runner-4`
 
 The default of 4 workers anchors to the GitHub-hosted Linux runner hardware contract (4 vCPU) and leaves CPU and disk-cache headroom on a single Mac — every runner keeps its own `_work` checkout and Playwright browser cache (~600 MB), so adding more processes has diminishing returns once the host's I/O knee is reached.
 
-### Reducing the pool
+### Removing the runner pool
 
-`setup-runners.sh` only provisions runners 1 through `WORKERS`; it does not remove higher-numbered runners left over from a previous higher-`WORKERS` run. After lowering `WORKERS` (for example, from 8 to 4), stop and uninstall the orphans manually:
+To de-register and stop the 4 persistent runners created by `setup-runners.sh`, run:
 
 ```bash
-# Replace 5..8 with whichever indices became orphans for your transition
-for i in 5 6 7 8; do
-  cd "$HOME/actions-runner-$i" 2>/dev/null || continue
-  ./svc.sh stop || true
-  ./svc.sh uninstall || true
-done
+./scripts/remove-runners.sh
 ```
 
-Then de-register the orphans at **GitHub → Settings → Actions → Runners** so they no longer count against the runner roster, and optionally delete the `~/actions-runner-{5..8}` directories.
+The removal script handles `~/actions-runner-1` … `~/actions-runner-4`, stops and uninstalls any launchd service wrapper it finds, and runs `./config.sh remove --token <remove-token>` for directories that still have local runner configuration. It skips missing directories and warns about partial directories that no longer contain `config.sh`, so one broken runner does not block cleanup for the rest.
 
 ### Routing jobs to the self-hosted runner
 
