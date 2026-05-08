@@ -4,6 +4,13 @@ import {
   CHART_TABLE_TOLERANCE_HUNDREDTHS,
   chartTablePercentGapHundredths,
 } from './svg-chart-percent.util.ts';
+import {
+  dataTableTopRowsFromXhtmlSnapshot,
+  type DataTableRow,
+  type XhtmlSnapshotArgs,
+} from './svg-chart-table.util.ts';
+
+export type { DataTableRow } from './svg-chart-table.util.ts';
 
 // Navigate to `pageUrl` and wait for the SVG chart sub-resource (`chart.php` /
 // `chart_all.php`) to load. On staging, Firefox does not cache Basic Auth credentials for
@@ -83,35 +90,15 @@ export async function svgChartPairs(page: Page, svgContent: string): Promise<Svg
 // MIME type and avoid live-DOM table APIs that depend on HTML document parsing. The chart is
 // capped at the top 10 distinct values; the table includes those
 // plus tail entries plus 3 footer rows. Pass N = chart entry count to cross-check.
-export interface DataTableRow {
-  readonly label: string;
-  readonly percent: string;
-}
-
 export async function dataTableTopRowsFromXhtml(
   page: Page,
   xhtml: string,
   n: number
 ): Promise<DataTableRow[]> {
-  return page.evaluate<DataTableRow[], { xhtml: string; count: number }>(
-    ({ xhtml, count }) => {
-      const doc = new DOMParser().parseFromString(xhtml, 'application/xhtml+xml');
-      if (doc.querySelector('parsererror')) return [];
-      const table = doc.querySelector('table');
-      if (!table) return [];
-      const rows = table.querySelectorAll('tr');
-      const topRows: DataTableRow[] = [];
-      for (let rowIndex = 1; rowIndex < rows.length && topRows.length < count; rowIndex++) {
-        const cells = rows[rowIndex].querySelectorAll('td, th');
-        topRows.push({
-          label: cells[1]?.textContent?.trim() ?? '',
-          percent: cells[3]?.textContent?.trim() ?? '',
-        });
-      }
-      return topRows;
-    },
-    { xhtml, count: n }
-  );
+  return page.evaluate<DataTableRow[], XhtmlSnapshotArgs>(dataTableTopRowsFromXhtmlSnapshot, {
+    xhtml,
+    count: n,
+  });
 }
 
 // Walk every `Pokaż statystyki` Parametr option on the current page. For each option:
