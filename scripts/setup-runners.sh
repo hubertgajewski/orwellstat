@@ -9,11 +9,15 @@
 #               GitHub → Settings → Actions → Runners → New self-hosted runner
 #
 # Each runner is installed in ~/actions-runner-N and registered as mac-runner-N.
-# Re-running the script replaces existing registrations (--replace) and reinstalls the service.
+# Re-running the script removes existing local registrations, replaces GitHub-side
+# runners with matching names (--replace), and reinstalls the service.
 
 set -euo pipefail
 
-WORKERS=4
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+# shellcheck source=scripts/runner-lib.sh
+. "$SCRIPT_DIR/runner-lib.sh"
+
 REPO_URL="https://github.com/hubertgajewski/orwellstat"
 SRC="${1:-$HOME/actions-runner-src}"
 
@@ -24,7 +28,8 @@ if [ ! -f "$SRC/config.sh" ]; then
 fi
 
 echo "Fetching registration token..."
-TOKEN=$(gh api -X POST "repos/hubertgajewski/orwellstat/actions/runners/registration-token" --jq '.token')
+set_runner_token_result "registration-token" "a runner registration"
+TOKEN="$RUNNER_TOKEN_RESULT"
 
 for i in $(seq 1 "$WORKERS"); do
   DIR="$HOME/actions-runner-$i"
@@ -40,11 +45,8 @@ for i in $(seq 1 "$WORKERS"); do
 
   cd "$DIR"
 
-  # Stop and uninstall existing service before reconfiguring (no-op if not installed)
-  if [ -f svc.sh ]; then
-    ./svc.sh stop  2>/dev/null || true
-    ./svc.sh uninstall 2>/dev/null || true
-  fi
+  stop_runner_service
+  remove_configured_runner_strict "$DIR"
 
   echo "Configuring..."
   ./config.sh \
