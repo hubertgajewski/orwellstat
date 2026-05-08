@@ -1,0 +1,31 @@
+sandbox_mode = "workspace-write"
+
+[mcp_servers.MCP_DOCKER]
+args = [
+    "mcp",
+    "gateway",
+    "run",
+]
+command = "docker"
+
+[mcp_servers.coverage-matrix]
+args = ["mcp/coverage-matrix/dist/index.js"]
+command = "node"
+
+[mcp_servers.playwright]
+args = ["@playwright/mcp@0.0.68"]
+command = "npx"
+
+[mcp_servers.playwright-report-mcp]
+args = [
+    "--min-release-age=0",
+    "playwright-report-mcp@3.1.0",
+]
+command = "npx"
+
+[mcp_servers.playwright-report-mcp.env]
+PW_ALLOWED_DIRS = ".."
+
+[mcp_servers.quality-metrics]
+args = ["mcp/quality-metrics/dist/index.js"]
+command = "node"

@@ -2,7 +2,7 @@
 
 Multi-language, multi-framework end-to-end test suite for [Orwell Stat](https://orwellstat.hubertgajewski.com) — a Polish-language web analytics and statistics service.
 
-## Claude skills
+## Claude and Codex skills
 
 Six project-scoped skills are available in Claude Code (stored in `.claude/skills/`) and appear in the VSCode extension `/` menu:
 
@@ -14,6 +14,10 @@ Six project-scoped skills are available in Claude Code (stored in `.claude/skill
 | `/deep-review-next` | `/deep-review-next [arg]`     | Multi-agent code review orchestrator — dispatches every project-scoped specialist agent under `.claude/agents/` in parallel against a scope resolved from `arg`: empty (local diff, **US1**), a PR number with optional bias (`213` or `213 focus on race conditions`, **US2**), a git ref or range (`HEAD~3..HEAD`, **US3a**), a file or directory path (`./scripts/self-healing.py`, **US3b**), or any other freeform instruction (**US3c**); surfaces their findings together. The current roster (security / project-checklist / simplification / code / architecture / typescript / python / docs / ci / qa / unit-test) is documented in `.claude/skills/deep-review-next/SKILL.md`. Coexists with `/deep-review` until promoted by dir rename (#435) |
 | `/generate-stubs`   | `/generate-stubs`             | Reads `coverage-matrix.json`, finds uncovered page-category combinations (excluding `title` and `api`), and generates `test.fixme()` stubs in the appropriate spec files                                                |
 | `/generate-test`    | `/generate-test <page>`       | Scaffolds `test.fixme()` blocks for one page's content / accessibility / visual-regression gaps in `coverage-matrix.json`, appending to existing spec files (never overwriting) or creating new ones                    |
+
+Codex exposes the same project skills through `.agents/skills/`. Those entries are symlinks to `.claude/skills/`; do not edit them independently. `.claude/skills/` is the source of truth for workflow text.
+
+Codex specialist agents live under `.codex/agents/` as thin TOML wrappers. Each wrapper points back to the matching `.claude/agents/<name>.md` file, which remains the source of truth for the agent prompt. Keep `.codex/` as the canonical Codex config directory; do not add a second `.Codex/` copy.
 
 ## Project board
 
@@ -75,6 +79,12 @@ Size is a coarse roadmap guess for epics, not a mechanical sum of children's poi
 .claude/
   skills/                   # project-scoped slash commands (fix-issue, create-issue, deep-review, deep-review-next, generate-stubs, generate-test)
   agents/                   # project-scoped sub-agents dispatched by skills (current roster lives in .claude/skills/deep-review-next/SKILL.md)
+.agents/
+  skills/                   # Codex project-skill symlinks to .claude/skills (references only, no duplicate workflow text)
+.codex/
+  agents/                   # Codex thin agent wrappers that reference .claude/agents/*.md
+  config.toml               # Codex MCP server configuration
+  hooks.json                # Codex hook equivalents for supported command hooks from .claude/settings.json
 .github/workflows/          # CI workflows (one per sub-project)
 CLAUDE.md                   # repository-specific behavioral guidance for Claude Code
 AGENTS.md                   # Codex entrypoint; delegates shared repository guidance to CLAUDE.md
@@ -88,6 +98,8 @@ docs/
 scripts/
   generate-quality-metrics.py  # generates QUALITY_METRICS.md and updates quality-metrics-history.json
   self-healing.py              # self-healing selector fix: parses test artifacts, posts PR comments or creates draft PRs
+  verify_commit_command_hook.py # shared pinned Claude/Codex hook check for direct git commit commands
+  test_commit_hook_config.py   # unit tests for Claude/Codex git commit command hooks
   test_self_healing.py         # unit tests for self-healing.py (loop prevention, classification, LLM-bound redaction)
   setup-runners.sh             # registers and starts 8 self-hosted runner instances as launchd services
 playwright/

@@ -38,6 +38,8 @@ Commit messages are always a **short, single-line description** with no body and
 
 The `#N` prefix must come first so `git log --oneline` and GitHub cross-references work at a glance.
 
+Run commits as a direct `git commit ...` command from the repository checkout. Avoid compound shell commands such as `cd repo && git commit`, `git commit && git status`, or `git commit; git status` so the configured commit hooks run consistently.
+
 ---
 
 ## Issue fix workflow
