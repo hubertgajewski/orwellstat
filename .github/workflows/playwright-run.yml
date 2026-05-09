@@ -74,7 +74,7 @@ on:
 jobs:
   run:
     name: tests
-    timeout-minutes: 15
+    timeout-minutes: 20
     runs-on: ${{ inputs.runner }}
     environment: ${{ inputs.env }}
     steps:
@@ -83,7 +83,8 @@ jobs:
           ref: ${{ inputs.ref }}
       - uses: actions/setup-node@v6
         with:
-          node-version: lts/*
+          node-version-file: .node-version
+          check-latest: true
           cache: "npm"
           cache-dependency-path: playwright/typescript/package-lock.json
       - name: Install dependencies
@@ -92,33 +93,15 @@ jobs:
       - name: Audit dependencies
         run: npm audit --audit-level=high
         working-directory: playwright/typescript
-      - name: Cache Playwright browsers
+      - name: Set up Playwright ${{ inputs.browser }}
         # Reuses the ~600 MB ms-playwright tarball across runs and shards. The key is bound to
-        # the Playwright version pinned in package-lock.json plus the per-leg browser slug, so
-        # any version bump (or a different browser binary) misses the cache and triggers a
-        # fresh download — no stale binaries can leak into a newer Playwright runtime. No
-        # `restore-keys` fallback: a partial restore would extract old binaries that the
-        # subsequent `install --with-deps` (cache-miss branch) would overwrite anyway, so the
-        # extra I/O has no benefit.
-        id: cache-playwright
-        uses: actions/cache@v5
+        # the installed Playwright version plus the per-leg browser slug, so unrelated lockfile
+        # churn does not force a cold browser install. The restore prefix lets a renamed key
+        # reuse an existing cache; the cache-miss branch still runs `install --with-deps` so
+        # Playwright can fetch the correct binaries if the restored cache is stale.
+        uses: ./.github/actions/setup-playwright-browser
         with:
-          path: ~/.cache/ms-playwright
-          key: ms-playwright-${{ runner.os }}-${{ inputs.browser }}-${{ hashFiles('playwright/typescript/package-lock.json') }}
-      - name: Install Playwright Browsers
-        # Tests run with `--no-deps` (#472), so the `setup` project is skipped and only the
-        # leg's own browser binary is needed. On cache hit only the OS-level apt packages are
-        # reinstalled (binaries are restored from `~/.cache/ms-playwright`).
-        run: |
-          if [ "${CACHE_HIT}" = "true" ]; then
-            npx playwright install-deps "${BROWSER}"
-          else
-            npx playwright install --with-deps "${BROWSER}"
-          fi
-        working-directory: playwright/typescript
-        env:
-          BROWSER: ${{ inputs.browser }}
-          CACHE_HIT: ${{ steps.cache-playwright.outputs.cache-hit }}
+          browser: ${{ inputs.browser }}
       - name: Install libxml2-utils (xmllint)
         # xmllint provides local XHTML DTD validation used by validation.spec.ts — the default
         # path; avoids POSTing authenticated pages to validator.w3.org on every CI run.

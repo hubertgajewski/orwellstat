@@ -1,0 +1,52 @@
+name: Setup Playwright Browser
+description: Restore the Playwright browser cache and install OS/browser dependencies.
+
+inputs:
+  browser:
+    description: Playwright browser slug to install.
+    required: true
+  working-directory:
+    description: Directory containing the Playwright package.json and node_modules.
+    required: false
+    default: playwright/typescript
+
+runs:
+  using: composite
+  steps:
+    - name: Configure Playwright browser path
+      shell: bash
+      run: |
+        browser_path="${RUNNER_TEMP}/ms-playwright"
+        mkdir -p "${browser_path}"
+        echo "PLAYWRIGHT_BROWSERS_PATH=${browser_path}" >> "${GITHUB_ENV}"
+
+    - name: Read Playwright version
+      id: playwright-version
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        version=$(node -p "require('./node_modules/@playwright/test/package.json').version")
+        echo "version=$version" >> "$GITHUB_OUTPUT"
+
+    - name: Cache Playwright browsers
+      id: cache-playwright
+      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
+      with:
+        path: ${{ runner.temp }}/ms-playwright
+        key: ms-playwright-${{ runner.os }}-${{ runner.arch }}-${{ inputs.browser }}-${{ steps.playwright-version.outputs.version }}
+        restore-keys: |
+          ms-playwright-${{ runner.os }}-${{ runner.arch }}-${{ inputs.browser }}-
+
+    - name: Install Playwright OS dependencies
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        BROWSER: ${{ inputs.browser }}
+      run: npx playwright install-deps "${BROWSER}"
+
+    - name: Install Playwright browsers
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        BROWSER: ${{ inputs.browser }}
+      run: npx playwright install "${BROWSER}"

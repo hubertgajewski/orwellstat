@@ -127,7 +127,7 @@ act push -W .github/workflows/playwright-typescript.yml
 act push -W .github/workflows/bruno.yml
 ```
 
-On first run, `act` will ask for a Docker image size — choose **Medium** (~500MB). The Playwright workflow installs browsers via `npx playwright install --with-deps`; the Bruno workflow only needs Node and `npm ci`.
+On first run, `act` will ask for a Docker image size — choose **Medium** (~500MB). The standard Playwright workflows install browsers through `.github/actions/setup-playwright-browser`, which runs `npx playwright install-deps <browser>` and then `npx playwright install <browser>` with an isolated cache; the Bruno workflow only needs Node and `npm ci`.
 
 > **Credentials and platform config:** The repo root contains `.actrc` which automatically passes `--secret-file .env`, `--var-file .vars`, and `--container-architecture linux/amd64` to every `act` invocation. The architecture flag is required on Apple Silicon (M-series) Macs and is a no-op on x86-64 hardware. `ORWELLSTAT_USER` and `ORWELLSTAT_PASSWORD` from `.env` are loaded as secrets with no extra flags needed. Copy `.vars.example` to `.vars` and set variables to `true` to enable the corresponding workflow jobs and features — without this, all gated jobs are skipped.
 

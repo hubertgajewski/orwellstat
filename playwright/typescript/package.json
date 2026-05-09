@@ -5,7 +5,7 @@
     "@google/generative-ai": "^0.24.1",
     "@playwright/test": "^1.59.1",
     "@prettier/plugin-xml": "^3.4.2",
-    "@types/node": "^25.6.0",
+    "@types/node": "^25.6.2",
     "@types/pngjs": "^6.0.5",
     "csstree-validator": "^4.0.1",
     "dotenv": "^17.4.2",
@@ -22,6 +22,7 @@
     "tsc": "tsc --noEmit",
     "test:unit": "node --test --experimental-strip-types --disable-warning=ExperimentalWarning 'utils/**/*.test.ts' 'scripts/**/*.test.ts'",
     "verify:matrix": "node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/verify-coverage-matrix.ts",
+    "postinstall": "node scripts/patch-playwright-yauzl-node26.mjs",
     "prepare": "cd ../.. && husky playwright/typescript/.husky"
   },
   "lint-staged": {

@@ -3,13 +3,17 @@ on:
   workflow_dispatch:
     inputs:
       branch:
-        description: 'Branch to update baselines on'
+        description: "Branch to update baselines on"
         required: false
-        default: 'main'
+        default: "main"
       runner:
-        description: 'Runner override (leave empty to use the RUNNER repo variable)'
+        description: "Runner override (leave empty to use the RUNNER repo variable)"
         required: false
-        default: ''
+        default: ""
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.inputs.branch || github.ref_name }}
+  cancel-in-progress: false
 
 jobs:
   update:
@@ -25,8 +29,9 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/setup-node@v6
         with:
-          node-version: lts/*
-          cache: 'npm'
+          node-version-file: .node-version
+          check-latest: true
+          cache: "npm"
           cache-dependency-path: playwright/typescript/package-lock.json
       - name: Install dependencies
         run: npm ci
