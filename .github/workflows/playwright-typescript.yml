@@ -28,7 +28,7 @@ on:
           - firefox
           - webkit
       update_visual_baselines:
-        description: "Regenerate Linux visual baselines via --update-snapshots=all and commit them back to the branch (only the browser projects selected by the project input are updated)"
+        description: "Regenerate Linux visual baselines via --update-snapshots and commit them back to the branch (only the browser projects selected by the project input are updated)"
         type: boolean
         default: false
       ref:
