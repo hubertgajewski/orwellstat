@@ -1,4 +1,4 @@
-import { test, expect } from '@fixtures/base.fixture';
+import { test, expect, type Page } from '@fixtures/base.fixture';
 import { HomePage } from '@pages/public/home.page';
 import { AboutSystemPage } from '@pages/public/about-system.page';
 import { ContactPage } from '@pages/public/contact.page';
@@ -18,6 +18,7 @@ import {
   STYLE_HIGH_CONTRAST,
   STYLE_PRINT,
 } from '@pages/common';
+import { navigateAndWaitForSvgChart } from '@utils/svg-chart.util';
 
 // All selectable styles; Irish Green SVG is the server default.
 const ALL_STYLES = [
@@ -26,6 +27,25 @@ const ALL_STYLES = [
   STYLE_HIGH_CONTRAST,
   STYLE_PRINT,
 ] as const satisfies readonly string[];
+
+const STABLE_TABLE_ROW_COUNT = 5;
+
+async function trimTableRows(
+  page: Page,
+  tableSelector: string,
+  keepRows = STABLE_TABLE_ROW_COUNT
+): Promise<void> {
+  await page.evaluate<void, { tableSelector: string; keepRows: number }>(
+    ({ tableSelector: selector, keepRows: rowCount }) => {
+      const table = document.querySelector<HTMLTableElement>(selector);
+      if (!table) return;
+      Array.from(table.rows)
+        .slice(rowCount)
+        .forEach((row) => row.parentNode?.removeChild(row));
+    },
+    { tableSelector, keepRows }
+  );
+}
 
 test('home page visual regression', { tag: '@regression' }, async ({ page }) => {
   await page.goto(HomePage.url);
@@ -105,26 +125,19 @@ test('statistics page visual regression', { tag: '@regression' }, async ({ page 
   // animations: 'disabled' freezes the SVG animation for a stable baseline.
   // The statistics table and SVG chart contain live data that changes frequently; mask both
   // to keep the baseline stable while still verifying page structure.
-  await Promise.all([
-    page.waitForResponse((response) => response.url().includes(ServiceStatisticsPage.svgChartUrl)),
-    page.goto(ServiceStatisticsPage.url),
-  ]);
-  // Wait for the <object> to be visible (non-zero dimensions) so its height is stable
-  // in the layout before screenshotting; without this the footer may shift after capture.
-  await expect(page.locator('object[type="image/svg+xml"]')).toBeVisible();
+  await navigateAndWaitForSvgChart(
+    page,
+    ServiceStatisticsPage.url,
+    ServiceStatisticsPage.svgChartUrl,
+    ServiceStatisticsPage.svgChartPreAuthUrl
+  );
   // Remove all but the first 5 rows (1 header + 4 data rows) from the statistics table so the table height —
   // and therefore the footer position — is stable regardless of how many browser/OS rows
   // live data contains. CSS overflow tricks don't work here: overflow:hidden clips visually
   // but Playwright's fullPage screenshot and mask both use the element's full bounding box,
   // so the only reliable fix is to physically remove rows from the DOM.
   // Table content is already masked below so removing rows does not affect correctness.
-  await page.evaluate<void>(() => {
-    const table = document.querySelector<HTMLTableElement>('table');
-    if (!table) return;
-    Array.from(table.rows)
-      .slice(5)
-      .forEach((row) => row.parentNode?.removeChild(row));
-  });
+  await trimTableRows(page, ServiceStatisticsPage.statisticsTableSelector);
   await expect(page).toHaveScreenshot({
     fullPage: true,
     animations: 'disabled',
@@ -146,20 +159,13 @@ for (const style of [STYLE_IRISH_GREEN_SVG, STYLE_PRINT] as const) {
         page.waitForURL('**'),
         page.getByRole('button', { name: STYLE_SELECTOR }).click(),
       ]);
-      await Promise.all([
-        page.waitForResponse((response) =>
-          response.url().includes(ServiceStatisticsPage.svgChartUrl)
-        ),
-        page.goto(ServiceStatisticsPage.url),
-      ]);
-      await expect(page.locator('object[type="image/svg+xml"]')).toBeVisible();
-      await page.evaluate<void>(() => {
-        const table = document.querySelector<HTMLTableElement>('table');
-        if (!table) return;
-        Array.from(table.rows)
-          .slice(5)
-          .forEach((row) => row.parentNode?.removeChild(row));
-      });
+      await navigateAndWaitForSvgChart(
+        page,
+        ServiceStatisticsPage.url,
+        ServiceStatisticsPage.svgChartUrl,
+        ServiceStatisticsPage.svgChartPreAuthUrl
+      );
+      await trimTableRows(page, ServiceStatisticsPage.statisticsTableSelector);
       try {
         await expect(page).toHaveScreenshot({
           fullPage: true,
@@ -187,13 +193,7 @@ for (const style of [STYLE_PURPLE_RAIN, STYLE_HIGH_CONTRAST] as const) {
         page.getByRole('button', { name: STYLE_SELECTOR }).click(),
       ]);
       await page.goto(ServiceStatisticsPage.url);
-      await page.evaluate<void>(() => {
-        const table = document.querySelector<HTMLTableElement>('table');
-        if (!table) return;
-        Array.from(table.rows)
-          .slice(5)
-          .forEach((row) => row.parentNode?.removeChild(row));
-      });
+      await trimTableRows(page, ServiceStatisticsPage.statisticsTableSelector);
       try {
         await expect(page).toHaveScreenshot({
           fullPage: true,
@@ -207,44 +207,100 @@ for (const style of [STYLE_PURPLE_RAIN, STYLE_HIGH_CONTRAST] as const) {
   );
 }
 
-test.fixme('register page visual regression', { tag: '@regression' }, async ({ page }) => {
-  // TODO: Navigate to RegisterPage.url and add toHaveScreenshot() assertion.
+test('register page visual regression', { tag: '@regression' }, async ({ page }) => {
   await page.goto(RegisterPage.url);
+  await expect(page).toHaveScreenshot({ fullPage: true });
 });
 
-test.fixme('password reset page visual regression', { tag: '@regression' }, async ({ page }) => {
-  // TODO: Navigate to PasswordResetPage.url and add toHaveScreenshot() assertion.
+test('password reset page visual regression', { tag: '@regression' }, async ({ page }) => {
   await page.goto(PasswordResetPage.url);
+  await expect(page).toHaveScreenshot({ fullPage: true });
 });
 
-test.fixme('previously added page visual regression', { tag: '@regression' }, async ({ page }) => {
-  // TODO: Navigate to PreviouslyAddedPage.url and add toHaveScreenshot() assertion.
+test('previously added page visual regression', { tag: '@regression' }, async ({ page }) => {
   // The page renders dynamic browser/OS lists inside #statsbar; match the home page
   // approach and mask both via getByRole('list') before capturing the baseline.
   await page.goto(PreviouslyAddedPage.url);
+  await expect(page).toHaveScreenshot({
+    fullPage: true,
+    mask: [page.locator('#statsbar').getByRole('list')],
+  });
 });
 
-test.fixme('information page visual regression', { tag: '@regression' }, async ({ page }) => {
-  // TODO: Navigate to InformationPage.url and add toHaveScreenshot() assertion.
+test('information page visual regression', { tag: '@regression' }, async ({ page }) => {
   await page.goto(InformationPage.url);
+  const informationPage = new InformationPage(page);
+  await expect(informationPage.heading).toBeVisible();
+  await expect(informationPage.visitFrequencyHeading).toBeVisible();
+  await expect(informationPage.rankingHeading).toBeVisible();
+  // /zone/ is live account data. Replace the volatile summary/ranking prose with
+  // stable same-shape placeholders before masking the blocks; masking alone would not
+  // prevent a long host, URL, or user-agent value from changing line wraps and page
+  // height between baseline runs.
+  await informationPage.stabilizeLiveSummaryForVisualRegression();
+  const statsbarTextBlocks = informationPage.liveSummaryBlocks;
+  await expect(statsbarTextBlocks).toHaveCount(2);
+  await expect(page).toHaveScreenshot({
+    fullPage: true,
+    mask: [statsbarTextBlocks.nth(0), statsbarTextBlocks.nth(1), informationPage.loggedInUsername],
+  });
 });
 
-test.fixme('stats page visual regression', { tag: '@regression' }, async ({ page }) => {
-  // TODO: Navigate to StatsPage.url and add toHaveScreenshot() assertion.
-  await page.goto(StatsPage.url);
+test('stats page visual regression', { tag: '@regression' }, async ({ page }) => {
+  const statsPage = new StatsPage(page);
+  await navigateAndWaitForSvgChart(
+    page,
+    StatsPage.url,
+    StatsPage.svgChartUrl,
+    StatsPage.svgChartPreAuthUrl
+  );
+  // Keep the page height stable while still capturing the form and table placement.
+  // The table data and SVG chart are live per-user traffic data, mirroring the public
+  // /statistics/ handling above: trim excess rows and mask the volatile regions.
+  await trimTableRows(page, StatsPage.statisticsTableSelector);
+  await expect(page).toHaveScreenshot({
+    fullPage: true,
+    animations: 'disabled',
+    mask: [statsPage.statisticsTable, statsPage.svgChart],
+  });
 });
 
-test.fixme('hits page visual regression', { tag: '@regression' }, async ({ page }) => {
-  // TODO: Navigate to HitsPage.url and add toHaveScreenshot() assertion.
-  await page.goto(HitsPage.url);
+test('hits page visual regression', { tag: '@regression' }, async ({ page }) => {
+  const hitsPage = new HitsPage(page);
+  await hitsPage.goto();
+  await expect(hitsPage.heading).toBeVisible();
+  await expect(hitsPage.resultsTable).toBeVisible();
+  // /zone/hits/ has live hit rows. Match the statistics-page strategy: keep the
+  // surrounding form/table layout covered, trim the table to a stable height, and mask
+  // the volatile hit details rather than committing changing account data.
+  await trimTableRows(page, HitsPage.resultsTableSelector);
+  await expect(page).toHaveScreenshot({
+    fullPage: true,
+    mask: [hitsPage.resultsTable],
+  });
 });
 
-test.fixme('scripts page visual regression', { tag: '@regression' }, async ({ page }) => {
-  // TODO: Navigate to ScriptsPage.url and add toHaveScreenshot() assertion.
+test('scripts page visual regression', { tag: '@regression' }, async ({ page }) => {
   await page.goto(ScriptsPage.url);
+  const scriptsPage = new ScriptsPage(page);
+  await expect(scriptsPage.heading).toBeVisible();
+  await expect(page).toHaveScreenshot({
+    fullPage: true,
+    mask: [scriptsPage.html5Snippet, scriptsPage.html4Snippet, scriptsPage.xhtmlSnippet],
+  });
 });
 
-test.fixme('admin page visual regression', { tag: '@regression' }, async ({ page }) => {
-  // TODO: Navigate to AdminPage.url and add toHaveScreenshot() assertion.
+test('admin page visual regression', { tag: '@regression' }, async ({ page }) => {
   await page.goto(AdminPage.url);
+  const adminPage = new AdminPage(page);
+  await expect(adminPage.heading).toBeVisible();
+  await expect(page).toHaveScreenshot({
+    fullPage: true,
+    mask: [
+      adminPage.statusMessage,
+      adminPage.settingsUsername,
+      adminPage.loggedInUsername,
+      adminPage.emailField,
+    ],
+  });
 });

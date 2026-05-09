@@ -1,4 +1,4 @@
-import { type Page } from '@fixtures/base.fixture';
+import { type Locator, type Page } from '@fixtures/base.fixture';
 import { AbstractPage } from '@pages/abstract.page';
 import { PARAMETER_OPTIONS, type ParameterOption } from '@pages/public/service-statistics.page';
 
@@ -42,6 +42,7 @@ export class StatsPage extends AbstractPage {
   // Per-user chart endpoint (vs `chart_all.php` on the public /statistics/ page).
   static readonly svgChartUrl = 'chart.php';
   static readonly svgChartPreAuthUrl = `/libs/${StatsPage.svgChartUrl}`;
+  static readonly statisticsTableSelector = 'table';
 
   constructor(page: Page) {
     super(page, StatsPage.url, StatsPage.title, StatsPage.accessKey);
@@ -63,5 +64,13 @@ export class StatsPage extends AbstractPage {
       name: StatsPage.showStatisticsSubmitLabel,
       exact: true,
     });
+  }
+
+  get statisticsTable(): Locator {
+    return this.page.getByRole('table');
+  }
+
+  get svgChart(): Locator {
+    return this.page.locator('object[type="image/svg+xml"]');
   }
 }

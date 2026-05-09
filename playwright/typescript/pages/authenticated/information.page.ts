@@ -1,4 +1,4 @@
-import { type Page } from '@fixtures/base.fixture';
+import { type Locator, type Page } from '@fixtures/base.fixture';
 import { AbstractPage } from '@pages/abstract.page';
 
 export class InformationPage extends AbstractPage {
@@ -34,6 +34,50 @@ export class InformationPage extends AbstractPage {
 
   get rankingHeading() {
     return this.page.getByRole('heading', { name: 'Ranking popularności', exact: true });
+  }
+
+  // /zone/ renders two live prose blocks under #statsbar for populated accounts:
+  // visit frequency and popularity ranking. Keep the structural selector here instead
+  // of in specs so visual tests can mask the page-specific volatile blocks via the POM.
+  get liveSummaryBlocks(): Locator {
+    return this.page.locator('#statsbar > div.text');
+  }
+
+  get loggedInUsername(): Locator {
+    return AbstractPage.loggedInUsername(this.page);
+  }
+
+  async stabilizeLiveSummaryForVisualRegression(): Promise<void> {
+    await this.page.evaluate<void>(() => {
+      const dynamicBlocks = Array.from(
+        document.querySelectorAll<HTMLDivElement>('#statsbar > div.text')
+      ).filter((block) => !block.querySelector('form'));
+      const [frequencyBlock, rankingBlock] = dynamicBlocks;
+
+      if (frequencyBlock) {
+        frequencyBlock.textContent = 'Dzisiaj: 0, w ciągu ostatnich 30 dni: 0.';
+      }
+
+      if (rankingBlock) {
+        const lines = [
+          'Najczęściej z hosta: stabilized.example - 00.00% (0)',
+          'Najwięcej odsłon dnia: 2000-01-01 - 00.00% (0)',
+          'Najpopularniejsza przeglądarka: Stabilized Browser - 00.00% (0)',
+          'Najpopularniejszy system operacyjny: Stabilized OS - 00.00% (0)',
+          'Najczęściej używany język: stabilized - 00.00% (0)',
+          'Najczęściej z kraju: Stabilized Country - 00.00% (0)',
+          'Najpopularniejsza strona: /stabilized/ - 00.00% (0)',
+          'Najczęściej ustawiona rozdzielczość ekranu: 0000x0000 - 00.00% (0)',
+          'Najczęściej spotykana liczba kolorów: 0 - 00.00% (0)',
+          'Prezentowane dane dotyczą ostatnich 30 dni.',
+        ];
+        rankingBlock.replaceChildren();
+        for (const [index, line] of lines.entries()) {
+          rankingBlock.append(document.createTextNode(line));
+          if (index < lines.length - 1) rankingBlock.append(document.createElement('br'));
+        }
+      }
+    });
   }
 
   // Each ranking line renders as inline prose: `<label> <span class="bold">value</span> - NN.NN%
