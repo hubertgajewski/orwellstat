@@ -3,13 +3,13 @@ on:
   workflow_dispatch:
     inputs:
       branch:
-        description: 'Branch to update baselines on'
+        description: "Branch to update baselines on"
         required: false
-        default: 'main'
+        default: "main"
       runner:
-        description: 'Runner override (leave empty to use the RUNNER repo variable)'
+        description: "Runner override (leave empty to use the RUNNER repo variable)"
         required: false
-        default: ''
+        default: ""
 
 jobs:
   update:
@@ -27,7 +27,7 @@ jobs:
         with:
           node-version: 26
           check-latest: true
-          cache: 'npm'
+          cache: "npm"
           cache-dependency-path: playwright/typescript/package-lock.json
       - name: Install dependencies
         run: npm ci

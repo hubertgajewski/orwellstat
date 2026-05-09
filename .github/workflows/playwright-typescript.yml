@@ -119,7 +119,7 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJSON(needs.setup-matrix.outputs.projects) }}
     runs-on: ${{ inputs.runner || vars.RUNNER || 'ubuntu-latest' }}
-    timeout-minutes: 5
+    timeout-minutes: 20
     environment: ${{ inputs.env || 'staging' }}
     steps:
       - uses: actions/checkout@v6
@@ -134,26 +134,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
         working-directory: playwright/typescript
-      - name: Cache Playwright browsers
+      - name: Set up Playwright Chromium
         # `auth.setup.ts` has no `use` block in `playwright.config.ts` so it always runs in
         # default Chromium — every auth-setup leg shares the same chromium cache regardless of
         # `matrix.browser`. Test-leg caches (keyed on each leg's actual browser) are populated
         # separately by `playwright-run.yml`.
-        id: cache-playwright
-        uses: actions/cache@v5
+        uses: ./.github/actions/setup-playwright-browser
         with:
-          path: ~/.cache/ms-playwright
-          key: ms-playwright-${{ runner.os }}-chromium-${{ hashFiles('playwright/typescript/package-lock.json') }}
-      - name: Install Playwright Browsers
-        run: |
-          if [ "${CACHE_HIT}" = "true" ]; then
-            npx playwright install-deps chromium
-          else
-            npx playwright install --with-deps chromium
-          fi
-        working-directory: playwright/typescript
-        env:
-          CACHE_HIT: ${{ steps.cache-playwright.outputs.cache-hit }}
+          browser: chromium
       - name: Run auth.setup.ts
         run: npx playwright test --project=setup
         working-directory: playwright/typescript

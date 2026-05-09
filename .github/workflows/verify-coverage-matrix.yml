@@ -3,17 +3,17 @@ on:
   push:
     branches: [main, master]
     paths:
-      - 'playwright/typescript/coverage-matrix.json'
-      - 'playwright/typescript/tests/**'
-      - 'playwright/typescript/scripts/verify-coverage-matrix.ts'
-      - '.github/workflows/verify-coverage-matrix.yml'
+      - "playwright/typescript/coverage-matrix.json"
+      - "playwright/typescript/tests/**"
+      - "playwright/typescript/scripts/verify-coverage-matrix.ts"
+      - ".github/workflows/verify-coverage-matrix.yml"
   pull_request:
     branches: [main, master]
     paths:
-      - 'playwright/typescript/coverage-matrix.json'
-      - 'playwright/typescript/tests/**'
-      - 'playwright/typescript/scripts/verify-coverage-matrix.ts'
-      - '.github/workflows/verify-coverage-matrix.yml'
+      - "playwright/typescript/coverage-matrix.json"
+      - "playwright/typescript/tests/**"
+      - "playwright/typescript/scripts/verify-coverage-matrix.ts"
+      - ".github/workflows/verify-coverage-matrix.yml"
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true

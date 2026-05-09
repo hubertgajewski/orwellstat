@@ -1,0 +1,44 @@
+name: Setup Playwright Browser
+description: Restore the Playwright browser cache and install OS/browser dependencies.
+
+inputs:
+  browser:
+    description: Playwright browser slug to install.
+    required: true
+  working-directory:
+    description: Directory containing the Playwright package.json and node_modules.
+    required: false
+    default: playwright/typescript
+
+runs:
+  using: composite
+  steps:
+    - name: Read Playwright version
+      id: playwright-version
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        version=$(node -p "require('./node_modules/@playwright/test/package.json').version")
+        echo "version=$version" >> "$GITHUB_OUTPUT"
+
+    - name: Cache Playwright browsers
+      id: cache-playwright
+      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
+      with:
+        path: ~/.cache/ms-playwright
+        key: ms-playwright-${{ runner.os }}-${{ inputs.browser }}-${{ steps.playwright-version.outputs.version }}
+        restore-keys: |
+          ms-playwright-${{ runner.os }}-${{ inputs.browser }}-
+
+    - name: Install Playwright browsers
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        BROWSER: ${{ inputs.browser }}
+        CACHE_HIT: ${{ steps.cache-playwright.outputs.cache-hit }}
+      run: |
+        if [ "${CACHE_HIT}" = "true" ]; then
+          npx playwright install-deps "${BROWSER}"
+        else
+          npx playwright install --with-deps "${BROWSER}"
+        fi
