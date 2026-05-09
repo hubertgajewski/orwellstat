@@ -26,7 +26,8 @@ jobs:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with:
-          node-version: lts/*
+          node-version: 26
+          check-latest: true
           cache: 'npm'
           cache-dependency-path: playwright/typescript/package-lock.json
       - name: Install dependencies

@@ -127,7 +127,8 @@ jobs:
           ref: ${{ github.event.inputs.ref || github.ref }}
       - uses: actions/setup-node@v6
         with:
-          node-version: lts/*
+          node-version: 26
+          check-latest: true
           cache: "npm"
           cache-dependency-path: playwright/typescript/package-lock.json
       - name: Install dependencies
@@ -212,7 +213,8 @@ jobs:
           ref: ${{ github.event.inputs.ref || github.ref }}
       - uses: actions/setup-node@v6
         with:
-          node-version: lts/*
+          node-version: 26
+          check-latest: true
           cache: "npm"
           cache-dependency-path: playwright/typescript/package-lock.json
       - name: Install dependencies

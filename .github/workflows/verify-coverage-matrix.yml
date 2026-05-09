@@ -30,6 +30,7 @@ jobs:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with:
-          node-version: lts/*
+          node-version: 26
+          check-latest: true
       - name: Verify coverage matrix is in sync with tests
         run: npm run verify:matrix
