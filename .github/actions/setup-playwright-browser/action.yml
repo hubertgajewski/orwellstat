@@ -26,9 +26,9 @@ runs:
       uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
       with:
         path: ~/.cache/ms-playwright
-        key: ms-playwright-${{ runner.os }}-${{ inputs.browser }}-${{ steps.playwright-version.outputs.version }}
+        key: ms-playwright-${{ runner.os }}-${{ runner.arch }}-${{ inputs.browser }}-${{ steps.playwright-version.outputs.version }}
         restore-keys: |
-          ms-playwright-${{ runner.os }}-${{ inputs.browser }}-
+          ms-playwright-${{ runner.os }}-${{ runner.arch }}-${{ inputs.browser }}-
 
     - name: Install Playwright browsers
       shell: bash
