@@ -1,5 +1,8 @@
-import { type Page } from '@fixtures/base.fixture';
+import { type Locator, type Page } from '@fixtures/base.fixture';
 import { AbstractPage } from '@pages/abstract.page';
+
+const LIVE_DATA_MASK = 'information-live-data';
+export const INFORMATION_LIVE_DATA_MASK_COUNT = 29;
 
 export class InformationPage extends AbstractPage {
   static readonly url = '/zone/';
@@ -96,5 +99,68 @@ export class InformationPage extends AbstractPage {
   // pointing at `/zone/hits/` — the date itself is plain text inside `<span class="bold">`.
   get peakDayLink() {
     return this.page.getByRole('link', { name: 'odsłon', exact: true });
+  }
+
+  async markLiveDataForVisualRegression(): Promise<Locator> {
+    await this.page.evaluate<void, string>((maskMarker) => {
+      const maskAttribute = 'data-visual-mask';
+      const createMask = (text: string): HTMLSpanElement => {
+        const span = document.createElement('span');
+        span.setAttribute(maskAttribute, maskMarker);
+        span.textContent = text;
+        return span;
+      };
+      const wrapRankingMetrics = (node: Text): void => {
+        const text = node.nodeValue ?? '';
+        const metricPattern = /(\d+\.\d+%)(\s*)(\(\d+\))/g;
+        if (!metricPattern.test(text)) return;
+
+        metricPattern.lastIndex = 0;
+        const fragment = document.createDocumentFragment();
+        let offset = 0;
+        for (const match of text.matchAll(metricPattern)) {
+          const index = match.index ?? 0;
+          fragment.append(text.slice(offset, index));
+          fragment.append(createMask('00.00%'));
+          fragment.append(match[2]);
+          fragment.append(createMask('(0000)'));
+          offset = index + match[0].length;
+        }
+        fragment.append(text.slice(offset));
+        node.parentNode?.replaceChild(fragment, node);
+      };
+      const contentBlocks = Array.from(
+        document.querySelectorAll<HTMLDivElement>('#statsbar > div.text')
+      ).filter((block) => !block.querySelector('form'));
+
+      const stableValues = [
+        '0000',
+        '00000',
+        'stable.example',
+        '2000-01-01',
+        'Stable Browser',
+        'Stable OS',
+        'stable',
+        'Stable Country',
+        '/stable/',
+        '0000x0000',
+        '0000000',
+      ];
+      let stableValueIndex = 0;
+
+      for (const contentBlock of contentBlocks) {
+        const boldSpans = contentBlock.querySelectorAll<HTMLSpanElement>('span.bold');
+        boldSpans.forEach((span, index) => {
+          span.textContent = stableValues[stableValueIndex + index] ?? '0';
+          span.setAttribute(maskAttribute, maskMarker);
+        });
+        stableValueIndex += boldSpans.length;
+        Array.from(contentBlock.childNodes)
+          .filter((node): node is Text => node.nodeType === Node.TEXT_NODE)
+          .forEach(wrapRankingMetrics);
+      }
+    }, LIVE_DATA_MASK);
+
+    return this.page.locator(`[data-visual-mask="${LIVE_DATA_MASK}"]`);
   }
 }

@@ -119,6 +119,14 @@ export function computeCovered(tests: ActiveTest[]): Set<CellKey> {
     ['/about/', 'about system page visual regression'],
     ['/contact/', 'contact page visual regression'],
     ['/statistics/', 'statistics page visual regression'],
+    ['/register/', 'register page visual regression'],
+    ['/password_reset/', 'password reset page visual regression'],
+    [PREVIOUSLY_ADDED_URL, 'previously added page visual regression'],
+    ['/zone/', 'information page visual regression'],
+    ['/zone/stats/', 'stats page visual regression'],
+    ['/zone/hits/', 'hits page visual regression'],
+    ['/zone/scripts/', 'scripts page visual regression'],
+    ['/zone/admin/', 'admin page visual regression'],
   ];
   for (const [url, title] of visualRules) {
     if (has('visual.spec.ts', (t) => t.title === title)) {

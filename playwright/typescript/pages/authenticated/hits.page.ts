@@ -6,6 +6,7 @@ export class HitsPage extends AbstractPage {
   static readonly title = 'Orwell Stat - Odsłony';
   static readonly accessKey = 'O';
   static readonly submitLabel = 'Pokaż statystyki';
+  static readonly resultsTableSelector = 'table.fixed_table';
 
   constructor(page: Page) {
     super(page, HitsPage.url, HitsPage.title, HitsPage.accessKey);
@@ -92,7 +93,7 @@ export class HitsPage extends AbstractPage {
   // one hit — a zero-result query removes the table from the DOM rather than rendering
   // an empty body, so `toHaveCount(0)` is the assertion for "no matches".
   get resultsTable(): Locator {
-    return this.page.locator('table.fixed_table');
+    return this.page.locator(HitsPage.resultsTableSelector);
   }
 
   // Data rows in the results table — excludes the header row whose id is `row1`.

@@ -139,6 +139,9 @@ jobs:
             SHARD_ARGS+=("--shard=${SHARD}/${TOTAL_SHARDS}")
           fi
           if [ "${UPDATE_BASELINES}" = "true" ]; then
+            # Normal baseline refresh uses Playwright's default update mode. For one-off
+            # mask-only / covered-area changes, temporarily use `--update-snapshots=all`
+            # to force rewriting existing PNGs, then revert that workflow change.
             npx playwright test tests/visual.spec.ts --update-snapshots --no-deps --project="${PROJECT}" "${SHARD_ARGS[@]}"
           else
             npx playwright test --no-deps --project="${PROJECT}" "${SHARD_ARGS[@]}"

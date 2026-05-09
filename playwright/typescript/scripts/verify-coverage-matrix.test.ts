@@ -80,6 +80,14 @@ function makeAllCoveredTests(): ActiveTest[] {
     { file: 'visual.spec.ts', title: 'about system page visual regression', describe: null },
     { file: 'visual.spec.ts', title: 'contact page visual regression', describe: null },
     { file: 'visual.spec.ts', title: 'statistics page visual regression', describe: null },
+    { file: 'visual.spec.ts', title: 'register page visual regression', describe: null },
+    { file: 'visual.spec.ts', title: 'password reset page visual regression', describe: null },
+    { file: 'visual.spec.ts', title: 'previously added page visual regression', describe: null },
+    { file: 'visual.spec.ts', title: 'information page visual regression', describe: null },
+    { file: 'visual.spec.ts', title: 'stats page visual regression', describe: null },
+    { file: 'visual.spec.ts', title: 'hits page visual regression', describe: null },
+    { file: 'visual.spec.ts', title: 'scripts page visual regression', describe: null },
+    { file: 'visual.spec.ts', title: 'admin page visual regression', describe: null },
     // Raw template form mirrors what `parseSpec` actually emits for the in-repo
     // `\`${page} visual regression - ${style} style\`` loop in visual.spec.ts —
     // `expandTemplates` only resolves `${X.url}`, so `${style}` survives verbatim.
@@ -140,9 +148,10 @@ function makeAllCoveredTests(): ActiveTest[] {
 }
 
 // Matrix that matches what makeAllCoveredTests() actually covers. /2/ is partially
-// covered (title + content via home.spec.ts only); /register/ adds content via
-// register.spec.ts; /password_reset/ adds content via password-reset.spec.ts; the
-// authenticated tail gets title + accessibility + api but no content/visual.
+// covered (title + content + visual via home/visual specs); /register/ and
+// /password_reset/ add content via their page specs and visual via visual.spec.ts; the
+// authenticated tail gets title + accessibility + api, with visual coverage for every
+// authenticated page after live tables/charts are masked in visual.spec.ts.
 function makeInSyncMatrix(): CoverageMatrix {
   return makeMatrix(
     false,
@@ -170,20 +179,52 @@ function makeInSyncMatrix(): CoverageMatrix {
         visualRegression: true,
         api: true,
       },
-      '/register/': { title: true, content: true, accessibility: true, api: true },
-      '/password_reset/': { title: true, content: true, accessibility: true, api: true },
-      '/2/': { title: true, content: true },
-      '/zone/': { title: true, content: true, accessibility: true, api: true, negativePath: true },
-      '/zone/stats/': { title: true, accessibility: true, api: true },
+      '/register/': {
+        title: true,
+        content: true,
+        accessibility: true,
+        visualRegression: true,
+        api: true,
+      },
+      '/password_reset/': {
+        title: true,
+        content: true,
+        accessibility: true,
+        visualRegression: true,
+        api: true,
+      },
+      '/2/': { title: true, content: true, visualRegression: true },
+      '/zone/': {
+        title: true,
+        content: true,
+        accessibility: true,
+        visualRegression: true,
+        api: true,
+        negativePath: true,
+      },
+      '/zone/stats/': { title: true, accessibility: true, visualRegression: true, api: true },
       '/zone/hits/': {
         title: true,
         content: true,
         accessibility: true,
+        visualRegression: true,
         api: true,
         negativePath: true,
       },
-      '/zone/scripts/': { title: true, content: true, accessibility: true, api: true },
-      '/zone/admin/': { title: true, accessibility: true, api: true, negativePath: true },
+      '/zone/scripts/': {
+        title: true,
+        content: true,
+        accessibility: true,
+        visualRegression: true,
+        api: true,
+      },
+      '/zone/admin/': {
+        title: true,
+        accessibility: true,
+        visualRegression: true,
+        api: true,
+        negativePath: true,
+      },
       '/scripts/*.php': { tracking: true },
     },
     {
@@ -205,11 +246,11 @@ test('verify: in-sync matrix passes with no errors', () => {
 
 test('verify: false-positive — matrix claims coverage that no test provides', () => {
   const matrix = makeInSyncMatrix();
-  matrix.pages['/zone/stats/'].visualRegression = true;
+  matrix.pages['/zone/stats/'].content = true;
   const result = verify(matrix, makeAllCoveredTests());
   assert.equal(result.ok, false);
   assert.equal(result.errors.length, 1);
-  assert.match(result.errors[0], /false-positive.*\/zone\/stats\/.*visualRegression/);
+  assert.match(result.errors[0], /false-positive.*\/zone\/stats\/.*content/);
 });
 
 test('verify: false-negative — an active test covers a cell the matrix has as false', () => {
@@ -340,11 +381,17 @@ test('computeCovered: visualRegression rules — each named test maps to its URL
   const covered = computeCovered([
     { file: 'visual.spec.ts', title: 'home page visual regression', describe: null },
     { file: 'visual.spec.ts', title: 'contact page visual regression', describe: null },
+    { file: 'visual.spec.ts', title: 'admin page visual regression', describe: null },
+    { file: 'visual.spec.ts', title: 'stats page visual regression', describe: null },
+    { file: 'visual.spec.ts', title: 'hits page visual regression', describe: null },
   ]);
   assert.ok(covered.has('/|visualRegression'));
   assert.ok(covered.has('/contact/|visualRegression'));
+  assert.ok(covered.has('/zone/admin/|visualRegression'));
+  assert.ok(covered.has('/zone/stats/|visualRegression'));
+  assert.ok(covered.has('/zone/hits/|visualRegression'));
   assert.ok(!covered.has('/about/|visualRegression'));
-  assert.ok(!covered.has('/statistics/|visualRegression'));
+  assert.ok(!covered.has('/zone/scripts/|visualRegression'));
 });
 
 test('computeCovered: content rules — primary spec per URL', () => {

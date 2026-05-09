@@ -50,6 +50,10 @@ export class RegisterPage extends AbstractPage {
     return this.registrationForm.locator('#email');
   }
 
+  get blockIpField(): Locator {
+    return this.registrationForm.locator('#block_ip');
+  }
+
   get submitButton(): Locator {
     return this.registrationForm.getByRole('button', {
       name: RegisterPage.submitLabel,

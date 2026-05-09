@@ -106,4 +106,12 @@ export class AdminPage extends AbstractPage {
       .filter({ has: this.settingsForm })
       .locator(':scope > span.bold');
   }
+
+  get settingsUsername(): Locator {
+    return this.settingsForm.locator('span.bold');
+  }
+
+  get loggedInUsername(): Locator {
+    return AbstractPage.loggedInUsername(this.page);
+  }
 }

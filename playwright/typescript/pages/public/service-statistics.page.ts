@@ -37,6 +37,7 @@ export class ServiceStatisticsPage extends AbstractPage {
 
   static readonly svgChartUrl = 'chart_all.php';
   static readonly svgChartPreAuthUrl = `/libs/${ServiceStatisticsPage.svgChartUrl}`;
+  static readonly statisticsTableSelector = 'table';
   static readonly totalRecognized = 'Łącznie rozpoznane';
   static readonly unrecognized = 'Nierozpoznane';
   static readonly total = 'Łącznie';
