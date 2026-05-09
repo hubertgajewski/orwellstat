@@ -11,6 +11,10 @@ on:
         required: false
         default: ""
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.inputs.branch || github.ref_name }}
+  cancel-in-progress: false
+
 jobs:
   update:
     if: github.repository == 'hubertgajewski/orwellstat'
@@ -25,7 +29,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/setup-node@v6
         with:
-          node-version: 26
+          node-version-file: .node-version
           check-latest: true
           cache: "npm"
           cache-dependency-path: playwright/typescript/package-lock.json

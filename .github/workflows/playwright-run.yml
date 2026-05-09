@@ -83,7 +83,7 @@ jobs:
           ref: ${{ inputs.ref }}
       - uses: actions/setup-node@v6
         with:
-          node-version: 26
+          node-version-file: .node-version
           check-latest: true
           cache: "npm"
           cache-dependency-path: playwright/typescript/package-lock.json

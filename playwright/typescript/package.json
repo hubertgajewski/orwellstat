@@ -22,6 +22,7 @@
     "tsc": "tsc --noEmit",
     "test:unit": "node --test --experimental-strip-types --disable-warning=ExperimentalWarning 'utils/**/*.test.ts' 'scripts/**/*.test.ts'",
     "verify:matrix": "node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/verify-coverage-matrix.ts",
+    "postinstall": "node scripts/patch-playwright-yauzl-node26.mjs",
     "prepare": "cd ../.. && husky playwright/typescript/.husky"
   },
   "lint-staged": {

@@ -43,8 +43,8 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.update_visual_baselines == 'true' && format('{0}-baseline-{1}', github.workflow, github.event.inputs.ref || github.ref_name) || format('{0}-{1}', github.workflow, github.ref) }}
+  cancel-in-progress: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.update_visual_baselines != 'true' }}
 
 jobs:
   setup-matrix:
@@ -127,7 +127,7 @@ jobs:
           ref: ${{ github.event.inputs.ref || github.ref }}
       - uses: actions/setup-node@v6
         with:
-          node-version: 26
+          node-version-file: .node-version
           check-latest: true
           cache: "npm"
           cache-dependency-path: playwright/typescript/package-lock.json
@@ -201,7 +201,7 @@ jobs:
           ref: ${{ github.event.inputs.ref || github.ref }}
       - uses: actions/setup-node@v6
         with:
-          node-version: 26
+          node-version-file: .node-version
           check-latest: true
           cache: "npm"
           cache-dependency-path: playwright/typescript/package-lock.json
@@ -231,6 +231,9 @@ jobs:
     if: ${{ github.repository == 'hubertgajewski/orwellstat' && always() && github.event.inputs.update_visual_baselines == 'true' && needs.test.result != 'cancelled' }}
     timeout-minutes: 5
     runs-on: ${{ inputs.runner || vars.RUNNER || 'ubuntu-latest' }}
+    concurrency:
+      group: visual-baselines-${{ github.event.inputs.ref || github.ref_name }}
+      cancel-in-progress: false
     permissions:
       contents: write
     steps:
@@ -244,6 +247,8 @@ jobs:
           path: playwright/typescript/tests/visual.spec.ts-snapshots/
           merge-multiple: true
       - name: Commit updated visual baselines
+        env:
+          TARGET_REF: ${{ github.event.inputs.ref || github.ref_name }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -251,6 +256,7 @@ jobs:
           if git diff --cached --quiet; then
             echo "No baseline changes to commit"
           else
+            git check-ref-format --branch "$TARGET_REF"
             git commit -m "Update Linux visual baselines [skip ci]"
-            git push origin HEAD:${{ github.event.inputs.ref || github.ref_name }}
+            git push origin "HEAD:${TARGET_REF}"
           fi

@@ -38,7 +38,7 @@ jobs:
 
       - uses: actions/setup-node@v6
         with:
-          node-version: 26
+          node-version-file: .node-version
           check-latest: true
 
       - name: Install dependencies
@@ -48,18 +48,32 @@ jobs:
         run: npm audit --audit-level=high
 
       - name: Create .env
+        env:
+          TARGET_ENV: ${{ inputs.env || 'staging' }}
+          ORWELLSTAT_USER: ${{ secrets.ORWELLSTAT_USER }}
+          ORWELLSTAT_PASSWORD: ${{ secrets.ORWELLSTAT_PASSWORD }}
+          ORWELLSTAT_USER_EMPTY: ${{ secrets.ORWELLSTAT_USER_EMPTY }}
+          ORWELLSTAT_PASSWORD_EMPTY: ${{ secrets.ORWELLSTAT_PASSWORD_EMPTY }}
+          BASIC_AUTH_USER: ${{ secrets.BASIC_AUTH_USER }}
+          BASIC_AUTH_PASSWORD: ${{ secrets.BASIC_AUTH_PASSWORD }}
         run: |
-          echo "ORWELLSTAT_USER=${{ secrets.ORWELLSTAT_USER }}" >> .env
-          echo "ORWELLSTAT_PASSWORD=${{ secrets.ORWELLSTAT_PASSWORD }}" >> .env
-          echo "ORWELLSTAT_USER_EMPTY=${{ secrets.ORWELLSTAT_USER_EMPTY }}" >> .env
-          echo "ORWELLSTAT_PASSWORD_EMPTY=${{ secrets.ORWELLSTAT_PASSWORD_EMPTY }}" >> .env
-          if [ "${{ inputs.env || 'staging' }}" = "staging" ]; then
-            echo "BASIC_AUTH_USER=${{ secrets.BASIC_AUTH_USER }}" >> .env
-            echo "BASIC_AUTH_PASSWORD=${{ secrets.BASIC_AUTH_PASSWORD }}" >> .env
+          {
+            printf 'ORWELLSTAT_USER=%s\n' "$ORWELLSTAT_USER"
+            printf 'ORWELLSTAT_PASSWORD=%s\n' "$ORWELLSTAT_PASSWORD"
+            printf 'ORWELLSTAT_USER_EMPTY=%s\n' "$ORWELLSTAT_USER_EMPTY"
+            printf 'ORWELLSTAT_PASSWORD_EMPTY=%s\n' "$ORWELLSTAT_PASSWORD_EMPTY"
+          } >> .env
+          if [ "$TARGET_ENV" = "staging" ]; then
+            {
+              printf 'BASIC_AUTH_USER=%s\n' "$BASIC_AUTH_USER"
+              printf 'BASIC_AUTH_PASSWORD=%s\n' "$BASIC_AUTH_PASSWORD"
+            } >> .env
           fi
 
       - name: Run Bruno tests
-        run: npx bru run --env "${{ vars.ENV }}"
+        env:
+          BRUNO_ENV: ${{ vars.ENV }}
+        run: npx bru run --env "$BRUNO_ENV"
 
       - name: Cleanup credentials
         if: always()
