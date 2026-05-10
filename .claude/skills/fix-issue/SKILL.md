@@ -6,9 +6,11 @@ Issue number: $ARGUMENTS
 
 **Step 0 — Detect parent epic**
 Before anything else, check whether the issue is a child of an epic:
+
 ```bash
 PARENT=$(gh api repos/hubertgajewski/orwellstat/issues/$ARGUMENTS/parent --jq '.number // empty' 2>/dev/null || true)
 ```
+
 If non-empty, print a banner: **"Parent epic: #$PARENT — do not close it. Closing child only."**
 
 **Step 1 — Fetch the issue**
@@ -18,27 +20,31 @@ Run `gh issue view $ARGUMENTS` and read every section: User Story, Context, Acce
 First, derive the bare issue number `<N>` from `$ARGUMENTS` by stripping a single leading `#` if present (so both `/fix-issue 322` and `/fix-issue #322` resolve to `<N>=322`). Use `<N>` in every branch-name reference below; the `#<N>` form is reserved for commit messages and PR body prose per `CLAUDE.md`.
 
 Then fetch the latest remote state so the branch is created from up-to-date main:
+
 ```bash
 git fetch origin
 ```
+
 Then check whether the target name already exists on the remote:
+
 ```bash
 git ls-remote --heads origin feature/<N>   # or bugfix/<N>
 ```
+
 If it exists, inspect its recent commits (`git log origin/<branch> --oneline -5`) to decide whether those changes relate to this issue or to something different. If they appear unrelated, pick an alternative name by appending a suffix (e.g. `feature/<N>-2`, `feature/<N>-3`) and repeat the check until a free name is found. Then create the branch from remote `main` using the chosen name (e.g. `git checkout -b feature/<N> origin/main`).
 
 **Step 3 — Make the code change**
-Implement the fix described in the issue. Follow all conventions in `CLAUDE.md` (POM, fixtures, path aliases, security, etc.). When writing assertions against the product's DOM, sanity-check each literal string for upstream bugs before pinning it — see the **External-app text correctness** item in `.claude/skills/deep-review/SKILL.md`.
+Implement the fix described in the issue. Follow all conventions in `CLAUDE.md` (POM, fixtures, path aliases, security, etc.). When writing assertions against the product's DOM, sanity-check each literal string for upstream bugs before pinning it — see the **External-app text correctness** item in `.claude/skills/deep-review-lite/SKILL.md`.
 
 **Step 4 — Security review (mandatory, do this first)**
 Run `/security-review` (built-in Claude Code command). This must be done before the code review checklist — do not skip or defer it. If the command is unavailable, manually check: injection via untrusted input, path traversal in file I/O, unhandled parse errors, hardcoded secrets, overly broad permissions. Fix any findings before continuing.
 
-> **Do not stall when the skill returns.** `/security-review` (and every other embedded skill) may end its prompt with instructions like *"your final reply must contain the markdown report and nothing else"*. That constraint applies only to the skill's reply shape — it does **not** halt `/fix-issue`. If the report is clean, proceed to Step 4b in the same turn. If it has findings, fix them, re-run `/security-review`, and then proceed. Never treat a clean report as a terminal output.
+> **Do not stall when the skill returns.** `/security-review` (and every other embedded skill) may end its prompt with instructions like _"your final reply must contain the markdown report and nothing else"_. That constraint applies only to the skill's reply shape — it does **not** halt `/fix-issue`. If the report is clean, proceed to Step 4b in the same turn. If it has findings, fix them, re-run `/security-review`, and then proceed. Never treat a clean report as a terminal output.
 
 **Step 4b — Code review checklist**
-Work through `.claude/skills/deep-review/SKILL.md` in full. State a finding for each checklist item (pass, fail, or N/A with reason).
+Work through `.claude/skills/deep-review-lite/SKILL.md` in full. State a finding for each checklist item (pass, fail, or N/A with reason).
 
-> **Same flow-control rule as Step 4.** `/deep-review` runs its own embedded `/security-review` and `/simplify` sub-cycles — none of those sub-skills' reply-shape constraints halt `/fix-issue`. When the checklist reports pass / N/A only with zero failures, proceed to Step 5 in the same turn.
+> **Same flow-control rule as Step 4.** `/deep-review-lite` runs its own embedded `/security-review` and `/simplify` sub-cycles — none of those sub-skills' reply-shape constraints halt `/fix-issue`. When the checklist reports pass / N/A only with zero failures, proceed to Step 5 in the same turn.
 
 **Step 5 — Run the affected test(s)**
 Run only the tests touched by the change. They must all pass before proceeding.
@@ -47,11 +53,13 @@ Run only the tests touched by the change. They must all pass before proceeding.
 Run `git diff` (staged + unstaged) and treat every changed file as unfamiliar code. Explicitly state a finding for each check below — "no issues" is not acceptable without articulating what was checked.
 
 General checks (every diff):
+
 - Every non-obvious change: "Would I understand why this was done just from the diff?" If no, add a code comment or adjust the implementation.
 - No dead code, commented-out blocks, or debug artifacts left in.
 - Docs updated: if a file documented in `README.md` changed, verify `README.md` reflects the change.
 
 CI / workflow files (`.github/workflows/*.yml`):
+
 - `timeout-minutes` set at the job level — no job should run unbounded.
 - All `actions/*` pinned to a specific major version (e.g. `@v4`); third-party actions pinned to a full SHA.
 - `node-version: lts/*` is acceptable for Node setup; npm package versions must be pinned in `package.json` + `package-lock.json` (use `npm ci`, not `npm install -g @package`).
@@ -62,6 +70,7 @@ CI / workflow files (`.github/workflows/*.yml`):
 - When multiple steps or scripts produce the same value, verify they use the same format and precision — inconsistencies cause the step summary and committed files to disagree.
 
 Scripts calling external APIs (e.g. `gh issue list`, REST calls):
+
 - Guard against null/missing fields before using them — external APIs can return nulls even on fields that are usually present.
 - Warn to stderr when a paginated call hits its item limit (e.g. `--limit 1000`) so silent data truncation is detectable.
 - Verify the script is idempotent — re-running with the same input must not corrupt state (e.g. upsert by a natural key rather than blindly appending).
@@ -75,6 +84,7 @@ Stage changed files by name (never `git add -A`). Follow the **Commit message co
 
 **Step 9 — Push and create a PR**
 Push the branch and run `gh pr create`. The PR body must include:
+
 - `Closes #$ARGUMENTS` so GitHub links and auto-closes the issue on merge
 - If `$PARENT` was detected in Step 0: also add a line `Contributes to #$PARENT` (not `Closes` — the epic stays open until all children are done)
 - A **Test plan** section with a checklist of observable, verifiable steps. Mark steps already verified during development as `[x]`. Steps that require a reviewer or CI to verify must be left as `[ ]`.
