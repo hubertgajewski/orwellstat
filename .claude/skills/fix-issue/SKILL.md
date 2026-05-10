@@ -2,22 +2,37 @@
 description: Fix a GitHub issue end-to-end - fetch, implement, test, review, commit, and open a PR.
 ---
 
-Issue number: $ARGUMENTS
+Issue reference: $ARGUMENTS
 
-**Step 0 — Detect parent epic**
-Before anything else, check whether the issue is a child of an epic:
+**Step 0 — Resolve issue number**
+Before any GitHub API call, resolve the incoming issue reference to a bare numeric issue number and use that value for the rest of the workflow.
+
+- If `$ARGUMENTS` matches `^#?[0-9]+$`, strip one leading `#` and set `ISSUE` to the result:
+
+  ```bash
+  ISSUE="${ARGUMENTS#\#}"
+  ```
+
+- If `$ARGUMENTS` is a natural-language reference (for example, "the one we discussed yesterday"), resolve it from the current conversation and memory before continuing.
+- If exactly one issue can be identified, state the resolved issue number and set `ISSUE` to that bare number.
+- If zero or multiple issues match, stop and ask the user to provide the issue number. Do not pass natural-language text to `gh`, branch names, commit messages, PR bodies, or Project board commands.
+
+After this step, `ISSUE` must be a bare number such as `322`. Use `#$ISSUE` only in human-facing prose where the `#` prefix is intended.
+
+**Step 0b — Detect parent epic**
+Before fetching the issue body or creating a branch, check whether the issue is a child of an epic:
 
 ```bash
-PARENT=$(gh api repos/hubertgajewski/orwellstat/issues/$ARGUMENTS/parent --jq '.number // empty' 2>/dev/null || true)
+PARENT=$(gh api repos/hubertgajewski/orwellstat/issues/$ISSUE/parent --jq '.number // empty' 2>/dev/null || true)
 ```
 
 If non-empty, print a banner: **"Parent epic: #$PARENT — do not close it. Closing child only."**
 
 **Step 1 — Fetch the issue**
-Run `gh issue view $ARGUMENTS` and read every section: User Story, Context, Acceptance Criteria, Implementation Hint, and Definition of Done. State what the issue requires before touching any code.
+Run `gh issue view $ISSUE` and read every section: User Story, Context, Acceptance Criteria, Implementation Hint, and Definition of Done. State what the issue requires before touching any code.
 
 **Step 2 — Create the branch**
-First, derive the bare issue number `<N>` from `$ARGUMENTS` by stripping a single leading `#` if present (so both `/fix-issue 322` and `/fix-issue #322` resolve to `<N>=322`). Use `<N>` in every branch-name reference below; the `#<N>` form is reserved for commit messages and PR body prose per `CLAUDE.md`.
+Use the normalized `$ISSUE` value in every branch-name reference below; the `#$ISSUE` form is reserved for commit messages and PR body prose per `CLAUDE.md`.
 
 Then fetch the latest remote state so the branch is created from up-to-date main:
 
@@ -28,10 +43,10 @@ git fetch origin
 Then check whether the target name already exists on the remote:
 
 ```bash
-git ls-remote --heads origin feature/<N>   # or bugfix/<N>
+git ls-remote --heads origin feature/$ISSUE   # or bugfix/$ISSUE
 ```
 
-If it exists, inspect its recent commits (`git log origin/<branch> --oneline -5`) to decide whether those changes relate to this issue or to something different. If they appear unrelated, pick an alternative name by appending a suffix (e.g. `feature/<N>-2`, `feature/<N>-3`) and repeat the check until a free name is found. Then create the branch from remote `main` using the chosen name (e.g. `git checkout -b feature/<N> origin/main`).
+If it exists, inspect its recent commits (`git log origin/<branch> --oneline -5`) to decide whether those changes relate to this issue or to something different. If they appear unrelated, pick an alternative name by appending a suffix (e.g. `feature/$ISSUE-2`, `feature/$ISSUE-3`) and repeat the check until a free name is found. Then create the branch from remote `main` using the chosen name (e.g. `git checkout -b feature/$ISSUE origin/main`).
 
 **Step 3 — Make the code change**
 Implement the fix described in the issue. Follow all conventions in `CLAUDE.md` (POM, fixtures, path aliases, security, etc.). When writing assertions against the product's DOM, sanity-check each literal string for upstream bugs before pinning it — see the **External-app text correctness** item in `.claude/skills/deep-review-lite/SKILL.md`.
@@ -80,13 +95,13 @@ Scripts calling external APIs (e.g. `gh issue list`, REST calls):
 Read every Given/When/Then scenario and every DoD checkbox in the issue. For each item, explicitly confirm it is satisfied or identify what is missing. Do not proceed to commit until all criteria pass.
 
 **Step 8 — Commit**
-Stage changed files by name (never `git add -A`). Follow the **Commit message convention** in `CLAUDE.md`: prefix with `#` and the issue number, single line, no body, no `Co-Authored-By` trailer.
+Stage changed files by name (never `git add -A`). Follow the **Commit message convention** in `CLAUDE.md`: prefix with `#$ISSUE`, single line, no body, no `Co-Authored-By` trailer.
 
 **Step 9 — Push and create a PR**
 Push the branch and run `gh pr create`. The PR body must include:
 
-- `Closes #$ARGUMENTS` so GitHub links and auto-closes the issue on merge
-- If `$PARENT` was detected in Step 0: also add a line `Contributes to #$PARENT` (not `Closes` — the epic stays open until all children are done)
+- `Closes #$ISSUE` so GitHub links and auto-closes the issue on merge
+- If `$PARENT` was detected in Step 0b: also add a line `Contributes to #$PARENT` (not `Closes` — the epic stays open until all children are done)
 - A **Test plan** section with a checklist of observable, verifiable steps. Mark steps already verified during development as `[x]`. Steps that require a reviewer or CI to verify must be left as `[ ]`.
 
 **Step 10 — Verify the PR test plan**
@@ -98,8 +113,9 @@ See **Project board → Actual hours** in [README.md](../../../README.md) for ho
 ```bash
 PROJECT_ID=PVT_kwHOAG7eT84BRbty
 HOURS_FIELD_ID=PVTF_lAHOAG7eT84BRbtyzhC91mc
+ISSUE=<same-bare-issue-number-resolved-in-Step-0>
 ITEM_ID=$(gh project item-list 1 --owner hubertgajewski --format json --limit 200 \
-  | jq -r ".items[] | select(.content.number == $ARGUMENTS) | .id")
+  | jq -r ".items[] | select(.content.number == $ISSUE) | .id")
 gh project item-edit --project-id "$PROJECT_ID" --id "$ITEM_ID" \
   --field-id "$HOURS_FIELD_ID" --number <hours>
 ```
