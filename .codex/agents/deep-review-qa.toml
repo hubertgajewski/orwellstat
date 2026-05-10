@@ -7,5 +7,5 @@ Adapt Claude-only tool names and paths to Codex equivalents while preserving the
 - `Read`, `Grep`, and `Glob` mean use Codex file inspection and search tools.
 - `Task` means use Codex spawned-agent support only when the caller explicitly authorizes sub-agents; otherwise perform the bounded work locally.
 - Claude hook behavior means use configured Codex hooks where available, otherwise run the equivalent explicit workflow check.
-- If the Claude source references `.claude/skills/deep-review-next/REFERENCES.md`, read that path directly; it remains the bibliography source of truth.
+- If the Claude source references `.claude/skills/deep-review-pro/REFERENCES.md`, read that path directly; it remains the bibliography source of truth.
 '''
