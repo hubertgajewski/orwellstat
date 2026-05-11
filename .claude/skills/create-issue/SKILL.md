@@ -19,7 +19,7 @@ See the Epic / Story convention and scales in [docs/PROJECT_MANAGEMENT.md](../..
 2. **Context** — explanation of the current problem with exact file references
 3. **Acceptance Criteria** — Given/When/Then scenarios covering the happy path and the failure case
 4. **Implementation Hint** — concrete code snippet showing the fix
-5. **Definition of Done** — checklist of observable, verifiable outcomes
+5. **Definition of Done** — checklist of observable, verifiable outcomes that `/fix-issue` can later map to concrete evidence before ticking the GitHub issue checkbox
 
 **Epic title:** `[epic] Short imperative description`
 
