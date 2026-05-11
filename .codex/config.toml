@@ -12,6 +12,15 @@ command = "docker"
 args = ["mcp/coverage-matrix/dist/index.js"]
 command = "node"
 
+[mcp_servers.coverage-matrix.tools.get_coverage_gaps]
+approval_mode = "approve"
+
+[mcp_servers.coverage-matrix.tools.get_coverage_summary]
+approval_mode = "approve"
+
+[mcp_servers.coverage-matrix.tools.mark_covered]
+approval_mode = "approve"
+
 [mcp_servers.playwright]
 args = ["@playwright/mcp@0.0.68"]
 command = "npx"
@@ -41,3 +50,12 @@ approval_mode = "approve"
 [mcp_servers.quality-metrics]
 args = ["mcp/quality-metrics/dist/index.js"]
 command = "node"
+
+[mcp_servers.quality-metrics.tools.get_defect_escape_rate]
+approval_mode = "approve"
+
+[mcp_servers.quality-metrics.tools.get_mttr]
+approval_mode = "approve"
+
+[mcp_servers.quality-metrics.tools.get_metrics_history]
+approval_mode = "approve"
