@@ -120,9 +120,18 @@ gh project item-edit --project-id "$PROJECT_ID" --id "$ITEM_ID" \
   --field-id "$HOURS_FIELD_ID" --number <hours>
 ```
 
-After recording Actual hours, update the GitHub issue body so every completed DoD checkbox is checked. Use the evidence map from Step 7 plus the post-merge evidence from this step (merge state, closed issue state, and Actual hours field). Leave any checkbox unchecked when evidence is missing, and report it as a remaining blocker instead of silently checking it.
+After recording Actual hours, update the GitHub issue body so every completed DoD checkbox is checked. Use the evidence map from Step 7 plus the post-merge evidence from this step (merge state, closed issue state, and Actual hours field). Fetch the current issue body, edit only the matching verified DoD bullets from `- [ ]` to `- [x]` by exact checkbox text, never use a blind global replacement, and write the edited body back:
 
-Re-read the issue body after editing and confirm the expected checkbox state:
+```bash
+ISSUE_BODY_FILE=/tmp/issue-$ISSUE-body.md
+gh issue view "$ISSUE" --json body --jq '.body' > "$ISSUE_BODY_FILE"
+# Edit $ISSUE_BODY_FILE so only verified DoD bullets are checked.
+gh issue edit "$ISSUE" --body-file "$ISSUE_BODY_FILE"
+```
+
+Leave any checkbox unchecked when evidence is missing. Add an issue comment listing each remaining blocker and reason, then either keep the issue open or create a follow-up issue for the missing work.
+
+Re-read the issue body after editing and confirm the expected checkbox state. Every completed checkbox in the evidence map must appear as `[x]`; every item without evidence must remain `[ ]`; checked and unchecked counts must match the expected evidence-map totals:
 
 ```bash
 gh issue view $ISSUE --json body --jq '.body'
