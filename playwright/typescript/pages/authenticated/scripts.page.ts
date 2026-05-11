@@ -1,4 +1,4 @@
-import { type Page } from '@fixtures/base.fixture';
+import { type Locator, type Page } from '@fixtures/base.fixture';
 import { AbstractPage } from '@pages/abstract.page';
 
 export class ScriptsPage extends AbstractPage {
@@ -48,5 +48,13 @@ export class ScriptsPage extends AbstractPage {
 
   get xhtmlSnippet() {
     return this.page.locator('textarea').nth(2);
+  }
+
+  get dataTables(): Locator {
+    return this.page.getByRole('table');
+  }
+
+  get svgCharts(): Locator {
+    return this.page.locator('object[type="image/svg+xml"]');
   }
 }

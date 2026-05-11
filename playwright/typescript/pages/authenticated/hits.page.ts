@@ -1,5 +1,6 @@
 import { type Locator, type Page } from '@fixtures/base.fixture';
 import { AbstractPage } from '@pages/abstract.page';
+import { NO_HITS_LAST_30_DAYS } from '@pages/common';
 
 export class HitsPage extends AbstractPage {
   static readonly url = '/zone/hits/';
@@ -7,6 +8,8 @@ export class HitsPage extends AbstractPage {
   static readonly accessKey = 'O';
   static readonly submitLabel = 'Pokaż statystyki';
   static readonly resultsTableSelector = 'table.fixed_table';
+  static readonly statisticsHeading = 'Statystyki';
+  static readonly emptyStateMessage = NO_HITS_LAST_30_DAYS;
 
   constructor(page: Page) {
     super(page, HitsPage.url, HitsPage.title, HitsPage.accessKey);
@@ -20,6 +23,20 @@ export class HitsPage extends AbstractPage {
   // abstract `heading` contract resolves to a visible page-specific heading.
   get heading(): Locator {
     return this.page.getByRole('heading', { name: 'Filtr', exact: true });
+  }
+
+  get statisticsSectionHeading(): Locator {
+    return this.page.getByRole('heading', {
+      name: HitsPage.statisticsHeading,
+      exact: true,
+    });
+  }
+
+  get emptyStateHeading(): Locator {
+    return this.page.getByRole('heading', {
+      name: HitsPage.emptyStateMessage,
+      exact: true,
+    });
   }
 
   // Scope filter-form fields to the `<fieldset>` whose `<legend>` is "Formularz do

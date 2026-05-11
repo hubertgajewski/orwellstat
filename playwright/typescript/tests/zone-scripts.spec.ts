@@ -6,6 +6,7 @@
  */
 import { readFileSync } from 'node:fs';
 import { test, expect } from '@fixtures/base.fixture';
+import { EMPTY_STORAGE_STATE } from '@fixtures/storage-state';
 import { ScriptsPage } from '@pages/authenticated/scripts.page';
 import { HitsPage } from '@pages/authenticated/hits.page';
 import { fireTrackingHit, TEST_DATA_BASE, TRACKING_FIXTURES } from '@utils/track-hit.util';
@@ -37,21 +38,11 @@ function canonicalRegex(template: string, baseURL: string): RegExp {
   return new RegExp(`^${parts.join('[^&"<]+')}$`);
 }
 
-test('scripts page - content', { tag: '@regression' }, async ({ page, baseURL }) => {
-  if (!baseURL) throw new Error('baseURL must be set in playwright.config.ts');
-  await page.goto(ScriptsPage.url);
-  const scriptsPage = new ScriptsPage(page);
-
+async function expectSnippetSurface(scriptsPage: ScriptsPage, baseURL: string): Promise<void> {
   await expect(scriptsPage.heading).toBeVisible();
   await expect(scriptsPage.html5SectionHeading).toBeVisible();
   await expect(scriptsPage.html4SectionHeading).toBeVisible();
   await expect(scriptsPage.xhtmlSectionHeading).toBeVisible();
-
-  // Assert each textarea's full body matches the canonical regex (id wildcarded). Any
-  // product-side drift (renamed id, changed URL, stripped noscript fallback, tweaked
-  // comment) fails the regex. toHaveText reads textContent — the correct way to read a
-  // textarea's default value on an application/xhtml+xml page (toHaveValue checks
-  // nodeName === 'TEXTAREA' strictly and fails on the lowercase nodeName XML preserves).
   await expect(scriptsPage.html5Snippet).toHaveText(
     canonicalRegex(CANONICAL_SNIPPETS['tracking-html5.html'], baseURL)
   );
@@ -61,6 +52,33 @@ test('scripts page - content', { tag: '@regression' }, async ({ page, baseURL })
   await expect(scriptsPage.xhtmlSnippet).toHaveText(
     canonicalRegex(CANONICAL_SNIPPETS['tracking.xhtml'], baseURL)
   );
+}
+
+test.describe('empty account', { tag: '@regression' }, () => {
+  test.use({ storageState: EMPTY_STORAGE_STATE });
+
+  test('renders tracker snippets for the empty account', async ({ page, baseURL }) => {
+    if (!baseURL) throw new Error('baseURL must be set in playwright.config.ts');
+    await page.goto(ScriptsPage.url);
+    const scriptsPage = new ScriptsPage(page);
+
+    await expectSnippetSurface(scriptsPage, baseURL);
+    await expect(scriptsPage.dataTables).toHaveCount(0);
+    await expect(scriptsPage.svgCharts).toHaveCount(0);
+  });
+});
+
+test('scripts page - content', { tag: '@regression' }, async ({ page, baseURL }) => {
+  if (!baseURL) throw new Error('baseURL must be set in playwright.config.ts');
+  await page.goto(ScriptsPage.url);
+  const scriptsPage = new ScriptsPage(page);
+
+  // Assert each textarea's full body matches the canonical regex (id wildcarded). Any
+  // product-side drift (renamed id, changed URL, stripped noscript fallback, tweaked
+  // comment) fails the regex. toHaveText reads textContent — the correct way to read a
+  // textarea's default value on an application/xhtml+xml page (toHaveValue checks
+  // nodeName === 'TEXTAREA' strictly and fails on the lowercase nodeName XML preserves).
+  await expectSnippetSurface(scriptsPage, baseURL);
 });
 
 test.describe('scripts page tracking', { tag: '@regression' }, () => {

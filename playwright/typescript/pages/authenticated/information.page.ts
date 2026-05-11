@@ -1,5 +1,6 @@
 import { type Locator, type Page } from '@fixtures/base.fixture';
 import { AbstractPage } from '@pages/abstract.page';
+import { NO_HITS_LAST_30_DAYS } from '@pages/common';
 
 const LIVE_DATA_MASK = 'information-live-data';
 export const INFORMATION_LIVE_DATA_MASK_COUNT = 29;
@@ -22,7 +23,7 @@ export class InformationPage extends AbstractPage {
   // Shown when the signed-in account has no hits in the last 30 days.
   get emptyStateHeading() {
     return this.page.getByRole('heading', {
-      name: 'W ciągu ostatnich 30 dni nie odnotowano żadnych odsłon na Twoich stronach',
+      name: NO_HITS_LAST_30_DAYS,
       exact: true,
     });
   }

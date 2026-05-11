@@ -5,6 +5,7 @@
  * Also covers the row-limit combobox (limits 10 and 20 against seeded hits).
  */
 import { test, expect, type Locator } from '@fixtures/base.fixture';
+import { EMPTY_STORAGE_STATE } from '@fixtures/storage-state';
 import { HitsPage } from '@pages/authenticated/hits.page';
 import { fireTrackingHit, TRACKING_FIXTURES } from '@utils/track-hit.util';
 
@@ -16,6 +17,36 @@ import { fireTrackingHit, TRACKING_FIXTURES } from '@utils/track-hit.util';
 // headers, but the live DOM does not render them as `<th>`; pinning them here would
 // silently mismatch the real header set.
 const RESULTS_TABLE_HEADERS = ['Lp.', 'Odsłony'] as const satisfies readonly string[];
+
+test.describe('empty account', { tag: '@regression' }, () => {
+  test.use({ storageState: EMPTY_STORAGE_STATE });
+
+  test('renders the empty hits surface and keeps the filter form usable', async ({ page }) => {
+    const hitsPage = new HitsPage(page);
+    await hitsPage.goto();
+
+    await expect(hitsPage.heading).toBeVisible();
+    await expect(hitsPage.statisticsSectionHeading).toBeVisible();
+    await expect(hitsPage.emptyStateHeading).toBeVisible();
+    await expect(hitsPage.resultsTable).toHaveCount(0);
+
+    await expect(hitsPage.periodSelect).toBeVisible();
+    await expect(hitsPage.ipField).toBeEditable();
+    await expect(hitsPage.hostField).toBeEditable();
+    await expect(hitsPage.browserField).toBeEditable();
+    await expect(hitsPage.osField).toBeEditable();
+    await expect(hitsPage.languageField).toBeEditable();
+    await expect(hitsPage.countryField).toBeEditable();
+    await expect(hitsPage.colorDepthField).toBeEditable();
+    await expect(hitsPage.rowLimitSelect).toBeVisible();
+    await expect(hitsPage.submitButton).toBeEnabled();
+
+    await hitsPage.ipField.fill('192.0.2.1');
+    await hitsPage.submitButton.click();
+    await expect(hitsPage.emptyStateHeading).toBeVisible();
+    await expect(hitsPage.resultsTable).toHaveCount(0);
+  });
+});
 
 test('hits page - content', { tag: '@regression' }, async ({ page }) => {
   const hitsPage = new HitsPage(page);

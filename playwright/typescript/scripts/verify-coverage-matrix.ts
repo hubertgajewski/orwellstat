@@ -156,28 +156,47 @@ export function computeCovered(tests: ActiveTest[]): Set<CellKey> {
   }
 
   // negativePath — tests that assert empty, error, mismatch, or zero-result behaviour.
-  if (
-    has(
+  const negativePathRules: ReadonlyArray<readonly [string, string, (t: ActiveTest) => boolean]> = [
+    [
+      '/zone/',
       'zone-information.spec.ts',
-      (t) => t.title === 'shows "no hits in last 30 days" empty-state message'
-    )
-  ) {
-    covered.add(pageCell('/zone/', 'negativePath'));
-  }
-  if (has('zone-hits.spec.ts', (t) => /^nonsense .* input produces zero results$/.test(t.title))) {
-    covered.add(pageCell('/zone/hits/', 'negativePath'));
-  }
-  if (
-    has(
+      (t) => t.title === 'shows "no hits in last 30 days" empty-state message',
+    ],
+    [
+      '/zone/stats/',
+      'zone-stats.spec.ts',
+      (t) => t.title === 'renders the empty-state surface without chart or table',
+    ],
+    [
+      '/zone/hits/',
+      'zone-hits.spec.ts',
+      (t) => /^nonsense .* input produces zero results$/.test(t.title),
+    ],
+    [
+      '/zone/hits/',
+      'zone-hits.spec.ts',
+      (t) => t.title === 'renders the empty hits surface and keeps the filter form usable',
+    ],
+    [
+      '/zone/scripts/',
+      'zone-scripts.spec.ts',
+      (t) => t.title === 'renders tracker snippets for the empty account',
+    ],
+    [
+      '/zone/admin/',
       'zone-admin.spec.ts',
       (t) =>
         t.title === 'wrong current password shows the "incorrect password" error' ||
         t.title === 'the literal example.com placeholder email is rejected' ||
         t.title ===
-          'correct current password with non-matching new passwords shows the mismatch error'
-    )
-  ) {
-    covered.add(pageCell('/zone/admin/', 'negativePath'));
+          'correct current password with non-matching new passwords shows the mismatch error' ||
+        t.title === 'renders the same non-mutating settings form fields',
+    ],
+  ];
+  for (const [url, file, predicate] of negativePathRules) {
+    if (has(file, predicate)) {
+      covered.add(pageCell(url, 'negativePath'));
+    }
   }
 
   // tracking — any active test that exercises the public /scripts/ tracker contract via

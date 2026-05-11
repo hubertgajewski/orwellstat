@@ -15,3 +15,6 @@ export const STYLE_IRISH_GREEN_SVG = 'Irish Green SVG';
 export const STYLE_PURPLE_RAIN = 'Purple Rain';
 export const STYLE_HIGH_CONTRAST = 'Wysoki kontrast';
 export const STYLE_PRINT = 'Wersja do druku';
+
+export const NO_HITS_LAST_30_DAYS =
+  'W ciągu ostatnich 30 dni nie odnotowano żadnych odsłon na Twoich stronach';

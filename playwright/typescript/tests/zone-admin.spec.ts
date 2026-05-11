@@ -5,6 +5,7 @@
  * and Chromium-only mutating tests (email, block_ip, block_cookie) with beforeEach/afterEach restore.
  */
 import { test, expect, type Locator } from '@fixtures/base.fixture';
+import { EMPTY_STORAGE_STATE } from '@fixtures/storage-state';
 import { AdminPage } from '@pages/authenticated/admin.page';
 import { HitsPage } from '@pages/authenticated/hits.page';
 import { fireTrackingHit, TRACKING_FIXTURES } from '@utils/track-hit.util';
@@ -57,6 +58,35 @@ async function readInputValue(locator: Locator): Promise<string> {
   return locator.evaluate<string, HTMLInputElement>((el) => el.value);
 }
 
+async function expectEditableSettingsForm(admin: AdminPage): Promise<void> {
+  for (const f of TEXT_FIELDS) {
+    await expect(f.getField(admin), `${f.name} not editable`).toBeEditable();
+  }
+  await expect(admin.blockCookieRadioYes).toBeEnabled();
+  await expect(admin.blockCookieRadioNo).toBeEnabled();
+  await expect(admin.submitButton).toBeEnabled();
+
+  // SMS-tracking fields are server-rendered only for accounts on a private username
+  // allowlist (see admin.page.ts:76-91); the populated and empty test accounts are not
+  // on that list, so these locators must resolve to count 0.
+  await expect(admin.mobileField).toHaveCount(0);
+  await expect(admin.ipToSmsField).toHaveCount(0);
+  await expect(admin.hostToSmsField).toHaveCount(0);
+}
+
+test.describe('empty account', { tag: '@regression' }, () => {
+  test.use({ storageState: EMPTY_STORAGE_STATE });
+
+  test('renders the same non-mutating settings form fields', async ({ page }) => {
+    const admin = new AdminPage(page);
+    await admin.goto();
+
+    await expect(admin.heading).toBeVisible();
+    await expect(admin.settingsUsername).not.toHaveText('');
+    await expectEditableSettingsForm(admin);
+  });
+});
+
 test.describe('admin page - content', { tag: '@regression' }, () => {
   test('static page content renders for the populated account', async ({ page }) => {
     const admin = new AdminPage(page);
@@ -82,9 +112,7 @@ test.describe('admin page - content', { tag: '@regression' }, () => {
       expect(formText, `label "${label}" missing from settings form`).toContain(label);
     }
 
-    // SMS-tracking fields are server-rendered only for accounts on a private
-    // username allowlist (see admin.page.ts:77-91); the populated and empty test
-    // accounts are not on that list, so these locators must resolve to count 0.
+    // Static-content coverage also pins the SMS-tracking field absence explicitly.
     await expect(admin.mobileField).toHaveCount(0);
     await expect(admin.ipToSmsField).toHaveCount(0);
     await expect(admin.hostToSmsField).toHaveCount(0);
@@ -115,20 +143,7 @@ test.describe('admin page - settings form', { tag: '@regression' }, () => {
 
     // Every text field is editable, both radios enabled, submit button enabled
     // (issue #98 acceptance criterion: "all form fields are editable").
-    for (const f of TEXT_FIELDS) {
-      await expect(f.getField(admin), `${f.name} not editable`).toBeEditable();
-    }
-    await expect(admin.blockCookieRadioYes).toBeEnabled();
-    await expect(admin.blockCookieRadioNo).toBeEnabled();
-    await expect(admin.submitButton).toBeEnabled();
-
-    // SMS-tracking fields are server-rendered only for a hard-coded username
-    // allowlist (the SMS-alert feature is enabled on a per-user basis); the
-    // populated and empty test accounts are not on that list, so the markup must
-    // be absent.
-    await expect(admin.mobileField).toHaveCount(0);
-    await expect(admin.ipToSmsField).toHaveCount(0);
-    await expect(admin.hostToSmsField).toHaveCount(0);
+    await expectEditableSettingsForm(admin);
   });
 
   for (const f of TEXT_FIELDS) {

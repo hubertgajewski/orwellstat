@@ -119,7 +119,27 @@ function makeAllCoveredTests(): ActiveTest[] {
       title: 'shows "no hits in last 30 days" empty-state message',
       describe: null,
     },
+    {
+      file: 'zone-stats.spec.ts',
+      title: 'SVG chart is rendered on /zone/stats/',
+      describe: null,
+    },
+    {
+      file: 'zone-stats.spec.ts',
+      title: 'renders the empty-state surface without chart or table',
+      describe: null,
+    },
+    {
+      file: 'zone-hits.spec.ts',
+      title: 'renders the empty hits surface and keeps the filter form usable',
+      describe: null,
+    },
     { file: 'zone-scripts.spec.ts', title: 'scripts page - content', describe: null },
+    {
+      file: 'zone-scripts.spec.ts',
+      title: 'renders tracker snippets for the empty account',
+      describe: null,
+    },
     {
       file: 'zone-scripts.spec.ts',
       title: '${variant.label} snippet fires tracking and registers a hit',
@@ -139,6 +159,11 @@ function makeAllCoveredTests(): ActiveTest[] {
     // adminSettings rule keys off the primary "admin page - settings form" describe in
     // zone-admin.spec.ts; same parser convention as hitsFilter.
     { file: 'zone-admin.spec.ts', title: 'admin page - settings form', describe: null },
+    {
+      file: 'zone-admin.spec.ts',
+      title: 'renders the same non-mutating settings form fields',
+      describe: null,
+    },
     {
       file: 'zone-admin.spec.ts',
       title: 'wrong current password shows the "incorrect password" error',
@@ -202,7 +227,14 @@ function makeInSyncMatrix(): CoverageMatrix {
         api: true,
         negativePath: true,
       },
-      '/zone/stats/': { title: true, accessibility: true, visualRegression: true, api: true },
+      '/zone/stats/': {
+        title: true,
+        content: true,
+        accessibility: true,
+        visualRegression: true,
+        api: true,
+        negativePath: true,
+      },
       '/zone/hits/': {
         title: true,
         content: true,
@@ -217,6 +249,7 @@ function makeInSyncMatrix(): CoverageMatrix {
         accessibility: true,
         visualRegression: true,
         api: true,
+        negativePath: true,
       },
       '/zone/admin/': {
         title: true,
@@ -246,11 +279,11 @@ test('verify: in-sync matrix passes with no errors', () => {
 
 test('verify: false-positive — matrix claims coverage that no test provides', () => {
   const matrix = makeInSyncMatrix();
-  matrix.pages['/zone/stats/'].content = true;
+  matrix.pages['/zone/stats/'].securityHeaders = true;
   const result = verify(matrix, makeAllCoveredTests());
   assert.equal(result.ok, false);
   assert.equal(result.errors.length, 1);
-  assert.match(result.errors[0], /false-positive.*\/zone\/stats\/.*content/);
+  assert.match(result.errors[0], /false-positive.*\/zone\/stats\/.*securityHeaders/);
 });
 
 test('verify: false-negative — an active test covers a cell the matrix has as false', () => {
@@ -397,11 +430,13 @@ test('computeCovered: visualRegression rules — each named test maps to its URL
 test('computeCovered: content rules — primary spec per URL', () => {
   const covered = computeCovered([
     { file: 'home.spec.ts', title: 'home page', describe: null },
+    { file: 'zone-stats.spec.ts', title: 'SVG chart is rendered on /zone/stats/', describe: null },
     { file: 'zone-scripts.spec.ts', title: 'scripts page - content', describe: null },
   ]);
   // home.spec.ts covers content for both '/' and '/2/' (it navigates to PreviouslyAddedPage).
   assert.ok(covered.has('/|content'));
   assert.ok(covered.has('/2/|content'));
+  assert.ok(covered.has('/zone/stats/|content'));
   assert.ok(covered.has('/zone/scripts/|content'));
   assert.ok(!covered.has('/about/|content'));
 });
@@ -414,8 +449,18 @@ test('computeCovered: negativePath rules map empty/error/zero-result tests to th
       describe: null,
     },
     {
+      file: 'zone-stats.spec.ts',
+      title: 'renders the empty-state surface without chart or table',
+      describe: null,
+    },
+    {
       file: 'zone-hits.spec.ts',
       title: 'nonsense IP input produces zero results',
+      describe: null,
+    },
+    {
+      file: 'zone-scripts.spec.ts',
+      title: 'renders tracker snippets for the empty account',
       describe: null,
     },
     {
@@ -425,9 +470,31 @@ test('computeCovered: negativePath rules map empty/error/zero-result tests to th
     },
   ]);
   assert.ok(covered.has('/zone/|negativePath'));
+  assert.ok(covered.has('/zone/stats/|negativePath'));
   assert.ok(covered.has('/zone/hits/|negativePath'));
+  assert.ok(covered.has('/zone/scripts/|negativePath'));
   assert.ok(covered.has('/zone/admin/|negativePath'));
-  assert.ok(!covered.has('/zone/stats/|negativePath'));
+});
+
+test('computeCovered: negativePath empty-account alternates cover their pages independently', () => {
+  assert.ok(
+    computeCovered([
+      {
+        file: 'zone-hits.spec.ts',
+        title: 'renders the empty hits surface and keeps the filter form usable',
+        describe: null,
+      },
+    ]).has('/zone/hits/|negativePath')
+  );
+  assert.ok(
+    computeCovered([
+      {
+        file: 'zone-admin.spec.ts',
+        title: 'renders the same non-mutating settings form fields',
+        describe: null,
+      },
+    ]).has('/zone/admin/|negativePath')
+  );
 });
 
 test('computeCovered: tracking rule maps tracker-contract tests to /scripts/*.php', () => {
