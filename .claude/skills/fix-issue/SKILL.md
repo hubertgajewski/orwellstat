@@ -92,7 +92,7 @@ Scripts calling external APIs (e.g. `gh issue list`, REST calls):
 - Avoid duplicate API calls across steps: if two steps fetch the same data, consolidate them.
 
 **Step 7 — Verify all acceptance criteria and the Definition of Done**
-Read every Given/When/Then scenario and every DoD checkbox in the issue. For each item, explicitly confirm it is satisfied or identify what is missing. Do not proceed to commit until all criteria pass.
+Read every Given/When/Then scenario and every DoD checkbox in the issue. For each item, explicitly confirm it is satisfied or identify what is missing. For every DoD checkbox, keep an evidence map from the checkbox text to the concrete proof that satisfies it: file path, diff hunk, command output, PR check, Project field, or GitHub issue/PR state. Do not proceed to commit until all pre-merge criteria pass. Do not mark unverifiable or incomplete DoD items as complete; report the exact missing evidence instead.
 
 **Step 8 — Commit**
 Stage changed files by name (never `git add -A`). Follow the **Commit message convention** in `CLAUDE.md`: prefix with `#$ISSUE`, single line, no body, no `Co-Authored-By` trailer.
@@ -107,7 +107,7 @@ Push the branch and run `gh pr create`. The PR body must include:
 **Step 10 — Verify the PR test plan**
 Re-read every test plan item. For each `[ ]` item that can be verified now, execute and confirm it, then update the PR body via `gh pr edit` to mark it `[x]`. For items that genuinely require a reviewer or CI, leave them as `[ ]` and note what is needed. If any item is found failing, implement a fix on the same branch: work through the code review checklist, run the affected tests, commit and push before considering the task done.
 
-**Step 11 — After merge: record Actual hours on the project item**
+**Step 11 — After merge: record Actual hours and update issue DoD checkboxes**
 See **Actual Hours** in [docs/PROJECT_MANAGEMENT.md](../../../docs/PROJECT_MANAGEMENT.md) for how to derive the value.
 
 ```bash
@@ -118,4 +118,21 @@ ITEM_ID=$(gh project item-list 1 --owner hubertgajewski --format json --limit 20
   | jq -r ".items[] | select(.content.number == $ISSUE) | .id")
 gh project item-edit --project-id "$PROJECT_ID" --id "$ITEM_ID" \
   --field-id "$HOURS_FIELD_ID" --number <hours>
+```
+
+After recording Actual hours, update the GitHub issue body so every completed DoD checkbox is checked. Use the evidence map from Step 7 plus the post-merge evidence from this step (merge state, closed issue state, and Actual hours field). Fetch the current issue body, edit only the matching verified DoD bullets from `- [ ]` to `- [x]` by exact checkbox text, never use a blind global replacement, and write the edited body back:
+
+```bash
+ISSUE_BODY_FILE=/tmp/issue-$ISSUE-body.md
+gh issue view "$ISSUE" --json body --jq '.body' > "$ISSUE_BODY_FILE"
+# Edit $ISSUE_BODY_FILE so only verified DoD bullets are checked.
+gh issue edit "$ISSUE" --body-file "$ISSUE_BODY_FILE"
+```
+
+Leave any checkbox unchecked when evidence is missing. Add an issue comment listing each remaining blocker and reason, then either keep the issue open or create a follow-up issue for the missing work.
+
+Re-read the issue body after editing and confirm the expected checkbox state. Every completed checkbox in the evidence map must appear as `[x]`; every item without evidence must remain `[ ]`; checked and unchecked counts must match the expected evidence-map totals:
+
+```bash
+gh issue view $ISSUE --json body --jq '.body'
 ```
