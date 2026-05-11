@@ -12,20 +12,20 @@ This skill is the targeted, per-page counterpart to `/generate-stubs` (which swe
 
 The user may pass any of: URL (`/register/`), class name (`RegisterPage`, case-insensitive), page-file stem (`register`, `register.page`). Match `$ARGUMENTS` against this table; the match must be unambiguous.
 
-| URL | Class | Import | File stem |
-|---|---|---|---|
-| `/` | `HomePage` | `@pages/public` | `home` |
-| `/about/` | `AboutSystemPage` | `@pages/public` | `about-system` |
-| `/statistics/` | `ServiceStatisticsPage` | `@pages/public` | `service-statistics` |
-| `/contact/` | `ContactPage` | `@pages/public` | `contact` |
-| `/register/` | `RegisterPage` | `@pages/public` | `register` |
-| `/2/` | `PreviouslyAddedPage` | `@pages/public/previously-added.page` | `previously-added` |
-| `/password_reset/` | `PasswordResetPage` | `@pages/public` | `password-reset` |
-| `/zone/` | `InformationPage` | `@pages/authenticated` | `information` |
-| `/zone/stats/` | `StatsPage` | `@pages/authenticated` | `stats` |
-| `/zone/hits/` | `HitsPage` | `@pages/authenticated` | `hits` |
-| `/zone/scripts/` | `ScriptsPage` | `@pages/authenticated` | `scripts` |
-| `/zone/admin/` | `AdminPage` | `@pages/authenticated` | `admin` |
+| URL                | Class                   | Import                                | File stem            |
+| ------------------ | ----------------------- | ------------------------------------- | -------------------- |
+| `/`                | `HomePage`              | `@pages/public`                       | `home`               |
+| `/about/`          | `AboutSystemPage`       | `@pages/public`                       | `about-system`       |
+| `/statistics/`     | `ServiceStatisticsPage` | `@pages/public`                       | `service-statistics` |
+| `/contact/`        | `ContactPage`           | `@pages/public`                       | `contact`            |
+| `/register/`       | `RegisterPage`          | `@pages/public`                       | `register`           |
+| `/2/`              | `PreviouslyAddedPage`   | `@pages/public/previously-added.page` | `previously-added`   |
+| `/password_reset/` | `PasswordResetPage`     | `@pages/public`                       | `password-reset`     |
+| `/zone/`           | `InformationPage`       | `@pages/authenticated`                | `information`        |
+| `/zone/stats/`     | `StatsPage`             | `@pages/authenticated`                | `stats`              |
+| `/zone/hits/`      | `HitsPage`              | `@pages/authenticated`                | `hits`               |
+| `/zone/scripts/`   | `ScriptsPage`           | `@pages/authenticated`                | `scripts`            |
+| `/zone/admin/`     | `AdminPage`             | `@pages/authenticated`                | `admin`              |
 
 If `$ARGUMENTS` is empty, matches nothing, or matches more than one row, stop and ask the user to pick from the list.
 
@@ -51,11 +51,11 @@ Continue with the remaining gaps.
 
 **Step 5 — Map each gap to a target file**
 
-| Gap | Target file | Action when file exists |
-|---|---|---|
-| `content` | see content-file mapping below | append |
-| `accessibility` | `playwright/typescript/tests/accessibility.spec.ts` | append inside the existing `test.describe('accessibility', ...)` block, after the two `for` loops |
-| `visualRegression` | `playwright/typescript/tests/visual.spec.ts` | append at the bottom of the file |
+| Gap                | Target file                                         | Action when file exists                                                                           |
+| ------------------ | --------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `content`          | see content-file mapping below                      | append                                                                                            |
+| `accessibility`    | `playwright/typescript/tests/accessibility.spec.ts` | append inside the existing `test.describe('accessibility', ...)` block, after the two `for` loops |
+| `visualRegression` | `playwright/typescript/tests/visual.spec.ts`        | append at the bottom of the file                                                                  |
 
 Content-file mapping:
 
@@ -87,7 +87,8 @@ All scaffolds are `test.fixme()` so unfinished scaffolds do not run in CI. The u
 **Content scaffold** — appended to or created in the content target file. Test title: `{pageName} - content`, where `{pageName}` is a human-readable name derived from the class — strip `Page`, split from camelCase into lowercase space-separated words, and append `page` (`RegisterPage` → `register page`, `PasswordResetPage` → `password reset page`, `ServiceStatisticsPage` → `service statistics page`). Template and derivation both match `/generate-stubs` exactly so the Step 6 duplicate guard catches stubs planted by either skill.
 
 New file template:
-```typescript
+
+```text
 import { test, expect } from '@fixtures/base.fixture';
 import { {ClassName} } from '{importPath}';
 
@@ -100,8 +101,8 @@ test.fixme('{pageName} - content', { tag: '@regression' }, async ({ page }) => {
 ```
 
 Append to existing file (import added separately if missing):
-```typescript
 
+```text
 test.fixme('{pageName} - content', { tag: '@regression' }, async ({ page }) => {
   await page.goto({ClassName}.url);
   const pageObject = new {ClassName}(page);
@@ -112,22 +113,20 @@ test.fixme('{pageName} - content', { tag: '@regression' }, async ({ page }) => {
 
 **Accessibility scaffold** — appended inside the existing `test.describe('accessibility', ...)` block in `accessibility.spec.ts`, after both `for` loops. Only emit this when Step 4 did not flag the page as already covered.
 
-```typescript
-
-  test.fixme('{url}', async ({ page }) => {
-    await page.goto({ClassName}.url);
-    await expectNoAccessibilityViolations(page);
-    // TODO: Add {ClassName} to {PUBLIC|AUTHENTICATED}_PAGE_CLASSES to replace this standalone
-    // test with the data-driven loop above, or remove this comment once the test is finalised.
-  });
+```text
+test.fixme('{url}', async ({ page }) => {
+  await page.goto({ClassName}.url);
+  await expectNoAccessibilityViolations(page);
+  // TODO: Add {ClassName} to {PUBLIC|AUTHENTICATED}_PAGE_CLASSES to replace this standalone
+  // test with the data-driven loop above, or remove this comment once the test is finalised.
+});
 ```
 
 Add the page-class import at the top of `accessibility.spec.ts` if missing.
 
 **Visual regression scaffold** — appended at the bottom of `visual.spec.ts`. Test title: `{pageName} visual regression`, using the same `{pageName}` derivation as the content scaffold (so `RegisterPage` → `register page visual regression`).
 
-```typescript
-
+```text
 test.fixme('{pageName} visual regression', { tag: '@regression' }, async ({ page }) => {
   await page.goto({ClassName}.url);
   // TODO: Add a toHaveScreenshot() assertion. Mask any dynamic content (live data tables,
@@ -138,15 +137,15 @@ test.fixme('{pageName} visual regression', { tag: '@regression' }, async ({ page
 
 Add the page-class import at the top of `visual.spec.ts` if missing.
 
-**Step 8 — Update README.md for new spec files**
+**Step 8 — Update focused docs for new spec files**
 
-If Step 7 **created** any new spec files, update `README.md`:
+If Step 7 **created** any new spec files, update the focused docs:
 
-1. Add the file to the "Single test file" run list under "Running tests".
-2. Add an entry to the spec file description list under "Architecture → Directory structure → `tests/`".
-3. Add the file to the "Test tags" table under `@regression`.
+1. Add the command example to `docs/PLAYWRIGHT.md` if the new file changes the documented run patterns.
+2. Add an entry to the spec file description list in `docs/TEST_INVENTORY.md`.
+3. Add the file to the tag documentation in `docs/PLAYWRIGHT.md` under `@regression`.
 
-If no new files were created, do not touch `README.md`.
+If no new files were created, do not touch docs.
 
 **Step 9 — Do not flip the coverage matrix**
 

@@ -49,7 +49,7 @@ git ls-remote --heads origin feature/$ISSUE   # or bugfix/$ISSUE
 If it exists, inspect its recent commits (`git log origin/<branch> --oneline -5`) to decide whether those changes relate to this issue or to something different. If they appear unrelated, pick an alternative name by appending a suffix (e.g. `feature/$ISSUE-2`, `feature/$ISSUE-3`) and repeat the check until a free name is found. Then create the branch from remote `main` using the chosen name (e.g. `git checkout -b feature/$ISSUE origin/main`).
 
 **Step 3 — Make the code change**
-Implement the fix described in the issue. Follow all conventions in `CLAUDE.md` (POM, fixtures, path aliases, security, etc.). When writing assertions against the product's DOM, sanity-check each literal string for upstream bugs before pinning it — see the **External-app text correctness** item in `.claude/skills/deep-review-lite/SKILL.md`.
+Implement the fix described in the issue. Follow behavioral conventions in `CLAUDE.md`, and Playwright conventions such as POM, fixtures, and path aliases in `docs/PLAYWRIGHT.md`. When writing assertions against the product's DOM, sanity-check each literal string for upstream bugs before pinning it — see the **External-app text correctness** item in `.claude/skills/deep-review-lite/SKILL.md`.
 
 **Step 4 — Security review (mandatory, do this first)**
 Run `/security-review` (built-in Claude Code command). This must be done before the code review checklist — do not skip or defer it. If the command is unavailable, manually check: injection via untrusted input, path traversal in file I/O, unhandled parse errors, hardcoded secrets, overly broad permissions. Fix any findings before continuing.
@@ -71,7 +71,7 @@ General checks (every diff):
 
 - Every non-obvious change: "Would I understand why this was done just from the diff?" If no, add a code comment or adjust the implementation.
 - No dead code, commented-out blocks, or debug artifacts left in.
-- Docs updated: if a file documented in `README.md` changed, verify `README.md` reflects the change.
+- Docs updated: if a file documented in `README.md` or `docs/` changed, verify the focused owner doc reflects the change.
 
 CI / workflow files (`.github/workflows/*.yml`):
 
@@ -108,7 +108,7 @@ Push the branch and run `gh pr create`. The PR body must include:
 Re-read every test plan item. For each `[ ]` item that can be verified now, execute and confirm it, then update the PR body via `gh pr edit` to mark it `[x]`. For items that genuinely require a reviewer or CI, leave them as `[ ]` and note what is needed. If any item is found failing, implement a fix on the same branch: work through the code review checklist, run the affected tests, commit and push before considering the task done.
 
 **Step 11 — After merge: record Actual hours on the project item**
-See **Project board → Actual hours** in [README.md](../../../README.md) for how to derive the value.
+See **Actual Hours** in [docs/PROJECT_MANAGEMENT.md](../../../docs/PROJECT_MANAGEMENT.md) for how to derive the value.
 
 ```bash
 PROJECT_ID=PVT_kwHOAG7eT84BRbty

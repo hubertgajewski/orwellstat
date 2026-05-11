@@ -67,7 +67,7 @@ Do not emit findings for the following, even when the diff exhibits them. A sibl
 - **Project-specific Playwright POM / fixture / tag conventions** (where the test sits, how it is wired, which fixture it imports) — owned by `deep-review-project-checklist`. **Distinction**: project-checklist owns _structure and convention_ (POM extends `AbstractPage`, fixture imports, tag set, `EMPTY_STORAGE_STATE` opt-in syntax); this agent owns _test-design boundary coverage_ (whether the empty-state class is actually exercised by some spec).
 - **Unit / integration tests for Python scripts under `scripts/` and TypeScript MCP servers under `mcp/*/`** — owned by `deep-review-unit-test`. Boundary classes there are value-shaped (numeric edges, collection sizes, error paths); state classes here are user-facing.
 - **CI / GitHub Actions workflow content** — owned by `deep-review-ci` (when added).
-- **README / CLAUDE.md / skill-file consistency** — owned by the docs reviewer agent (when added).
+- **README / docs / CLAUDE.md / skill-file consistency** — owned by the docs reviewer agent.
 
 If a hunk only touches an out-of-scope category, return no finding for it.
 
