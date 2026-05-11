@@ -87,7 +87,7 @@
       "visualRegression": true,
       "api": true,
       "securityHeaders": false,
-      "negativePath": false,
+      "negativePath": true,
       "tracking": false
     },
     "/zone/hits/": {
@@ -107,7 +107,7 @@
       "visualRegression": true,
       "api": true,
       "securityHeaders": false,
-      "negativePath": false,
+      "negativePath": true,
       "tracking": false
     },
     "/zone/admin/": {
@@ -149,7 +149,23 @@
   ],
   "pageApplicableCategories": {
     "/zone/": ["title", "content", "accessibility", "visualRegression", "api", "negativePath"],
+    "/zone/stats/": [
+      "title",
+      "content",
+      "accessibility",
+      "visualRegression",
+      "api",
+      "negativePath"
+    ],
     "/zone/hits/": ["title", "content", "accessibility", "visualRegression", "api", "negativePath"],
+    "/zone/scripts/": [
+      "title",
+      "content",
+      "accessibility",
+      "visualRegression",
+      "api",
+      "negativePath"
+    ],
     "/zone/admin/": [
       "title",
       "content",

@@ -1,5 +1,6 @@
 import { type Locator, type Page } from '@fixtures/base.fixture';
 import { AbstractPage } from '@pages/abstract.page';
+import { NO_HITS_LAST_30_DAYS } from '@pages/common';
 import { PARAMETER_OPTIONS, type ParameterOption } from '@pages/public/service-statistics.page';
 
 // Six per-user-only Parametr dimensions that exist on `/zone/stats/` but NOT on the public
@@ -30,6 +31,7 @@ export class StatsPage extends AbstractPage {
   static readonly parameterLabel = 'Parametr';
   static readonly periodLabel = 'Okres';
   static readonly showStatisticsSubmitLabel = 'Pokaż statystyki';
+  static readonly emptyStateMessage = NO_HITS_LAST_30_DAYS;
   static readonly colLp = 'Lp.';
   static readonly colBrowsers = 'Przeglądarki i inne aplikacje WWW';
   static readonly colCount = '#';
@@ -59,6 +61,13 @@ export class StatsPage extends AbstractPage {
     });
   }
 
+  get periodCombobox() {
+    return this.page.getByRole('combobox', {
+      name: StatsPage.periodLabel,
+      exact: true,
+    });
+  }
+
   get showStatisticsSubmit() {
     return this.page.getByRole('button', {
       name: StatsPage.showStatisticsSubmitLabel,
@@ -72,5 +81,12 @@ export class StatsPage extends AbstractPage {
 
   get svgChart(): Locator {
     return this.page.locator('object[type="image/svg+xml"]');
+  }
+
+  get emptyStateHeading(): Locator {
+    return this.page.getByRole('heading', {
+      name: StatsPage.emptyStateMessage,
+      exact: true,
+    });
   }
 }

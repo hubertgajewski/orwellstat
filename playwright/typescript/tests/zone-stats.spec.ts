@@ -5,6 +5,7 @@
  * each dimension renders a distinct chart (switching Parametr is not a server-side no-op).
  */
 import { test, expect } from '@fixtures/base.fixture';
+import { EMPTY_STORAGE_STATE } from '@fixtures/storage-state';
 import { AbstractPage } from '@pages/abstract.page';
 import { StatsPage, USER_PARAMETER_OPTIONS } from '@pages/authenticated/stats.page';
 import { expectHeadings } from '@utils/string.util';
@@ -14,6 +15,23 @@ import {
   navigateAndWaitForSvgChart,
 } from '@utils/svg-chart.util';
 import { StatisticsRow } from '@types-local/statistics-row';
+
+test.describe('empty account', { tag: '@regression' }, () => {
+  test.use({ storageState: EMPTY_STORAGE_STATE });
+
+  test('renders the empty-state surface without chart or table', async ({ page }) => {
+    const statsPage = new StatsPage(page);
+    await statsPage.goto();
+
+    await expect(statsPage.heading).toBeVisible();
+    await expect(statsPage.parameterCombobox).toBeVisible();
+    await expect(statsPage.periodCombobox).toBeVisible();
+    await expect(statsPage.showStatisticsSubmit).toBeVisible();
+    await expect(statsPage.emptyStateHeading).toBeVisible();
+    await expect(statsPage.svgChart).toHaveCount(0);
+    await expect(statsPage.statisticsTable).toHaveCount(0);
+  });
+});
 
 test('SVG chart is rendered on /zone/stats/', { tag: '@regression' }, async ({ page }) => {
   const svgResponse = await navigateAndWaitForSvgChart(
