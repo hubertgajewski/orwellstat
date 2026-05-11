@@ -6,7 +6,7 @@ Description: $ARGUMENTS
 
 **Format — decide first: story or epic?**
 
-See the Epic / Story convention and scales in the **Project board** section of [README.md](../../../README.md).
+See the Epic / Story convention and scales in [docs/PROJECT_MANAGEMENT.md](../../../docs/PROJECT_MANAGEMENT.md).
 
 - **Story** — prefix like `[bug]`, `[ci]`, `[enhancement]`, etc. Use the five-section body below.
 - **Epic** — prefix `[epic]`, apply `epic` label. Use the three-section body below (≥ 2 children).
@@ -33,19 +33,19 @@ See the Epic / Story convention and scales in the **Project board** section of [
 
 **Milestone:** every issue must have a milestone. Pick the one that matches the nature of the work:
 
-| Milestone | Use when the issue is about… |
-|---|---|
-| **Test Coverage Expansion** | New tests, new spec files, new page objects, new test patterns, visual regression |
-| **CI Improvements** | GitHub Actions workflows — scheduling, triggers, parallelism, caching, Dependabot |
-| **Test Infrastructure** | Fixtures, utilities, configuration, environment setup, documentation, refactoring |
-| **Bug Fixes** | Bugs, flakiness fixes, security patches |
-| **Developer Tooling** | Claude Code hooks, slash commands, settings, local dev setup (`act`, scripts) |
-| **Quality Metrics Dashboard** | Defect escape rate, MTTR, coverage tracking, GitHub Pages dashboard |
-| **Learning Exercises** | Self-study, technology exploration, proof-of-concept work |
+| Milestone                     | Use when the issue is about…                                                      |
+| ----------------------------- | --------------------------------------------------------------------------------- |
+| **Test Coverage Expansion**   | New tests, new spec files, new page objects, new test patterns, visual regression |
+| **CI Improvements**           | GitHub Actions workflows — scheduling, triggers, parallelism, caching, Dependabot |
+| **Test Infrastructure**       | Fixtures, utilities, configuration, environment setup, documentation, refactoring |
+| **Bug Fixes**                 | Bugs, flakiness fixes, security patches                                           |
+| **Developer Tooling**         | Claude Code hooks, slash commands, settings, local dev setup (`act`, scripts)     |
+| **Quality Metrics Dashboard** | Defect escape rate, MTTR, coverage tracking, GitHub Pages dashboard               |
+| **Learning Exercises**        | Self-study, technology exploration, proof-of-concept work                         |
 
 If none of the existing milestones fit, **do not assign one silently** — propose a new milestone name and description to the user and wait for approval before creating it and assigning the issue.
 
-**Project #1 board fields** (full scales in README **Project board** section):
+**Project #1 board fields** (full scales in `docs/PROJECT_MANAGEMENT.md`):
 
 - Stories get `Estimate` (Fibonacci 1/2/3/5/8). Anchor: `#145 = 3`.
 - `Estimate = 13` triggers a warning — print `"13 is a warning zone; consider splitting or promoting to an epic. Proceed only if a split would be artificial."` and require explicit user confirmation before writing the field.
@@ -69,6 +69,7 @@ If none of the existing milestones fit, **do not assign one silently** — propo
 This only applies to text that will be posted to GitHub. In-skill prose (headings like "Project #1 board fields" above) is fine as-is because it is read by Claude and never reaches an issue body.
 
 **Steps:**
+
 1. Decide story vs epic based on `$ARGUMENTS`. Draft the title and all required body sections (five for a story, three for an epic). Ask for clarification on any ambiguous section before proceeding.
 2. Select the appropriate milestone using the table above. If none fit, propose a new one and wait for approval.
 3. For a story, pick an Estimate by analogy with the reference stories in the point scale table. If it feels like 13, surface the warning and ask the user whether a split is possible. If it feels like 21+, refuse and propose an epic instead. For an epic, pick a Size from the Size scale. Identify the parent epic if the story belongs to one.

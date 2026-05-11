@@ -12,20 +12,20 @@ Read `playwright/typescript/coverage-matrix.json`. Parse both the `pages` and `f
 
 Use this mapping to resolve each URL to a page class and import path:
 
-| URL | Class | Import |
-|---|---|---|
-| `/` | `HomePage` | `@pages/public` |
-| `/about/` | `AboutSystemPage` | `@pages/public` |
-| `/statistics/` | `ServiceStatisticsPage` | `@pages/public` |
-| `/contact/` | `ContactPage` | `@pages/public` |
-| `/register/` | `RegisterPage` | `@pages/public` |
-| `/2/` | `PreviouslyAddedPage` | `@pages/public/previously-added.page` |
-| `/password_reset/` | `PasswordResetPage` | `@pages/public` |
-| `/zone/` | `InformationPage` | `@pages/authenticated` |
-| `/zone/stats/` | `StatsPage` | `@pages/authenticated` |
-| `/zone/hits/` | `HitsPage` | `@pages/authenticated` |
-| `/zone/scripts/` | `ScriptsPage` | `@pages/authenticated` |
-| `/zone/admin/` | `AdminPage` | `@pages/authenticated` |
+| URL                | Class                   | Import                                |
+| ------------------ | ----------------------- | ------------------------------------- |
+| `/`                | `HomePage`              | `@pages/public`                       |
+| `/about/`          | `AboutSystemPage`       | `@pages/public`                       |
+| `/statistics/`     | `ServiceStatisticsPage` | `@pages/public`                       |
+| `/contact/`        | `ContactPage`           | `@pages/public`                       |
+| `/register/`       | `RegisterPage`          | `@pages/public`                       |
+| `/2/`              | `PreviouslyAddedPage`   | `@pages/public/previously-added.page` |
+| `/password_reset/` | `PasswordResetPage`     | `@pages/public`                       |
+| `/zone/`           | `InformationPage`       | `@pages/authenticated`                |
+| `/zone/stats/`     | `StatsPage`             | `@pages/authenticated`                |
+| `/zone/hits/`      | `HitsPage`              | `@pages/authenticated`                |
+| `/zone/scripts/`   | `ScriptsPage`           | `@pages/authenticated`                |
+| `/zone/admin/`     | `AdminPage`             | `@pages/authenticated`                |
 
 If a URL in the matrix is not in this table, stop and ask the user which page class it maps to.
 
@@ -42,6 +42,7 @@ For each form in the `forms` section where the value is `false`, record a gap: `
 Before generating stubs, read `playwright/typescript/pages/public/index.ts` and `playwright/typescript/pages/authenticated/index.ts`. Check whether each page with `accessibility: false` is already in `PUBLIC_PAGE_CLASSES` or `AUTHENTICATED_PAGE_CLASSES`.
 
 If a page IS in one of those arrays, `accessibility.spec.ts` already tests it via the data-driven loop. In that case:
+
 - Do NOT generate an accessibility stub for that page.
 - Warn the user: "Page `{url}` (`{ClassName}`) is in `{PUBLIC|AUTHENTICATED}_PAGE_CLASSES`, so `accessibility.spec.ts` already covers it. Flip `accessibility` to `true` in `coverage-matrix.json` instead of adding a stub."
 
@@ -50,7 +51,8 @@ If a page IS in one of those arrays, `accessibility.spec.ts` already tests it vi
 For each accessibility gap NOT resolved by Step 5, add a `test.fixme()` inside the existing `test.describe('accessibility', ...)` block in `playwright/typescript/tests/accessibility.spec.ts`. Place it after the existing `for` loops.
 
 Format:
-```typescript
+
+```text
 test.fixme('{url}', async ({ page }) => {
   // TODO: Add {ClassName} to {PUBLIC|AUTHENTICATED}_PAGE_CLASSES
   // or test accessibility for {url} directly here
@@ -64,7 +66,8 @@ test.fixme('{url}', async ({ page }) => {
 For each `visualRegression: false` gap, add a `test.fixme()` to `playwright/typescript/tests/visual.spec.ts`. Add the page class import if not already present.
 
 Format:
-```typescript
+
+```text
 test.fixme('{pageName} visual regression', { tag: '@regression' }, async ({ page }) => {
   // TODO: Navigate to {ClassName}.url and add toHaveScreenshot() assertion
 });
@@ -96,7 +99,8 @@ For each `content: false` gap, determine the target file:
    - `/zone/admin/` → `zone-admin.spec.ts`
 
 New file template:
-```typescript
+
+```text
 import { test, expect } from '@fixtures/base.fixture';
 import { {ClassName} } from '{importPath}';
 
@@ -107,7 +111,8 @@ test.fixme('{pageName} - content', { tag: '@regression' }, async ({ page }) => {
 ```
 
 Existing file — append:
-```typescript
+
+```text
 test.fixme('{pageName} - content', { tag: '@regression' }, async ({ page }) => {
   // TODO: Add content assertions for {ClassName}
 });
@@ -118,29 +123,33 @@ test.fixme('{pageName} - content', { tag: '@regression' }, async ({ page }) => {
 For each uncovered form, add stubs to `playwright/typescript/tests/forms.spec.ts`. Create the file if it does not exist.
 
 Form-to-page mapping:
+
 - `login` → the login form appears on every page via `#statsbar`; use `/` as the entry point, import `HomePage` from `@pages/public`
 - `hitsFilter` → `HitsPage` from `@pages/authenticated`
 - `adminSettings` → `AdminPage` from `@pages/authenticated`
 
 Template for a new `forms.spec.ts`:
-```typescript
+
+```text
 import { test, expect } from '@fixtures/base.fixture';
 ```
 
 Add the appropriate page class imports, then for each form:
-```typescript
+
+```text
 test.fixme('{formName} form', { tag: '@regression' }, async ({ page }) => {
   // TODO: Navigate to the page containing the {formName} form,
   // fill in fields, submit, and verify the result
 });
 ```
 
-**Step 10 — Update README.md**
+**Step 10 — Update focused docs**
 
 If any new spec files were created in Step 8 or Step 9, add them to:
-1. The "Single test file" run list under "Running tests"
-2. The spec file description list under "Architecture"
-3. The "Test tags" table with the appropriate tag (`@regression`)
+
+1. The command examples or architecture notes in `docs/PLAYWRIGHT.md` if the new file changes the documented run patterns
+2. The spec file description list in `docs/TEST_INVENTORY.md`
+3. The tag documentation in `docs/PLAYWRIGHT.md` with the appropriate tag (`@regression`)
 
 **Step 11 — Summary**
 

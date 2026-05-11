@@ -69,7 +69,7 @@ Do not emit findings for the following, even when the diff exhibits them. A sibl
 - **Project-specific Playwright POM / fixture / tag conventions** — owned by `deep-review-project-checklist`.
 - **End-to-end Playwright spec design / state coverage / accessibility states / coverage-matrix flips** — owned by `deep-review-qa`. **Distinction**: qa owns user-facing state classes (empty UI, populated UI, network states, locale, accessibility); this agent owns value-shaped boundary classes (`null`, numeric edges, collection sizes, string content) on the unit-test surface (`scripts/`, `mcp/`, `playwright/typescript/utils/`, `playwright/typescript/scripts/`).
 - **CI / GitHub Actions workflow content** — owned by `deep-review-ci` (when added).
-- **README / CLAUDE.md / skill-file consistency** — owned by the docs reviewer agent (when added).
+- **README / docs / CLAUDE.md / skill-file consistency** — owned by the docs reviewer agent.
 
 If a hunk only touches an out-of-scope category, return no finding for it.
 

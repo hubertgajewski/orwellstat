@@ -47,7 +47,7 @@ Do not emit findings for the following, even when the diff exhibits them. A sibl
 - **Playwright POM / fixture / tag conventions / coverage matrix** — owned by `deep-review-project-checklist`.
 - **type-hint completeness** — whether code is annotated at all (`ANN*` family) is a project-policy choice not covered by this agent's PEP-8/20/257 anchoring. Modernizing existing hints (`List[str]` → `list[str]`, `Optional[X]` → `X | None`) **is** in scope under `idiom` above.
 - **CI / GitHub Actions workflow content** — owned by `deep-review-ci` (when added).
-- **README / CLAUDE.md / skill-file consistency** — owned by the docs reviewer agent (when added).
+- **README / docs / CLAUDE.md / skill-file consistency** — owned by the docs reviewer agent.
 
 If a hunk only touches an out-of-scope category, return no finding for it.
 

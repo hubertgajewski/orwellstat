@@ -46,7 +46,7 @@ Do not emit findings for the following, even when the diff exhibits them. A sibl
 - **Playwright POM / fixture / tag conventions / coverage matrix** — owned by `deep-review-project-checklist`.
 - **Python style or typing** — owned by `deep-review-python`.
 - **CI / GitHub Actions workflow content** — owned by `deep-review-ci` (when added).
-- **README / CLAUDE.md / skill-file consistency** — owned by the docs reviewer agent (when added).
+- **README / docs / CLAUDE.md / skill-file consistency** — owned by the docs reviewer agent.
 
 If a hunk only touches an out-of-scope category, return no finding for it.
 
