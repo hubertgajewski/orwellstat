@@ -1,7 +1,29 @@
 import { test, describe } from 'node:test';
 import { strict as assert } from 'node:assert';
 import { execFileSync } from 'node:child_process';
-import { redactSensitive } from './diagnosis.util.ts';
+import { redactSensitive, resolveAiModels } from './diagnosis.util.ts';
+
+describe('resolveAiModels', () => {
+  test('defaults both Gemini tiers to the GA Flash Lite slug', () => {
+    assert.deepEqual(resolveAiModels('gemini', {}), {
+      fast: 'gemini-3.1-flash-lite',
+      strong: 'gemini-3.1-flash-lite',
+    });
+  });
+
+  test('preserves explicit Gemini model overrides', () => {
+    assert.deepEqual(
+      resolveAiModels('gemini', {
+        AI_MODEL_FAST: 'custom-fast',
+        AI_MODEL_STRONG: 'custom-strong',
+      }),
+      {
+        fast: 'custom-fast',
+        strong: 'custom-strong',
+      }
+    );
+  });
+});
 
 describe('redactSensitive', () => {
   test('redacts Cookie header value', () => {

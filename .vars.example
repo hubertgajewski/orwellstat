@@ -11,10 +11,10 @@ AI_DIAGNOSIS=
 # AI provider for test failure diagnosis. Accepted values: anthropic (default), gemini.
 AI_PROVIDER=
 # Override the fast-tier model used for diagnosis. Leave empty to use the provider default.
-# Defaults: anthropic -> claude-haiku-4-5, gemini -> gemini-3.1-flash-lite-preview.
+# Defaults: anthropic -> claude-haiku-4-5, gemini -> gemini-3.1-flash-lite.
 AI_MODEL_FAST=
 # Override the strong-tier model used for selector-fix proposals. Leave empty to use the provider default.
-# Defaults: anthropic -> claude-sonnet-4-6, gemini -> gemini-3.1-flash-lite-preview.
+# Defaults: anthropic -> claude-sonnet-4-6, gemini -> gemini-3.1-flash-lite.
 AI_MODEL_STRONG=
 # Base URL for the PR code review action (claude-code-review.yml).
 # Leave empty to use Anthropic's native API (requires ANTHROPIC_API_KEY secret, x-api-key auth).
@@ -54,4 +54,3 @@ RUNNER=
 # default local xmllint path. Set to "true" only on a periodic schedule or before a release
 # — every run sends rendered pages (including authenticated zones) to validator.w3.org.
 VALIDATE_REMOTE=
-
