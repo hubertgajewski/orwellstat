@@ -70,9 +70,8 @@ type AiCompletionFn = (opts: {
 
 const MODEL_MAP = {
   anthropic: { fast: 'claude-haiku-4-5', strong: 'claude-sonnet-4-6' },
-  // Both tiers use the same model: free-tier Pro access is unavailable,
-  // and gemini-3.1-flash-lite-preview has the best RPD quota (500 vs 20).
-  gemini: { fast: 'gemini-3.1-flash-lite-preview', strong: 'gemini-3.1-flash-lite-preview' },
+  // Both tiers use the same GA Flash Lite model for the free-tier default.
+  gemini: { fast: 'gemini-3.1-flash-lite', strong: 'gemini-3.1-flash-lite' },
 } as const;
 
 type AiProvider = keyof typeof MODEL_MAP;
@@ -90,6 +89,16 @@ const API_KEY_ENV: Record<AiProvider, string> = {
   anthropic: 'ANTHROPIC_API_KEY',
   gemini: 'GEMINI_API_KEY',
 };
+
+export function resolveAiModels(
+  provider: AiProvider,
+  env: NodeJS.ProcessEnv = process.env
+): Models {
+  return {
+    fast: env.AI_MODEL_FAST || MODEL_MAP[provider].fast,
+    strong: env.AI_MODEL_STRONG || MODEL_MAP[provider].strong,
+  };
+}
 
 type CompletionFactory = (apiKey: string) => Promise<AiCompletionFn>;
 
@@ -275,10 +284,7 @@ export async function attachAiDiagnosis(
 
   try {
     const complete = await PROVIDER_FACTORY[provider](apiKey);
-    const models = {
-      fast: process.env.AI_MODEL_FAST || MODEL_MAP[provider].fast,
-      strong: process.env.AI_MODEL_STRONG || MODEL_MAP[provider].strong,
-    };
+    const models = resolveAiModels(provider);
     console.log(`[AI diagnosis] provider=${provider} fast=${models.fast} strong=${models.strong}`);
 
     // Redact before truncation so cut-off tokens cannot leak their prefix.

@@ -1368,6 +1368,24 @@ class TestYamlGuards(unittest.TestCase):
         self.assertIn("github.repository", self.workflow_content)
 
 
+class TestGeminiModelDefaults(unittest.TestCase):
+    @patch("self_healing.urllib.request.urlopen")
+    def test_call_gemini_defaults_to_ga_flash_lite_slug(self, mock_urlopen):
+        mock_response = MagicMock()
+        mock_response.read.return_value = json.dumps({
+            "candidates": [{"content": {"parts": [{"text": "ok"}]}}],
+        }).encode()
+        mock_urlopen.return_value.__enter__.return_value = mock_response
+
+        with patch.dict(os.environ, {}, clear=True):
+            result = self_healing._call_gemini("fake-key", "prompt")
+
+        self.assertEqual(result, "ok")
+        request = mock_urlopen.call_args.args[0]
+        self.assertIn("/models/gemini-3.1-flash-lite:generateContent", request.full_url)
+        self.assertNotIn("gemini-3.1-flash-lite-" "preview", request.full_url)
+
+
 # ===================================================================
 # Redaction of LLM-bound artifacts (issue #402)
 #

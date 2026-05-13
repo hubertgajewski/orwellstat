@@ -445,8 +445,8 @@ def _call_anthropic(api_key: str, user_content: str) -> str | None:
 
 
 def _call_gemini(api_key: str, user_content: str) -> str | None:
-    # Default matches diagnosis.util.ts — chosen for its free-tier RPD quota (500 vs 20).
-    model = os.environ.get("AI_MODEL_STRONG") or "gemini-3.1-flash-lite-preview"
+    # Default matches diagnosis.util.ts.
+    model = os.environ.get("AI_MODEL_STRONG") or "gemini-3.1-flash-lite"
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
     body = json.dumps({
         "systemInstruction": {"parts": [{"text": _SELECTOR_FIX_SYSTEM_PROMPT}]},
