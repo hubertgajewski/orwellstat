@@ -64,7 +64,7 @@ jobs:
       # ignore ANTHROPIC_DEFAULT_SONNET_MODEL for internal Agent SDK sub-calls and leak
       # native Sonnet billing through OpenRouter. Do NOT bump to @v1 until upstream fix
       # lands and is verified clean for 48h. See issue #375.
-      - uses: anthropics/claude-code-action@034cbdb008291e7eeeac420d315fc3b45fca3781 # v1.0.117
+      - uses: anthropics/claude-code-action@51ea8ea73a139f2a74ff649e3092c25a904aed7e # v1.0.123
         id: claude_code_action
         env:
           ANTHROPIC_BASE_URL: ${{ vars.ANTHROPIC_BASE_URL }}
@@ -158,7 +158,7 @@ jobs:
         id: claude_code_action_fallback
         if: steps.claude_code_action.conclusion == 'success' && steps.primary_check.outputs.need_fallback == 'true'
         # Pinned to v1.0.103 (4e5d8b13) — see comment on the primary step above. #375
-        uses: anthropics/claude-code-action@034cbdb008291e7eeeac420d315fc3b45fca3781 # v1.0.117
+        uses: anthropics/claude-code-action@51ea8ea73a139f2a74ff649e3092c25a904aed7e # v1.0.123
         env:
           # Clear proxy config so the Anthropic SDK hits the native endpoint.
           ANTHROPIC_BASE_URL: ''
