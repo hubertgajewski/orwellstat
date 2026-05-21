@@ -50,7 +50,6 @@ This file describes what each Playwright spec covers. For commands, tags, fixtur
 | `utils/css-validator.util.test.ts`              | CSS validation formatting         | Verifies intentionally broken CSS reports per-line errors with line numbers and source URL.                                                                                    |
 | `scripts/verify-coverage-matrix.test.ts`        | Coverage-matrix drift verifier    | Covers false-positive, false-negative, in-sync, matrix-edit regression, and parser edge cases.                                                                                 |
 | `scripts/redact.test.ts`                        | Redaction CLI                     | Runs the real stdin/stdout subprocess path for `scripts/redact.ts`.                                                                                                            |
-| `scripts/patch-playwright-yauzl-node26.test.ts` | Node 26 Playwright patch          | Verifies the postinstall patch for the vendored `yauzl` stream-destroy issue.                                                                                                  |
 
 ## Coverage Matrix
 

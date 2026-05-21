@@ -107,7 +107,7 @@ playwright/typescript/
   coverage-matrix.json           # manual page/form coverage matrix
   fixtures/                      # custom Playwright fixtures and storage-state constants
   pages/                         # Page Object Model classes
-  scripts/                       # matrix verifier, redaction CLI, postinstall patch
+  scripts/                       # matrix verifier and redaction CLI
   test-data/                     # tracking snippet fixtures
   tests/                         # Playwright spec files
   types/                         # local TypeScript interfaces
@@ -167,13 +167,10 @@ Public page classes live under `pages/public/`; authenticated page classes live 
 | `utils/css-validator.util.ts`               | Pure helpers around `csstree-validator`                                                                                                                 |
 | `scripts/verify-coverage-matrix.ts`         | Cross-checks active tests against `coverage-matrix.json`                                                                                                |
 | `scripts/redact.ts`                         | stdin/stdout redaction CLI used by self-healing                                                                                                         |
-| `scripts/patch-playwright-yauzl-node26.mjs` | Node 26 postinstall patch for the Playwright vendored `yauzl` stream-destroy issue                                                                      |
 | `test-data/scripts/snippet-*.txt`           | Canonical HTML5, HTML4, and XHTML tracking snippets with `{{ORWELLSTAT_BASE}}` placeholders                                                             |
 | `test-data/scripts/tracking-*`              | HTML/HTML4/XHTML shells used by tracking E2E tests after inserting the matching live snippet                                                            |
 
 Unit tests for pure utilities run through `npm run test:unit`.
-
-`scripts/patch-playwright-yauzl-node26.mjs` can be removed with the `postinstall` hook once the repository upgrades to a stable Playwright release containing upstream PR #40747.
 
 ## Soft Assertions
 
