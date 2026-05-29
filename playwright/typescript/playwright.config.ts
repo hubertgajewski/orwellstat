@@ -1,7 +1,8 @@
+import { fileURLToPath } from 'node:url';
 import { defineConfig, devices } from '@playwright/test';
 import dotenv from 'dotenv';
 
-dotenv.config({ path: new URL('../../.env', import.meta.url).pathname, quiet: true });
+dotenv.config({ path: fileURLToPath(new URL('../../.env', import.meta.url)), quiet: true });
 
 const BASE_URLS: Record<string, string> = {
   production: 'https://orwellstat.hubertgajewski.com',
@@ -19,7 +20,7 @@ const baseURL = BASE_URLS[env];
 // opt into `.auth/empty.json` per file via `test.use({ storageState: EMPTY_STORAGE_STATE })`
 // from `@fixtures/storage-state`. This config cannot use path aliases — they're resolved by
 // tsconfig-paths after Playwright reads the config — so the URL is inlined here.
-const POPULATED_STORAGE_STATE = new URL('.auth/populated.json', import.meta.url).pathname;
+const POPULATED_STORAGE_STATE = fileURLToPath(new URL('.auth/populated.json', import.meta.url));
 
 /**
  * See https://playwright.dev/docs/test-configuration.

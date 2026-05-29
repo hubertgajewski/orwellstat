@@ -1,8 +1,11 @@
+import { fileURLToPath } from 'node:url';
 import { test as setup, expect, type Page } from '@playwright/test';
 import { loadEnv, requireCredentials, type Account } from '@utils/env.util';
 import { AbstractPage } from '@pages/abstract.page';
+import { writeAuthStateMetadata } from '@utils/auth-state-metadata.util';
 
 loadEnv(import.meta.url, 2);
+const AUTH_STATE_DIR = new URL('.auth/', import.meta.url);
 
 // Run the two logins sequentially to avoid any login-throttling edge cases on the target
 // server. The setup project is also marked non-parallel in `playwright.config.ts`.
@@ -23,7 +26,7 @@ async function authenticate(page: Page, account: Account): Promise<void> {
   await expect(AbstractPage.loggedInUsername(page)).toHaveText(user);
   await page
     .context()
-    .storageState({ path: new URL(`.auth/${account}.json`, import.meta.url).pathname });
+    .storageState({ path: fileURLToPath(new URL(`${account}.json`, AUTH_STATE_DIR)) });
 }
 
 setup('authenticate populated', { tag: '@auth-populated' }, async ({ page }) => {
@@ -32,4 +35,8 @@ setup('authenticate populated', { tag: '@auth-populated' }, async ({ page }) => 
 
 setup('authenticate empty', { tag: '@auth-empty' }, async ({ page }) => {
   await authenticate(page, 'empty');
+});
+
+setup.afterAll(async () => {
+  await writeAuthStateMetadata(AUTH_STATE_DIR);
 });

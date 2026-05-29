@@ -67,16 +67,17 @@ Auth setup details:
 
 - `auth-setup` runs `npx playwright test --project=setup` once per browser project.
 - Each setup leg logs in both populated and empty accounts, so normal runs perform 10 logins total, independent of shard count.
-- Auth state artifacts are named `auth-state-<id>` and retained for 1 day.
+- Auth state artifacts are named `auth-state-<id>` and retained for 1 day. Each artifact contains `.auth/populated.json`, `.auth/empty.json`, and `.auth/metadata.json` with non-secret generation time and GitHub run identifiers.
 - Downstream test legs depend on auth setup, so a setup failure skips tests instead of letting them pass with stale state.
 
 Reusable test job:
 
 - `playwright-run.yml` accepts matrix inputs (`project`, `browser`, `id`, `snap-token`, `shard`, `total-shards`) plus run-shape inputs (`update-visual-baselines`, `env`, `runner`, `ref`).
 - It inherits secrets.
-- Each leg installs only the browser it needs.
+- Each leg normally installs only the browser it needs.
+- It validates downloaded auth-state files and metadata before running the shard. Missing metadata, invalid timestamps, or metadata older than 1 hour triggers a local setup-project rerun in that leg; this protects failed-job reruns from reusing expired storage-state artifacts. Local auth regeneration reuses the shared browser setup action to install Chromium only for non-Chromium shard legs because the setup project uses Playwright's default browser.
 - It runs `npx playwright test --project=<project> --shard=<shard>/<total-shards>`.
-- Per-leg artifacts use `-<id>-<shard>` suffixes for reports, blob reports, self-healing data, and visual baselines.
+- Per-leg artifacts use `-<id>-<shard>` suffixes for reports, blob reports, self-healing data, and visual baselines. Report/blob uploads only run after the shard test step is reached, and self-healing data is collected/uploaded only when that shard test step fails.
 - Artifacts are retained for 30 days unless otherwise noted.
 
 Caching:

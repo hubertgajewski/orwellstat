@@ -125,8 +125,11 @@ For what each spec covers, see [TEST_INVENTORY.md](TEST_INVENTORY.md).
 
 - `.auth/populated.json`
 - `.auth/empty.json`
+- `.auth/metadata.json`
 
-The setup project runs sequentially to avoid back-to-back login throttling. After login, it asserts that the rendered username matches the credential pair it just used, so swapped populated/empty credentials fail early.
+The setup project runs sequentially to avoid back-to-back login throttling. After login, it asserts that the rendered username matches the credential pair it just used, so swapped populated/empty credentials fail early. Metadata contains the generation timestamp, GitHub run identifiers, and storage-state labels only; it must not contain usernames, cookies, or credentials.
+
+CI test shards download the auth-state artifact and validate that all three files exist and that metadata is fresh before running with `--no-deps`. If a failed-job rerun reuses stale artifacts, the reusable test job reruns the setup project locally before starting the shard.
 
 Browser projects default to `storageState: '.auth/populated.json'`. Empty-state specs opt in per file:
 
@@ -150,25 +153,26 @@ Public page classes live under `pages/public/`; authenticated page classes live 
 
 ## Fixtures And Utilities
 
-| Path                                        | Purpose                                                                                                                                                 |
-| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `fixtures/base.fixture.ts`                  | Extends Playwright `test`, captures console logs and `dom.xhtml` on failure, attaches AI diagnosis when enabled, and re-exports common Playwright types |
-| `fixtures/api.fixture.ts`                   | Adds `unauthenticatedRequest` and `authenticatedRequest` API fixtures                                                                                   |
-| `fixtures/storage-state.ts`                 | Exports populated and empty storage-state paths                                                                                                         |
-| `utils/accessibility.util.ts`               | Axe WCAG checks                                                                                                                                         |
-| `utils/string.util.ts`                      | Heading visibility helper                                                                                                                               |
-| `utils/svg-chart.util.ts`                   | SVG chart loading, parsing, and chart/table comparison helpers                                                                                          |
-| `utils/svg-chart-table.util.ts`             | Fixture-free XHTML snapshot table extractor                                                                                                             |
-| `utils/svg-chart-percent.util.ts`           | Percentage normalization and chart/table tolerance helpers                                                                                              |
-| `utils/validation.util.ts`                  | XHTML and CSS validators with local and remote modes                                                                                                    |
-| `utils/track-hit.util.ts`                   | Tracking-hit seeding through live snippets and `/scripts/drain.php`                                                                                     |
-| `utils/env.util.ts`                         | `.env` loading and credential validation                                                                                                                |
-| `utils/diagnosis.util.ts`                   | AI diagnosis, selector-fix attachment, and redaction rules                                                                                              |
-| `utils/css-validator.util.ts`               | Pure helpers around `csstree-validator`                                                                                                                 |
-| `scripts/verify-coverage-matrix.ts`         | Cross-checks active tests against `coverage-matrix.json`                                                                                                |
-| `scripts/redact.ts`                         | stdin/stdout redaction CLI used by self-healing                                                                                                         |
-| `test-data/scripts/snippet-*.txt`           | Canonical HTML5, HTML4, and XHTML tracking snippets with `{{ORWELLSTAT_BASE}}` placeholders                                                             |
-| `test-data/scripts/tracking-*`              | HTML/HTML4/XHTML shells used by tracking E2E tests after inserting the matching live snippet                                                            |
+| Path                                | Purpose                                                                                                                                                 |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `fixtures/base.fixture.ts`          | Extends Playwright `test`, captures console logs and `dom.xhtml` on failure, attaches AI diagnosis when enabled, and re-exports common Playwright types |
+| `fixtures/api.fixture.ts`           | Adds `unauthenticatedRequest` and `authenticatedRequest` API fixtures                                                                                   |
+| `fixtures/storage-state.ts`         | Exports populated and empty storage-state paths                                                                                                         |
+| `utils/accessibility.util.ts`       | Axe WCAG checks                                                                                                                                         |
+| `utils/string.util.ts`              | Heading visibility helper                                                                                                                               |
+| `utils/svg-chart.util.ts`           | SVG chart loading, parsing, and chart/table comparison helpers                                                                                          |
+| `utils/svg-chart-table.util.ts`     | Fixture-free XHTML snapshot table extractor                                                                                                             |
+| `utils/svg-chart-percent.util.ts`   | Percentage normalization and chart/table tolerance helpers                                                                                              |
+| `utils/validation.util.ts`          | XHTML and CSS validators with local and remote modes                                                                                                    |
+| `utils/track-hit.util.ts`           | Tracking-hit seeding through live snippets and `/scripts/drain.php`                                                                                     |
+| `utils/env.util.ts`                 | `.env` loading and credential validation                                                                                                                |
+| `utils/auth-state-metadata.util.ts` | Non-secret `.auth/metadata.json` writer for CI auth-state freshness checks                                                                              |
+| `utils/diagnosis.util.ts`           | AI diagnosis, selector-fix attachment, and redaction rules                                                                                              |
+| `utils/css-validator.util.ts`       | Pure helpers around `csstree-validator`                                                                                                                 |
+| `scripts/verify-coverage-matrix.ts` | Cross-checks active tests against `coverage-matrix.json`                                                                                                |
+| `scripts/redact.ts`                 | stdin/stdout redaction CLI used by self-healing                                                                                                         |
+| `test-data/scripts/snippet-*.txt`   | Canonical HTML5, HTML4, and XHTML tracking snippets with `{{ORWELLSTAT_BASE}}` placeholders                                                             |
+| `test-data/scripts/tracking-*`      | HTML/HTML4/XHTML shells used by tracking E2E tests after inserting the matching live snippet                                                            |
 
 Unit tests for pure utilities run through `npm run test:unit`.
 
