@@ -185,9 +185,9 @@
         "hooks": [
           {
             "type": "command",
-            "command": "INPUT=$(cat); CMD=$(printf '%s' \"$INPUT\" | jq -r '.tool_input.command // empty'); case \"$CMD\" in *git*|*commit*|*';'*|*'&'*|*'|'*|*'<'*|*'>'*|*'$'*|*'('*|*')'*|*'{'*|*'}'*|*'='*|*'`'*) ;; *) exit 0;; esac; ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0; SCRIPT=\"$ROOT/scripts/verify_commit_command_hook.py\"; EXPECTED='0c6d499e65f850b8066158c2d8ce548da0756c7f3c83acd5afb2ef453d6aaa95'; ACTUAL=$(shasum -a 256 \"$SCRIPT\" 2>/dev/null | awk '{print $1}') || exit 2; if [ \"$ACTUAL\" != \"$EXPECTED\" ]; then echo 'BLOCKED: commit hook helper hash mismatch; review scripts/verify_commit_command_hook.py and update the pinned hook hash deliberately.' >&2; exit 2; fi; printf '%s' \"$INPUT\" | python3 \"$SCRIPT\" claude",
+            "command": "INPUT=$(cat); CMD=$(printf '%s' \"$INPUT\" | jq -r '.tool_input.command // empty'); case \"$CMD\" in *git*|*send-pack*|*\\'*|*\\\"*|*\\\\*|*';'*|*'&'*|*'|'*|*'<'*|*'>'*|*'$'*|*'('*|*')'*|*'{'*|*'}'*|*'='*|*'`'*) ;; *) exit 0;; esac; ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0; SCRIPT=\"$ROOT/scripts/verify_commit_command_hook.py\"; EXPECTED='f5c8549116a0de826c12cfeb8e39b7a593fa333577ceb6e987e8c5ea3eeac161'; ACTUAL=$(shasum -a 256 \"$SCRIPT\" 2>/dev/null | awk '{print $1}') || exit 2; if [ \"$ACTUAL\" != \"$EXPECTED\" ]; then echo 'BLOCKED: publish hook helper hash mismatch; review scripts/verify_commit_command_hook.py and update the pinned hook hash deliberately.' >&2; exit 2; fi; printf '%s' \"$INPUT\" | python3 \"$SCRIPT\" claude",
             "timeout": 60,
-            "statusMessage": "Verifying types and format before commit..."
+            "statusMessage": "Verifying types and format before push..."
           },
           {
             "type": "command",
@@ -197,11 +197,11 @@
           },
           {
             "type": "agent",
-            "if": "Bash(git commit*)",
-            "prompt": "A git commit is about to run in the orwellstat repo. Execute the project's deep code review by following .claude/skills/deep-review-lite/SKILL.md exactly (run /security-review, /simplify, then the project checklist against `git diff HEAD`). If any blocking issues remain after the skill's 3-cycle loop, return decision 'block' with the prioritised failure list as the reason so the commit is aborted. If the skill finishes with no blocking failures, return decision 'allow'. Input: $ARGUMENTS",
+            "if": "Bash(git push*)",
+            "prompt": "A git push is about to publish refs from the orwellstat repo. Execute the project's deep code review by following .claude/skills/deep-review-lite/SKILL.md exactly (run /security-review, /simplify, then the project checklist against `git diff HEAD`). If any blocking issues remain after the skill's 3-cycle loop, return decision 'block' with the prioritised failure list as the reason so the push is aborted. If the skill finishes with no blocking failures, return decision 'allow'. Input: $ARGUMENTS",
             "model": "claude-sonnet-4-6",
             "timeout": 600,
-            "statusMessage": "Running /deep-review-lite before commit..."
+            "statusMessage": "Running /deep-review-lite before push..."
           }
         ]
       }

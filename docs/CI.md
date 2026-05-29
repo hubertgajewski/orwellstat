@@ -35,19 +35,19 @@ Use [CI_LOCAL.md](CI_LOCAL.md) for self-hosted runner setup, security model, and
 
 Root scripts support CI workflows, hooks, and generated reports:
 
-| Script                                     | Purpose                                                                                   |
-| ------------------------------------------ | ----------------------------------------------------------------------------------------- |
-| `scripts/generate-quality-metrics.py`      | Generates `QUALITY_METRICS.md` and appends `quality-metrics-history.json` data points     |
-| `scripts/self-healing.py`                  | Parses Playwright failure artifacts and posts selector-fix comments or creates draft PRs  |
-| `scripts/provision-worktree-env.sh`        | Symlinks or copies gitignored env files into per-issue worktrees                          |
-| `scripts/setup-runners.sh`                 | Registers and starts the self-hosted runner pool as launchd services                      |
-| `scripts/remove-runners.sh`                | De-registers and stops the self-hosted runner pool                                        |
-| `scripts/runner-lib.sh`                    | Shared helpers for the self-hosted runner setup/removal scripts                           |
-| `scripts/verify_commit_command_hook.py`    | Shared pinned-hook check that rejects indirect or multi-line `git commit` command forms   |
-| `scripts/test_generate_quality_metrics.py` | Unit tests for generated quality-metrics behavior                                         |
-| `scripts/test_self_healing.py`             | Unit tests for self-healing loop prevention, classification, redaction, and AI boundaries |
-| `scripts/test_runner_scripts.py`           | Unit tests for self-hosted runner setup/removal scripts                                   |
-| `scripts/test_commit_hook_config.py`       | Unit tests for Claude/Codex commit-hook configuration                                     |
+| Script                                     | Purpose                                                                                          |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------ |
+| `scripts/generate-quality-metrics.py`      | Generates `QUALITY_METRICS.md` and appends `quality-metrics-history.json` data points            |
+| `scripts/self-healing.py`                  | Parses Playwright failure artifacts and posts selector-fix comments or creates draft PRs         |
+| `scripts/provision-worktree-env.sh`        | Symlinks or copies gitignored env files into per-issue worktrees                                 |
+| `scripts/setup-runners.sh`                 | Registers and starts the self-hosted runner pool as launchd services                             |
+| `scripts/remove-runners.sh`                | De-registers and stops the self-hosted runner pool                                               |
+| `scripts/runner-lib.sh`                    | Shared helpers for the self-hosted runner setup/removal scripts                                  |
+| `scripts/verify_commit_command_hook.py`    | Shared pinned-hook check that verifies direct `git push` commands and rejects wrapped push forms |
+| `scripts/test_generate_quality_metrics.py` | Unit tests for generated quality-metrics behavior                                                |
+| `scripts/test_self_healing.py`             | Unit tests for self-healing loop prevention, classification, redaction, and AI boundaries        |
+| `scripts/test_runner_scripts.py`           | Unit tests for self-hosted runner setup/removal scripts                                          |
+| `scripts/test_commit_hook_config.py`       | Unit tests for Claude/Codex publish-time hook configuration                                      |
 
 ## Playwright Typescript Tests
 
@@ -138,6 +138,12 @@ npm run test:unit
 ```
 
 Add `lint-and-types` to required branch-protection checks on `main` so local `git commit --no-verify` cannot bypass formatting, type, or unit-test failures.
+
+## Assistant Publish Gate
+
+Claude and Codex run the local assistant gate at publish time, not commit time. Direct `git push` commands run the pinned `scripts/verify_commit_command_hook.py` helper before refs are published; the helper runs the TypeScript check and Prettier format check for `playwright/typescript/`. Claude additionally runs the deep review agent hook before allowing the push.
+
+Wrapped or indirect publication commands such as `cd repo && git push`, `env git push`, alias-configured push commands, and `send-pack` are blocked with an actionable message. Local history-maintenance commands such as `git rebase origin/main`, `git rebase --continue`, `git merge`, `git cherry-pick`, and local `git commit` commands do not trigger the publish gate.
 
 ## Standalone Baseline Update
 

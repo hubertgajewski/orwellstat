@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Shared Claude/Codex hook for direct git commit commands."""
+"""Shared Claude/Codex hook for direct git push commands."""
 
 from __future__ import annotations
 
@@ -16,8 +16,8 @@ Decision = Literal["none", "block", "allow"]
 MAX_ENV_SPLIT_DEPTH = 3
 
 BLOCK_MESSAGES = {
-    "claude": 'BLOCKED: use a direct git commit command so the /deep-review agent hook runs (avoid compound commands like "cd repo && git commit").',
-    "codex": 'BLOCKED: use a direct git commit command so commit hooks run consistently (avoid compound commands like "cd repo && git commit").',
+    "claude": 'BLOCKED: use a direct git push command so the /deep-review agent hook runs before publication (avoid wrappers like "cd repo && git push").',
+    "codex": 'BLOCKED: use a direct git push command so verification runs before publication (avoid wrappers like "cd repo && git push").',
 }
 
 
@@ -99,11 +99,33 @@ GIT_OPTIONS_WITH_VALUES = {
     "--exec-path",
     "--config-env",
 }
-SUBSTITUTION_COMMIT_RE = re.compile(
-    r"(`|\$\(|<\(|>\()\s*(/\S*/)?git\b(?:\s+(?:-[A-Za-z]|--[A-Za-z-]+)(?:[=\s]\S+)*)*\s+commit\b",
+PUBLISH_SUBCOMMANDS = {"push", "send-pack"}
+PUBLISH_SUBCOMMAND_PATTERN = "|".join(
+    re.escape(subcommand) for subcommand in sorted(PUBLISH_SUBCOMMANDS, key=len, reverse=True)
+)
+SUBSTITUTION_PUBLISH_RE = re.compile(
+    rf"(`|\$\(|<\(|>\()\s*(/\S*/)?git\b(?:\s+(?:-[A-Za-z]|--[A-Za-z-]+)(?:[=\s]\S+)*)*\s+(?:{PUBLISH_SUBCOMMAND_PATTERN})\b",
     re.DOTALL,
 )
-DYNAMIC_COMMIT_RE = re.compile(r"\bgit\s*\$[({A-Za-z_].*\bcommit\b", re.DOTALL)
+DYNAMIC_PUBLISH_RE = re.compile(
+    rf"\bgit\s*\$[({{A-Za-z_].*\b(?:{PUBLISH_SUBCOMMAND_PATTERN})\b|"
+    rf"\bgit\$\{{[^}}]+\}}(?:{PUBLISH_SUBCOMMAND_PATTERN})\b",
+    re.DOTALL,
+)
+GIT_PUBLISH_RE = re.compile(
+    rf"\bgit\b(?:\s+(?:-[A-Za-z]|--[A-Za-z-]+)(?:[=\s]\S+)*)*\s+(?:{PUBLISH_SUBCOMMAND_PATTERN})\b|\bgit-send-pack\b",
+    re.DOTALL,
+)
+RAW_PUBLISH_RE = re.compile(
+    rf"\bgit\b.*\b(?:{PUBLISH_SUBCOMMAND_PATTERN})\b|\bgit-send-pack\b",
+    re.DOTALL,
+)
+RUNTIME_PUBLISH_RE = re.compile(
+    rf"\bgit\b(?:\s+(?:-[A-Za-z]|--[A-Za-z-]+)(?:[=\s]\S+)*)*\s+(?:{PUBLISH_SUBCOMMAND_PATTERN})\b|"
+    rf"[\"']git[\"']\s*\+\s*[\"']\s+(?:{PUBLISH_SUBCOMMAND_PATTERN})\b|"
+    r"\bgit-send-pack\b",
+    re.DOTALL,
+)
 SHELL_INTERPRETERS = {"bash", "dash", "sh", "zsh"}
 INLINE_RUNTIME_FLAGS = {"-c", "-e", "--eval", "-p", "--print"}
 XARGS_OPTIONS_WITH_VALUES = {
@@ -122,12 +144,15 @@ XARGS_OPTIONS_WITH_VALUES = {
     "-s",
     "--max-chars",
 }
-KNOWN_NON_COMMIT_GIT_SUBCOMMANDS = {
+KNOWN_NON_PUBLISH_GIT_SUBCOMMANDS = {
     "add",
     "apply",
     "blame",
     "branch",
     "checkout",
+    "cherry-pick",
+    "check-ignore",
+    "commit",
     "commit-graph",
     "config",
     "describe",
@@ -138,11 +163,14 @@ KNOWN_NON_COMMIT_GIT_SUBCOMMANDS = {
     "help",
     "log",
     "ls-files",
+    "ls-remote",
     "ls-tree",
+    "merge",
     "mv",
-    "push",
+    "pull",
     "remote",
     "reflog",
+    "rebase",
     "restore",
     "rev-parse",
     "reset",
@@ -174,13 +202,13 @@ ENV_OPTIONS_WITH_VALUES = {
 ENV_FLAGS_WITHOUT_VALUES = {"-i", "-", "--ignore-environment"}
 
 
-def config_value_defines_commit_alias(value: str) -> bool:
-    return bool(re.match(r"^alias\.[^.]+=.*\bcommit\b", value, re.IGNORECASE))
+def config_value_defines_publish_alias(value: str) -> bool:
+    return bool(re.match(rf"^alias\.[^.]+=.*\b(?:{PUBLISH_SUBCOMMAND_PATTERN})\b", value, re.IGNORECASE))
 
 
 def config_value_can_define_alias(value: str) -> bool:
     return bool(
-        config_value_defines_commit_alias(value)
+        config_value_defines_publish_alias(value)
         or re.match(r"^include(?:If\..+)?\.path=", value, re.IGNORECASE)
         or re.match(r"^alias\.[^.]+$", value, re.IGNORECASE)
     )
@@ -196,6 +224,10 @@ def config_env_key_can_define_alias(value: str) -> bool:
 
 def is_git_executable(token: str) -> bool:
     return token == "git" or token.endswith("/git")
+
+
+def is_git_send_pack_executable(token: str) -> bool:
+    return Path(token).name == "git-send-pack" or token.endswith("/git-send-pack")
 
 
 def is_git_config_assignment(token: str) -> bool:
@@ -256,7 +288,7 @@ def env_prefix_has_git_config_assignment(segment: list[str], index: int) -> bool
     return scan_env_prefix(segment, index)[1]
 
 
-def env_split_string_contains_commit(segment: list[str], index: int, depth: int) -> bool:
+def env_split_string_contains_publish(segment: list[str], index: int, depth: int) -> bool:
     return any(command_decision(payload, depth + 1) != "none" for payload in scan_env_prefix(segment, index)[2])
 
 
@@ -308,7 +340,7 @@ def skip_exec_prefix(segment: list[str], index: int) -> int:
     return index
 
 
-def interpreter_string_contains_commit(segment: list[str], depth: int) -> bool:
+def interpreter_string_contains_publish(segment: list[str], depth: int) -> bool:
     if not segment:
         return False
 
@@ -329,19 +361,19 @@ def interpreter_string_contains_commit(segment: list[str], depth: int) -> bool:
     return False
 
 
-def python_string_contains_commit(segment: list[str]) -> bool:
+def python_string_contains_publish(segment: list[str]) -> bool:
     if not segment or not re.match(r"^python(?:\d+(?:\.\d+)?)?$", Path(segment[0]).name):
         return False
 
     for index, token in enumerate(segment[1:], start=1):
         if token == "-c":
-            return index + 1 < len(segment) and re.search(r"\bgit\b.*\bcommit\b", segment[index + 1], re.DOTALL) is not None
+            return index + 1 < len(segment) and RUNTIME_PUBLISH_RE.search(segment[index + 1]) is not None
         if token.startswith("-c") and len(token) > 2:
-            return re.search(r"\bgit\b.*\bcommit\b", token[2:], re.DOTALL) is not None
+            return RUNTIME_PUBLISH_RE.search(token[2:]) is not None
     return False
 
 
-def node_string_contains_commit(segment: list[str]) -> bool:
+def node_string_contains_publish(segment: list[str]) -> bool:
     if not segment or Path(segment[0]).name != "node":
         return False
 
@@ -349,20 +381,20 @@ def node_string_contains_commit(segment: list[str]) -> bool:
         if token in INLINE_RUNTIME_FLAGS:
             if token in {"-p", "--print"} and index + 1 < len(segment) and segment[index + 1].startswith("-"):
                 continue
-            return index + 1 < len(segment) and re.search(r"\bgit\b.*\bcommit\b", segment[index + 1], re.DOTALL) is not None
+            return index + 1 < len(segment) and RUNTIME_PUBLISH_RE.search(segment[index + 1]) is not None
         if token.startswith("--eval=") or token.startswith("--print="):
-            return re.search(r"\bgit\b.*\bcommit\b", token.split("=", 1)[1], re.DOTALL) is not None
+            return RUNTIME_PUBLISH_RE.search(token.split("=", 1)[1]) is not None
         if token.startswith("-") and not token.startswith("--") and "e" in token[1:] and len(token) > 2:
             inline = token[token.index("e") + 1 :]
             if inline:
-                return re.search(r"\bgit\b.*\bcommit\b", inline, re.DOTALL) is not None
-            return index + 1 < len(segment) and re.search(r"\bgit\b.*\bcommit\b", segment[index + 1], re.DOTALL) is not None
+                return RUNTIME_PUBLISH_RE.search(inline) is not None
+            return index + 1 < len(segment) and RUNTIME_PUBLISH_RE.search(segment[index + 1]) is not None
         if token.startswith("-p") and len(token) > 2:
-            return re.search(r"\bgit\b.*\bcommit\b", token[2:], re.DOTALL) is not None
+            return RUNTIME_PUBLISH_RE.search(token[2:]) is not None
     return False
 
 
-def substitution_contains_commit(command: str, depth: int) -> bool:
+def substitution_contains_publish(command: str, depth: int) -> bool:
     substitution_re = re.compile(r"\$\(([^)]*)\)|`([^`]*)`|[<>]\(([^)]*)\)", re.DOTALL)
     for match in substitution_re.finditer(command):
         body = next(group for group in match.groups() if group is not None)
@@ -453,10 +485,10 @@ def xargs_input_info(segment: list[str]) -> tuple[bool, set[str]]:
     return has_external_input, replacement_tokens
 
 
-def xargs_utility_contains_commit(current: list[str], utility_index: int, depth: int) -> bool:
+def xargs_utility_contains_publish(current: list[str], utility_index: int, depth: int) -> bool:
     utility = current[utility_index:]
     has_external_or_replacement_input, replacement_tokens = xargs_input_info(current)
-    if has_external_or_replacement_input and utility and any(token == "commit" for token in utility[1:]):
+    if has_external_or_replacement_input and utility and any(token in PUBLISH_SUBCOMMANDS for token in utility[1:]):
         return True
     if has_external_or_replacement_input and utility and any(
         marker and marker in token and any(config_value_can_define_alias(arg) for arg in utility)
@@ -468,10 +500,10 @@ def xargs_utility_contains_commit(current: list[str], utility_index: int, depth:
         return True
     if git_invocation(utility, depth)[0]:
         return True
-    if is_git_executable(utility[0]) and git_invocation([*utility, "commit"], depth)[0]:
+    if is_git_executable(utility[0]) and git_invocation([*utility, "push"], depth)[0]:
         return True
     if first_token_basename(utility) == "env":
-        if env_split_string_contains_commit(utility, 0, depth) or any(
+        if env_split_string_contains_publish(utility, 0, depth) or any(
             env_split_payload_allows_xargs_input(payload, depth) for payload in env_split_payloads(utility)
         ):
             return True
@@ -480,36 +512,36 @@ def xargs_utility_contains_commit(current: list[str], utility_index: int, depth:
         return True
     if utility and git_invocation(utility, depth)[0]:
         return True
-    if utility and is_git_executable(utility[0]) and git_invocation([*utility, "commit"], depth)[0]:
+    if utility and is_git_executable(utility[0]) and git_invocation([*utility, "push"], depth)[0]:
         return True
     if has_external_or_replacement_input and utility and first_token_basename(utility) in {"eval", *SHELL_INTERPRETERS}:
         return True
     if utility and first_token_basename(utility) in SHELL_INTERPRETERS and any(token in {"<", "<<"} for token in current):
         return True
-    return command_builder_contains_commit(current, utility_index, depth)
+    return command_builder_contains_publish(current, utility_index, depth)
 
 
-def command_builder_contains_commit(segment: list[str], index: int, depth: int) -> bool:
+def command_builder_contains_publish(segment: list[str], index: int, depth: int) -> bool:
     current = segment[index:]
-    if interpreter_string_contains_commit(current, depth) or python_string_contains_commit(current) or node_string_contains_commit(current):
+    if interpreter_string_contains_publish(current, depth) or python_string_contains_publish(current) or node_string_contains_publish(current):
         return True
     if current and first_token_basename(current) in SHELL_INTERPRETERS:
-        return any(re.search(r"\bgit\b.*\bcommit\b", token, re.DOTALL) for token in current[1:])
+        return any(GIT_PUBLISH_RE.search(token) for token in current[1:])
     if current and first_token_basename(current) == "eval":
         nested = " ".join(current[1:])
         return bool(nested and command_decision(nested, depth + 1) != "none")
     if current and first_token_basename(current) == "env":
-        if env_split_string_contains_commit(current, 0, depth) or any(
+        if env_split_string_contains_publish(current, 0, depth) or any(
             env_split_payload_allows_xargs_input(payload, depth) for payload in env_split_payloads(current)
         ):
             return True
         env_index = skip_env_prefix(current, 0)
-        return env_index < len(current) and command_builder_contains_commit(current, env_index, depth)
+        return env_index < len(current) and command_builder_contains_publish(current, env_index, depth)
     if current and first_token_basename(current) == "xargs":
         utility_index = xargs_utility_index(current)
         if utility_index is None:
             return False
-        return xargs_utility_contains_commit(current, utility_index, depth)
+        return xargs_utility_contains_publish(current, utility_index, depth)
     return False
 
 
@@ -521,10 +553,10 @@ def git_invocation(segment: list[str], depth: int) -> tuple[bool, bool]:
     while index < len(segment) and ASSIGNMENT_RE.match(segment[index]):
         has_git_config_assignment = has_git_config_assignment or is_git_config_assignment(segment[index])
         index += 1
-    if command_builder_contains_commit(segment, index, depth):
+    if command_builder_contains_publish(segment, index, depth):
         return True, False
     if index < len(segment) and first_token_basename(segment[index:]) == "env":
-        if env_split_string_contains_commit(segment, index, depth):
+        if env_split_string_contains_publish(segment, index, depth):
             return True, False
         has_git_config_assignment = has_git_config_assignment or env_prefix_has_git_config_assignment(segment, index)
         index = skip_env_prefix(segment, index)
@@ -535,12 +567,15 @@ def git_invocation(segment: list[str], depth: int) -> tuple[bool, bool]:
         index = next_index
     if index < len(segment) and segment[index] == "exec":
         index = skip_exec_prefix(segment, index)
-    if command_builder_contains_commit(segment, index, depth):
+    if command_builder_contains_publish(segment, index, depth):
         return True, False
 
     if index < len(segment) and "$" in segment[index] and any(
-        "$" in token or token == "commit" or config_value_can_define_alias(token) for token in segment[index + 1 :]
+        "$" in token or token in PUBLISH_SUBCOMMANDS or config_value_can_define_alias(token) for token in segment[index + 1 :]
     ):
+        return True, False
+
+    if index < len(segment) and is_git_send_pack_executable(segment[index]):
         return True, False
 
     if index >= len(segment) or not is_git_executable(segment[index]):
@@ -572,32 +607,30 @@ def git_invocation(segment: list[str], depth: int) -> tuple[bool, bool]:
             continue
         break
 
-    is_commit = index < len(segment) and segment[index] == "commit"
-    if index < len(segment) and segment[index] in {"cherry-pick", "merge", "rebase"}:
-        return not any(token in {"--abort", "--quit"} for token in segment[index + 1 :]), False
-    if index < len(segment) and not is_commit and segment[index] not in KNOWN_NON_COMMIT_GIT_SUBCOMMANDS:
+    is_publish = index < len(segment) and segment[index] in PUBLISH_SUBCOMMANDS
+    if index < len(segment) and not is_publish and segment[index] not in KNOWN_NON_PUBLISH_GIT_SUBCOMMANDS:
         return True, False
     if (
         has_git_config_assignment
         and git_index == index - 1
         and index < len(segment)
-        and not is_commit
-        and segment[index] not in KNOWN_NON_COMMIT_GIT_SUBCOMMANDS
+        and not is_publish
+        and segment[index] not in KNOWN_NON_PUBLISH_GIT_SUBCOMMANDS
     ):
         return True, False
-    if not is_commit and index < len(segment) and any("$" in token or token in {"(", ")"} for token in segment[index:]):
+    if not is_publish and index < len(segment) and any("$" in token or token in {"(", ")"} for token in segment[index:]):
         return True, False
     is_direct = (
         len(segment) >= 2
         and segment[0] == "git"
-        and segment[1] == "commit"
+        and segment[1] == "push"
         and git_index == 0
         and index == 1
     )
-    return is_commit, is_direct
+    return is_publish, is_direct
 
 
-def segment_has_embedded_git_commit(segment: list[str]) -> bool:
+def segment_has_embedded_git_publish(segment: list[str]) -> bool:
     if segment and segment[0] == "command" and any(
         token.startswith("-") and not token.startswith("--") and any(flag in token for flag in {"v", "V"})
         for token in segment[1:]
@@ -606,57 +639,53 @@ def segment_has_embedded_git_commit(segment: list[str]) -> bool:
     if segment and re.match(r"^python(?:\d+(?:\.\d+)?)?$", first_token_basename(segment)) and len(segment) > 1 and segment[1] != "-":
         return False
     for index in range(len(segment) - 1):
-        if is_git_executable(segment[index]) and segment[index + 1] == "commit":
+        if is_git_executable(segment[index]) and segment[index + 1] in PUBLISH_SUBCOMMANDS:
+            return True
+        if is_git_send_pack_executable(segment[index]):
             return True
     return False
 
 
-def segment_has_dynamic_git_commit(segment: list[str]) -> bool:
-    return any(re.search(r"\bgit\s*\$.*commit\b|\bgit\$\{[^}]+\}commit\b", token) for token in segment)
+def segment_has_dynamic_git_publish(segment: list[str]) -> bool:
+    return any(DYNAMIC_PUBLISH_RE.search(token) for token in segment)
 
 
 def command_decision(command: str, depth: int = 0) -> Decision:
     if depth > MAX_ENV_SPLIT_DEPTH:
-        return "block" if re.search(r"\bgit\b.*\bcommit\b", command, re.DOTALL) else "none"
+        return "block" if RAW_PUBLISH_RE.search(command) else "none"
 
     forbidden, normalized_command = scan_command(command)
     tokens = shell_tokens(normalized_command)
 
     if tokens is None:
-        return "block" if re.search(r"\bgit\b.*\bcommit\b", command, re.DOTALL) else "none"
+        return "block" if RAW_PUBLISH_RE.search(command) else "none"
 
     segments = split_segments(tokens)
     invocations = [git_invocation(segment, depth) for segment in segments]
-    commit_invocations = [invocation for invocation in invocations if invocation[0]]
-    direct_invocations = [invocation for invocation in commit_invocations if invocation[1]]
-    if not commit_invocations:
-        if any(segment_has_embedded_git_commit(segment) for segment in segments):
+    publish_invocations = [invocation for invocation in invocations if invocation[0]]
+    direct_invocations = [invocation for invocation in publish_invocations if invocation[1]]
+    if not publish_invocations:
+        if any(segment_has_embedded_git_publish(segment) for segment in segments):
             return "block"
-        if any(segment_has_dynamic_git_commit(segment) for segment in segments):
+        if any(segment_has_dynamic_git_publish(segment) for segment in segments):
             return "block"
         if any(
             segment
             and (segment[0].startswith("`") or segment[0].startswith("$(") or segment[0].startswith("$"))
-            and any("commit" in token or config_value_can_define_alias(token) for token in segment[1:])
+            and any(token in PUBLISH_SUBCOMMANDS or config_value_can_define_alias(token) for token in segment[1:])
             for segment in segments
         ):
             return "block"
-        if any(segment and first_token_basename(segment) == "eval" for segment in segments) and re.search(
-            r"\bgit\b.*\bcommit\b", command, re.DOTALL
-        ):
+        if any(segment and first_token_basename(segment) == "eval" for segment in segments) and GIT_PUBLISH_RE.search(command):
             return "block"
-        if any(segment and first_token_basename(segment) in SHELL_INTERPRETERS for segment in segments) and re.search(
-            r"\bgit\b.*\bcommit\b", command, re.DOTALL
-        ):
+        if any(segment and first_token_basename(segment) in SHELL_INTERPRETERS for segment in segments) and GIT_PUBLISH_RE.search(command):
             return "block"
-        if any(segment and first_token_basename(segment) == "python3" and len(segment) > 1 and segment[1] == "-" for segment in segments) and re.search(
-            r"\bgit\b.*\bcommit\b", command, re.DOTALL
-        ):
+        if any(segment and first_token_basename(segment) == "python3" and len(segment) > 1 and segment[1] == "-" for segment in segments) and GIT_PUBLISH_RE.search(command):
             return "block"
         if forbidden and (
-            substitution_contains_commit(command, depth)
-            or SUBSTITUTION_COMMIT_RE.search(command)
-            or DYNAMIC_COMMIT_RE.search(command)
+            substitution_contains_publish(command, depth)
+            or SUBSTITUTION_PUBLISH_RE.search(command)
+            or DYNAMIC_PUBLISH_RE.search(command)
         ):
             return "block"
         return "none"
@@ -664,7 +693,7 @@ def command_decision(command: str, depth: int = 0) -> Decision:
     direct = (
         len(segments) == 1
         and len(direct_invocations) == 1
-        and re.match(r"^\s*git\s+commit(?:\s|$)", command) is not None
+        and re.match(r"^\s*git\s+push(?:\s|$)", command) is not None
     )
     if direct and not forbidden:
         return "allow"
@@ -682,7 +711,7 @@ def run_check(command: list[str], cwd: Path) -> None:
 def main() -> int:
     mode = sys.argv[1] if len(sys.argv) > 1 else "codex"
     if mode not in BLOCK_MESSAGES:
-        print(f"Unknown commit hook mode: {mode}", file=sys.stderr)
+        print(f"Unknown hook mode: {mode}", file=sys.stderr)
         return 2
 
     payload = json.loads(sys.stdin.read() or "{}")

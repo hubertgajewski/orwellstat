@@ -38,7 +38,7 @@ Commit messages are always a **short, single-line description** with no body and
 
 The `#N` prefix must come first so `git log --oneline` and GitHub cross-references work at a glance.
 
-Run commits as a direct `git commit ...` command from the repository checkout. Avoid compound shell commands such as `cd repo && git commit`, `git commit && git status`, or `git commit; git status` so the configured commit hooks run consistently.
+Run commits as a direct `git commit ...` command from the repository checkout so local Git hooks run consistently. The assistant review and verification gate runs at publication time: use a direct `git push ...` command and avoid compound or wrapped publication commands such as `cd repo && git push`, `env git push`, or alias-only push forms so the publish gate runs before refs are published.
 
 ---
 
