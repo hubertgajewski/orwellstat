@@ -1,4 +1,4 @@
-"""Unit tests for the Claude/Codex git commit command hooks.
+"""Unit tests for the Claude/Codex publish-time Git command hooks.
 
 Usage:
     python3 scripts/test_commit_hook_config.py
@@ -6,9 +6,9 @@ Usage:
 
 from __future__ import annotations
 
-import json
 import importlib.util
 import io
+import json
 import os
 import subprocess
 import tempfile
@@ -29,173 +29,170 @@ _SPEC.loader.exec_module(hook)
 
 
 class CommandDecisionTests(unittest.TestCase):
-    def test_allows_direct_commit_forms(self):
+    def test_allows_direct_push_forms(self):
         for command in (
-            "git commit -m test",
-            'git commit -m "test && docs; still direct"',
-            "git commit -m test\\;docs",
-            'git commit -m "$MSG"',
+            "git push",
+            "git push origin HEAD",
+            "git push --force-with-lease origin HEAD",
+            "git push origin HEAD:refs/heads/main",
         ):
             with self.subTest(command=command):
                 self.assertEqual(hook.command_decision(command), "allow")
 
-    def test_blocks_non_direct_commit_forms(self):
+    def test_blocks_non_direct_push_forms(self):
         for command in (
-            "cd /tmp && git commit -m test",
-            "git commit -m test && git status",
-            "git commit -m test; git status",
-            "git commit -m test || git status",
-            "git -C . commit -m test",
-            "git --git-dir . commit -m test",
-            "git --work-tree . commit -m test",
-            "git --config-env foo=bar commit -m test",
-            "git --unknown commit -m test",
-            "git ci -m test",
-            "git cherry-pick abc123",
-            "git merge feature",
-            "git rebase main",
-            "git rebase --continue",
-            "git pull",
-            "git -c alias.ci=commit ci -m test",
-            "git -calias.ci=commit ci -m test",
-            "git -c include.path=/tmp/gitconfig ci -m test",
-            "git -c includeIf.gitdir:/path/.git.path=/tmp/gitconfig ci -m test",
-            "git --config-env alias.ci=GIT_ALIAS ci -m test",
-            "git --config-env includeIf.gitdir:/path/.git.path=GIT_INCLUDE ci -m test",
-            "git --config-env=alias.ci=GIT_ALIAS ci -m test",
-            "git commit -m ok -F <(git add bad.py)",
-            "echo $(git -C . commit -m test)",
-            "echo $(git -c alias.ci=commit ci -m test)",
-            "echo $(git --config-env alias.ci=GIT_ALIAS ci -m test)",
-            "git commit -m \"$(date)\"",
-            'git "commit" -m test',
-            "git 'commit' -m test",
-            "git comm\\it -m test",
-            "true\ngit commit -m test",
-            "GIT_AUTHOR_NAME=test git commit -m test",
-            "GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=alias.ci GIT_CONFIG_VALUE_0=commit git ci -m test",
-            "GIT_CONFIG_GLOBAL=/tmp/gitconfig git ci -m test",
-            "env GIT_CONFIG_GLOBAL=/tmp/gitconfig git ci -m test",
-            "$'git' commit -m test",
-            "`printf git` commit --no-verify -m test",
-            "`printf /usr/bin/git` commit --no-verify -m test",
-            "`printf git` -c alias.ci=commit ci -m test",
-            "$(printf git) -c alias.ci=commit ci -m test",
-            "$'git' -c alias.ci=commit ci -m test",
-            "git${IFS}commit --no-verify",
-            "G=git; $G commit -m test",
-            "G=git; C=commit; $G $C -m test",
-            "env git commit -m test",
-            "env -- git commit -m test",
-            "env FOO=bar git commit -m test",
-            "env -i git commit -m test",
-            "env -u FOO git commit -m test",
-            "env -C /tmp git commit -m test",
-            "env -P /usr/bin git commit -m test",
-            "env -P/usr/bin git commit -m test",
-            "env -S 'git commit -m test'",
-            "env -S'git commit -m test'",
-            "env -Sgit commit -m test",
-            "env --split-string='git commit -m test'",
-            "command env -S 'git commit -m test'",
-            "exec env -S 'git commit -m test'",
-            "command env -Sgit commit -m test",
-            "env -S \"env -S 'env -S \\'env -S \\\\\\'git commit -m test\\\\\\'\\''\"",
-            "command git commit -m test",
-            "command -- bash -c 'git commit -m test'",
-            "command -p git -c alias.ci=commit ci -m test",
-            "command -p env -S 'git commit -m test'",
-            "command eval 'git commit -m test'",
-            "exec git commit -m test",
-            "exec -a name git -c alias.ci=commit ci -m test",
-            "exec -a name env -S 'git commit -m test'",
-            "exec -c git -c alias.ci=commit ci -m test",
-            "exec -l git -c alias.ci=commit ci -m test",
-            "exec -cl git -c alias.ci=commit ci -m test",
-            "exec -lc git -c alias.ci=commit ci -m test",
-            "exec -la name git -c alias.ci=commit ci -m test",
-            'eval "git commit -m test"',
-            'cmd="git commit -m test"; eval "$cmd"',
-            "printf 'commit -m test' | xargs git",
-            "printf 'commit -m test' | xargs /usr/bin/git",
-            "xargs -a /tmp/args sh -c 'git commit -m test'",
+            "cd /tmp && git push",
+            "git push && git status",
+            "git push; git status",
+            "git push || git status",
+            "git -C . push",
+            "git --git-dir . push",
+            "git --work-tree . push",
+            "git --unknown push",
+            "git send-pack origin refs/heads/main",
+            "git-send-pack origin refs/heads/main",
+            "git -c alias.pub=push pub origin HEAD",
+            "git -calias.pub=push pub origin HEAD",
+            "git -c include.path=/tmp/gitconfig pub origin HEAD",
+            "git -c includeIf.gitdir:/path/.git.path=/tmp/gitconfig pub origin HEAD",
+            "git --config-env alias.pub=GIT_ALIAS pub origin HEAD",
+            "git --config-env includeIf.gitdir:/path/.git.path=GIT_INCLUDE pub origin HEAD",
+            "git --config-env=alias.pub=GIT_ALIAS pub origin HEAD",
+            "echo $(git -C . push)",
+            "echo $(git -c alias.pub=push pub origin HEAD)",
+            "echo $(git --config-env alias.pub=GIT_ALIAS pub origin HEAD)",
+            "git push origin \"$(date)\"",
+            'git "push" origin HEAD',
+            "git 'push' origin HEAD",
+            "git pu\\sh origin HEAD",
+            "true\ngit push",
+            "GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=alias.pub GIT_CONFIG_VALUE_0=push git pub origin HEAD",
+            "GIT_CONFIG_GLOBAL=/tmp/gitconfig git pub origin HEAD",
+            "env GIT_CONFIG_GLOBAL=/tmp/gitconfig git pub origin HEAD",
+            "$'git' push origin HEAD",
+            "`printf git` push origin HEAD",
+            "`printf /usr/bin/git` push origin HEAD",
+            "`printf git` -c alias.pub=push pub origin HEAD",
+            "$(printf git) -c alias.pub=push pub origin HEAD",
+            "$'git' -c alias.pub=push pub origin HEAD",
+            "git${IFS}push origin HEAD",
+            "G=git; $G push origin HEAD",
+            "G=git; C=push; $G $C origin HEAD",
+            "env git push origin HEAD",
+            "env -- git push origin HEAD",
+            "env FOO=bar git push origin HEAD",
+            "env -i git push origin HEAD",
+            "env -u FOO git push origin HEAD",
+            "env -C /tmp git push origin HEAD",
+            "env -P /usr/bin git push origin HEAD",
+            "env -P/usr/bin git push origin HEAD",
+            "env -S 'git push origin HEAD'",
+            "env -S'git push origin HEAD'",
+            "env -Sgit push origin HEAD",
+            "env --split-string='git push origin HEAD'",
+            "command env -S 'git push origin HEAD'",
+            "exec env -S 'git push origin HEAD'",
+            "command env -Sgit push origin HEAD",
+            "command git push origin HEAD",
+            "command -- bash -c 'git push origin HEAD'",
+            "command -p git -c alias.pub=push pub origin HEAD",
+            "command -p env -S 'git push origin HEAD'",
+            "command eval 'git push origin HEAD'",
+            "exec git push origin HEAD",
+            "exec -a name git -c alias.pub=push pub origin HEAD",
+            "exec -a name env -S 'git push origin HEAD'",
+            "exec -c git -c alias.pub=push pub origin HEAD",
+            "exec -l git -c alias.pub=push pub origin HEAD",
+            "exec -cl git -c alias.pub=push pub origin HEAD",
+            "exec -lc git -c alias.pub=push pub origin HEAD",
+            "exec -la name git -c alias.pub=push pub origin HEAD",
+            'eval "git push origin HEAD"',
+            'cmd="git push origin HEAD"; eval "$cmd"',
+            "printf 'push origin HEAD' | xargs git",
+            "printf 'push origin HEAD' | xargs /usr/bin/git",
+            "xargs -a /tmp/args sh -c 'git push origin HEAD'",
             "xargs -a /tmp/args git",
-            "xargs -a /tmp/args -I{} git {} -m test",
-            "xargs --arg-file=/tmp/args -I{} git {} -m test",
-            "xargs -a /tmp/args git -C . commit -m test",
-            "printf 'commit --no-verify' | xargs git -C .",
-            "xargs -a /tmp/args git -c alias.ci=commit ci -m test",
-            "xargs -a /tmp/args env GIT_CONFIG_GLOBAL=/tmp/gitconfig git ci -m test",
-            "printf 'commit -m test' | xargs env git",
+            "xargs -a /tmp/args -I{} git {} origin HEAD",
+            "xargs --arg-file=/tmp/args -I{} git {} origin HEAD",
+            "xargs -a /tmp/args git -C . push origin HEAD",
+            "printf 'push --force' | xargs git -C .",
+            "xargs -a /tmp/args git -c alias.pub=push pub origin HEAD",
+            "xargs -a /tmp/args env GIT_CONFIG_GLOBAL=/tmp/gitconfig git pub origin HEAD",
+            "printf 'push origin HEAD' | xargs env git",
             "xargs -a /tmp/args env git",
-            "printf 'commit -m test' | xargs env -S git",
+            "printf 'push origin HEAD' | xargs env -S git",
             "xargs -a /tmp/args env -S git",
-            "printf 'commit -m test' | xargs env -Sgit",
+            "printf 'push origin HEAD' | xargs env -Sgit",
             "xargs -a /tmp/args env --split-string=git",
             'xargs -a /tmp/args -I{} sh -c "{}"',
             'xargs -a /tmp/args -I{} env sh -c "{}"',
             'xargs --replace={} sh -c "{}"',
             "xargs -i sh -c '{}'",
-            "xargs -i git {} -m test",
+            "xargs -i git {} origin HEAD",
             "xargs sh -c < /tmp/args",
-            "printf 'git commit -m test' | sh",
-            'printf "git commit -m test" | xargs -I{} sh -c "{}"',
-            "printf git | xargs -I{} {} commit -m test",
-            "printf git | xargs -I{} {} -c alias.ci=commit ci -m test",
-            "printf git | xargs -I{} /usr/bin/{} -c alias.ci=commit ci -m test",
-            "printf git | xargs --replace=G /usr/bin/G -c alias.ci=commit ci -m test",
-            "printf git | xargs -I{} /usr/bin/env {} -c alias.ci=commit ci -m test",
-            "dash -c 'git commit -m test'",
-            "python3 -c 'import os; os.system(\"git commit -m test\")'",
-            "python3 -c 'import os; os.system(\"git\"+\" commit -m test\")'",
-            "node -e 'require(\"child_process\").execSync(\"git commit -m test\")'",
-            "node -e 'require(\"child_process\").execSync(\"git\"+\" commit -m test\")'",
-            "node --eval='require(\"child_process\").execSync(\"git commit -m test\")'",
-            "node --print='require(\"child_process\").execSync(\"git commit -m test\")'",
-            "node --eval='require(\"child_process\").execSync(\"git\"+\" commit -m test\")'",
-            "node -p'require(\"child_process\").execSync(\"git commit -m test\")'",
-            "node -p -e 'require(\"child_process\").execSync(\"git commit -m test\")'",
-            "node --print --eval 'require(\"child_process\").execSync(\"git commit -m test\")'",
-            "node -pe'require(\"child_process\").execSync(\"git commit -m test\")'",
-            "bash -c 'git commit -m test'",
-            "bash -lc 'git commit -m test'",
-            "bash --rcfile /tmp/x -c 'git commit -m test'",
-            "bash <<EOF\ngit commit -m test\nEOF",
-            "true\nbash <<EOF\ngit commit -m test\nEOF",
-            "sh <<EOF-1\ngit commit -m test\nEOF-1",
-            "env bash -c 'git commit -m test'",
-            "sh -c 'git commit -m test'",
-            "zsh -c 'git commit -m test'",
-            "zsh --no-rcs -c 'git commit -m test'",
-            "/usr/bin/git commit -m test",
-            "/usr/bin/env -- git commit -m test",
-            "(git commit -m test)",
-            "{ git commit -m test; }",
-            "if true; then git commit -m test; fi",
-            "echo git commit",
-            "echo $(git commit -m test)",
-            "echo `git commit -m test`",
-            'python3 - <<X\nprint("echo $(printf \'git commit\')")\nX',
-            "python3 - <<X\ngit commit -m test\nX",
-            "python3 - <<'EOF-1'\ngit commit -m test\nEOF-1\ngit status",
-            "git com$(printf mit) -m test",
-            "git 'commit",
+            "printf 'git push origin HEAD' | sh",
+            'printf "git push origin HEAD" | xargs -I{} sh -c "{}"',
+            "printf git | xargs -I{} {} push origin HEAD",
+            "printf git | xargs -I{} {} -c alias.pub=push pub origin HEAD",
+            "printf git | xargs -I{} /usr/bin/{} -c alias.pub=push pub origin HEAD",
+            "printf git | xargs --replace=G /usr/bin/G -c alias.pub=push pub origin HEAD",
+            "printf git | xargs -I{} /usr/bin/env {} -c alias.pub=push pub origin HEAD",
+            "dash -c 'git push origin HEAD'",
+            "python3 -c 'import os; os.system(\"git push origin HEAD\")'",
+            "python3 -c 'import os; os.system(\"git\"+\" push origin HEAD\")'",
+            "node -e 'require(\"child_process\").execSync(\"git push origin HEAD\")'",
+            "node -e 'require(\"child_process\").execSync(\"git\"+\" push origin HEAD\")'",
+            "node --eval='require(\"child_process\").execSync(\"git push origin HEAD\")'",
+            "node --print='require(\"child_process\").execSync(\"git push origin HEAD\")'",
+            "node --eval='require(\"child_process\").execSync(\"git\"+\" push origin HEAD\")'",
+            "node -p'require(\"child_process\").execSync(\"git push origin HEAD\")'",
+            "node -p -e 'require(\"child_process\").execSync(\"git push origin HEAD\")'",
+            "node --print --eval 'require(\"child_process\").execSync(\"git push origin HEAD\")'",
+            "node -pe'require(\"child_process\").execSync(\"git push origin HEAD\")'",
+            "bash -c 'git push origin HEAD'",
+            "bash -lc 'git push origin HEAD'",
+            "bash --rcfile /tmp/x -c 'git push origin HEAD'",
+            "bash <<EOF\ngit push origin HEAD\nEOF",
+            "true\nbash <<EOF\ngit push origin HEAD\nEOF",
+            "sh <<EOF-1\ngit push origin HEAD\nEOF-1",
+            "env bash -c 'git push origin HEAD'",
+            "sh -c 'git push origin HEAD'",
+            "zsh -c 'git push origin HEAD'",
+            "zsh --no-rcs -c 'git push origin HEAD'",
+            "/usr/bin/git push origin HEAD",
+            "/usr/bin/env -- git push origin HEAD",
+            "(git push origin HEAD)",
+            "{ git push origin HEAD; }",
+            "if true; then git push origin HEAD; fi",
+            "echo git push",
+            "echo $(git push origin HEAD)",
+            "echo `git push origin HEAD`",
+            'python3 - <<X\nprint("echo $(printf \'git push\')")\nX',
+            "python3 - <<X\ngit push origin HEAD\nX",
+            "python3 - <<'EOF-1'\ngit push origin HEAD\nEOF-1\ngit status",
+            "git pu$(printf sh) origin HEAD",
+            "git 'push",
         ):
             with self.subTest(command=command):
                 self.assertEqual(hook.command_decision(command), "block")
 
-    def test_recursion_limit_blocks_commit_payload(self):
+    def test_recursion_limit_blocks_push_payload(self):
         self.assertEqual(
-            hook.command_decision("git commit -m test", hook.MAX_ENV_SPLIT_DEPTH + 1),
+            hook.command_decision("git push origin HEAD", hook.MAX_ENV_SPLIT_DEPTH + 1),
             "block",
         )
 
-    def test_ignores_non_commit_commands(self):
+    def test_ignores_non_push_commands(self):
         for command in (
-            'echo "; git commit --amend"',
-            "git help commit",
-            "git show commit",
-            'git show :README.md | rg -n "commit hook"',
+            'echo "; git push --force"',
+            "git help push",
+            "git show push",
+            'git show :README.md | rg -n "push hook"',
+            "git commit -m test",
+            'git commit -m "push docs"',
+            "bash -c 'git commit -m push'",
+            "python3 -c 'import os; os.system(\"git commit -m push\")'",
+            "node -e 'require(\"child_process\").execSync(\"git commit -m push\")'",
             "git commit-graph verify",
             "GIT_CONFIG_NOSYSTEM=1 git status",
             "GIT_CONFIG_NOSYSTEM=1 git branch",
@@ -212,32 +209,38 @@ class CommandDecisionTests(unittest.TestCase):
             "git gc",
             "git worktree add /tmp/wt HEAD",
             "git worktree list",
+            "git check-ignore -q .worktrees",
             "git diff",
             "git mv old new",
             "git rm --cached file",
             "git apply patch.diff",
             "git reflog",
+            "git rebase origin/main",
+            "git rebase --continue",
             "git rebase --abort",
             "git rebase --quit",
+            "git merge feature",
             "git merge --abort",
             "git merge --quit",
+            "git cherry-pick abc123",
             "git cherry-pick --abort",
             "git cherry-pick --quit",
             "git reset --soft HEAD~1",
             "git ls-tree HEAD",
+            "git ls-remote --heads origin feature/563",
             "git describe --tags",
             "git show-ref --heads",
-            "git diff | xargs echo commit",
-            "python3 scripts/foo.py git commit",
-            "command -v git commit -m test",
-            "command -V git commit -m test",
-            "command -pv git commit -m test",
-            "command -pV git commit -m test",
-            "git status | xargs echo commit",
+            "git diff | xargs echo push",
+            "python3 scripts/foo.py git push",
+            "command -v git push origin HEAD",
+            "command -V git push origin HEAD",
+            "command -pv git push origin HEAD",
+            "command -pV git push origin HEAD",
+            "git status | xargs echo push",
             "bash <<EOF\necho hi\nEOF",
             "git status | xargs echo",
             "echo $PATH | xargs echo",
-            "echo $PATH | xargs echo commit",
+            "echo $PATH | xargs echo push",
             "sh /tmp/setup.sh",
             "bash scripts/setup-runners.sh",
             "node scripts/setup.js",
@@ -256,7 +259,7 @@ class CommandDecisionTests(unittest.TestCase):
                 with patch("sys.argv", ["hook", "codex"]), patch("sys.stdin", io.StringIO(payload)):
                     self.assertEqual(hook.main(), 0)
 
-        payload = json.dumps({"tool_input": {"command": "env git commit -m test"}})
+        payload = json.dumps({"tool_input": {"command": "env git push origin HEAD"}})
         with (
             patch("sys.argv", ["hook", "codex"]),
             patch("sys.stdin", io.StringIO(payload)),
@@ -267,7 +270,7 @@ class CommandDecisionTests(unittest.TestCase):
         root = MagicMock(returncode=0, stdout=f"{REPO_ROOT}\n", stderr="")
         with (
             patch("sys.argv", ["hook", "codex"]),
-            patch("sys.stdin", io.StringIO(json.dumps({"tool_input": {"command": "git commit -m test"}}))),
+            patch("sys.stdin", io.StringIO(json.dumps({"tool_input": {"command": "git push origin HEAD"}}))),
             patch.object(hook.subprocess, "run", return_value=root),
         ):
             self.assertEqual(hook.main(), 0)
@@ -279,7 +282,7 @@ class CommandDecisionTests(unittest.TestCase):
         failed_root = MagicMock(returncode=1, stdout="", stderr="not a repo\n")
         with (
             patch("sys.argv", ["hook", "codex"]),
-            patch("sys.stdin", io.StringIO(json.dumps({"tool_input": {"command": "git commit -m test"}}))),
+            patch("sys.stdin", io.StringIO(json.dumps({"tool_input": {"command": "git push origin HEAD"}}))),
             patch.object(hook.subprocess, "run", return_value=failed_root),
             redirect_stderr(io.StringIO()),
         ):
@@ -291,7 +294,7 @@ class CommandDecisionTests(unittest.TestCase):
                 hook.run_check(["npx", "tsc", "--noEmit"], REPO_ROOT)
 
 
-class CommitCommandHookTests(unittest.TestCase):
+class PublishCommandHookTests(unittest.TestCase):
     def run_hook_command(self, hook_command: str, command: str) -> tuple[int, list[str], str]:
         with tempfile.TemporaryDirectory() as tmpdir:
             calls_path = Path(tmpdir) / "calls.log"
@@ -324,18 +327,18 @@ class CommitCommandHookTests(unittest.TestCase):
             return result.returncode, calls, result.stderr
 
     def run_hook(self, hook_file: str, command: str) -> tuple[int, list[str], str]:
-        return self.run_hook_command(self.commit_hook_command(hook_file), command)
+        return self.run_hook_command(self.publish_hook_command(hook_file), command)
 
-    def commit_hook_command(self, hook_file: str) -> str:
+    def publish_hook_command(self, hook_file: str) -> str:
         hook_config = json.loads((REPO_ROOT / hook_file).read_text(encoding="utf-8"))
         for group in hook_config["hooks"]["PreToolUse"]:
             if group.get("matcher") != "Bash":
                 continue
-            for hook in group["hooks"]:
-                command = hook.get("command", "")
+            for hook_config_entry in group["hooks"]:
+                command = hook_config_entry.get("command", "")
                 if "verify_commit_command_hook.py" in command:
                     return command
-        raise AssertionError(f"commit verifier hook not found in {hook_file}")
+        raise AssertionError(f"publish verifier hook not found in {hook_file}")
 
     def assert_hook_case(
         self,
@@ -352,33 +355,35 @@ class CommitCommandHookTests(unittest.TestCase):
                 if expected_stderr is not None:
                     self.assertIn(expected_stderr, stderr)
 
-    def test_direct_commit_runs_type_and_format_checks(self):
+    def test_direct_push_runs_type_and_format_checks(self):
         self.assert_hook_case(
-            "git commit -m test",
+            "git push origin HEAD",
             0,
             ["npx tsc --noEmit", "npm run format:check"],
         )
 
-    def test_irrelevant_commands_skip_verifier_before_hash_check(self):
-        for hook_file in HOOK_FILES:
-            with self.subTest(hook_file=hook_file):
-                hook_command = self.commit_hook_command(hook_file).replace("EXPECTED='", "EXPECTED='000")
-                status, calls, stderr = self.run_hook_command(hook_command, "date")
-                self.assertEqual(status, 0)
-                self.assertEqual(calls, [])
-                self.assertEqual(stderr, "")
+    def test_commit_and_rebase_do_not_run_publish_checks(self):
+        for command in ("git commit -m test", "git rebase origin/main"):
+            with self.subTest(command=command):
+                self.assert_hook_case(command, 0, [])
 
-    def test_dynamic_commands_do_not_skip_verifier_prefilter(self):
-        for hook_file in HOOK_FILES:
-            with self.subTest(hook_file=hook_file):
-                hook_command = self.commit_hook_command(hook_file).replace("EXPECTED='", "EXPECTED='000")
-                status, calls, stderr = self.run_hook_command(
-                    hook_command,
-                    "G=g; I=it; C=com; M=mit; $G$I $C$M --no-verify",
-                )
-                self.assertEqual(status, 2)
-                self.assertEqual(calls, [])
-                self.assertIn("hash mismatch", stderr)
+    def test_dynamic_push_commands_do_not_skip_verifier_prefilter(self):
+        for command in (
+            "G=g; I=it; C=pu; H=sh; $G$I $C$H origin HEAD",
+            "g''it push origin HEAD",
+            'g""it push origin HEAD',
+            "g\\it push origin HEAD",
+            "git pub origin HEAD",
+            "git pu''sh origin HEAD",
+            "git pu\\sh origin HEAD",
+        ):
+            for hook_file in HOOK_FILES:
+                with self.subTest(hook_file=hook_file, command=command):
+                    hook_command = self.publish_hook_command(hook_file).replace("EXPECTED='", "EXPECTED='000")
+                    status, calls, stderr = self.run_hook_command(hook_command, command)
+                    self.assertEqual(status, 2)
+                    self.assertEqual(calls, [])
+                    self.assertIn("hash mismatch", stderr)
 
     def test_blocked_commands_use_platform_specific_messages(self):
         expectations = {
@@ -387,57 +392,54 @@ class CommitCommandHookTests(unittest.TestCase):
         }
         for hook_file, expected_message in expectations.items():
             with self.subTest(hook_file=hook_file):
-                status, calls, stderr = self.run_hook(hook_file, "env git commit -m test")
+                status, calls, stderr = self.run_hook(hook_file, "env git push origin HEAD")
                 self.assertEqual(status, 2)
                 self.assertEqual(calls, [])
                 self.assertIn(expected_message, stderr)
 
-    def test_compound_commit_forms_are_blocked(self):
+    def test_compound_push_forms_are_blocked(self):
         for command in (
-            "cd /tmp && git commit -m test",
-            "git commit -m test && git status",
-            "git commit -m test; git status",
-            "git commit -m test || git status",
-            "git -C . commit -m test",
-            "true\ngit commit -m test",
-            "GIT_AUTHOR_NAME=test git commit -m test",
-            "env git commit -m test",
-            "command git commit -m test",
-            "/usr/bin/git commit -m test",
-            "(git commit -m test)",
-            "echo $(git commit -m test)",
-            "echo `git commit -m test`",
-            "G=g; I=it; C=com; M=mit; $G$I $C$M --no-verify",
-            "printf git | xargs -I{} {} -c alias.ci=commit ci -m test",
-            "printf git | xargs -I{} /usr/bin/{} -c alias.ci=commit ci -m test",
-            "printf git | xargs --replace=G /usr/bin/G -c alias.ci=commit ci -m test",
-            "printf git | xargs -I{} /usr/bin/env {} -c alias.ci=commit ci -m test",
+            "cd /tmp && git push",
+            "git push && git status",
+            "git push; git status",
+            "git push || git status",
+            "git -C . push",
+            "true\ngit push",
+            "env git push origin HEAD",
+            "command git push origin HEAD",
+            "/usr/bin/git push origin HEAD",
+            "(git push origin HEAD)",
+            "echo $(git push origin HEAD)",
+            "echo `git push origin HEAD`",
+            "G=g; I=it; C=pu; H=sh; $G$I $C$H origin HEAD",
+            "printf git | xargs -I{} {} -c alias.pub=push pub origin HEAD",
+            "printf git | xargs -I{} /usr/bin/{} -c alias.pub=push pub origin HEAD",
+            "printf git | xargs --replace=G /usr/bin/G -c alias.pub=push pub origin HEAD",
+            "printf git | xargs -I{} /usr/bin/env {} -c alias.pub=push pub origin HEAD",
         ):
             with self.subTest(command=command):
                 self.assert_hook_case(command, 2, [], "BLOCKED:")
 
-    def test_quoted_or_non_executable_commit_text_is_ignored(self):
+    def test_quoted_or_non_executable_push_text_is_ignored(self):
         for command in (
-            'echo "; git commit --amend"',
-            "git help commit",
-            "git show commit",
-            "git commit-graph verify",
+            'echo "; git push --force"',
+            "git help push",
+            "git show push",
+            "git commit -m push",
+            "bash -c 'git commit -m push'",
             "git status",
         ):
             with self.subTest(command=command):
                 self.assert_hook_case(command, 0, [])
 
-    def test_quoted_or_escaped_control_chars_in_direct_commit_are_allowed(self):
-        for command in (
-            'git commit -m "test && docs; still direct"',
-            "git commit -m test\\;docs",
-        ):
-            with self.subTest(command=command):
-                self.assert_hook_case(
-                    command,
-                    0,
-                    ["npx tsc --noEmit", "npm run format:check"],
-                )
+    def test_hook_configs_keep_publish_gate_in_sync(self):
+        commands = [self.publish_hook_command(hook_file) for hook_file in HOOK_FILES]
+        normalized = [command.replace(" python3 \"$SCRIPT\" claude", " python3 \"$SCRIPT\"") for command in commands]
+        self.assertEqual(normalized[0], normalized[1])
+        for command in commands:
+            self.assertIn("*git*", command)
+            self.assertIn("*send-pack*", command)
+            self.assertIn("verify_commit_command_hook.py", command)
 
 
 if __name__ == "__main__":

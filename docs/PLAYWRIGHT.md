@@ -19,7 +19,7 @@ npx playwright install --with-deps
 1. `lint-staged` formats staged `*.{ts,tsx,js,json,md,yml,yaml,html,xhtml}` files under `playwright/typescript/` with Prettier and re-stages them.
 2. `npx tsc --noEmit` blocks commits with TypeScript errors.
 
-`git commit --no-verify` bypasses the local hook, but CI still runs the same backstop checks.
+`git commit --no-verify` bypasses the local hook, but CI still runs the same backstop checks. Claude/Codex assistant hooks also run the TypeScript and format checks before direct `git push` publication commands; see [CI.md](CI.md#assistant-publish-gate).
 
 ## Running Tests
 
