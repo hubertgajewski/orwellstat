@@ -28,7 +28,7 @@ command = "npx"
 [mcp_servers.playwright-report-mcp]
 args = [
     "--min-release-age=0",
-    "playwright-report-mcp@3.2.0",
+    "playwright-report-mcp@3.2.1",
 ]
 command = "npx"
 
