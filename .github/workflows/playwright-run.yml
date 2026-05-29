@@ -177,7 +177,7 @@ jobs:
 
           trap cleanup_auth_regeneration_artifacts EXIT
           cleanup_auth_regeneration_artifacts
-          npx playwright test --project=setup --reporter=line --trace=off --screenshot=off --video=off --output=.auth-regeneration-results
+          npx playwright test --project=setup --reporter=line --trace=off --output=.auth-regeneration-results
         working-directory: playwright/typescript
         env:
           ENV: ${{ vars.ENV }}
