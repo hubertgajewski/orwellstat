@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 import { test as setup, expect, type Page } from '@playwright/test';
 import { loadEnv, requireCredentials, type Account } from '@utils/env.util';
 import { AbstractPage } from '@pages/abstract.page';
@@ -23,7 +24,9 @@ async function authenticate(page: Page, account: Account): Promise<void> {
   // produce two valid storage states pointed at the wrong accounts and
   // every downstream test would run mis-attributed.
   await expect(AbstractPage.loggedInUsername(page)).toHaveText(user);
-  await page.context().storageState({ path: new URL(`${account}.json`, AUTH_STATE_DIR).pathname });
+  await page
+    .context()
+    .storageState({ path: fileURLToPath(new URL(`${account}.json`, AUTH_STATE_DIR)) });
 }
 
 setup('authenticate populated', { tag: '@auth-populated' }, async ({ page }) => {
