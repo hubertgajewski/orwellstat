@@ -169,16 +169,16 @@ docker container prune
 
 ### Docker RAM requirements for the Playwright matrix
 
-The matrix strategy runs 5 browser projects in parallel, each in its own container. Every container installs Chromium (required by the auth setup project) plus its own browser:
+The matrix strategy runs 5 browser projects in parallel, each in its own container. Auth setup containers install Chromium. Test containers normally install only their project browser, and non-Chromium test containers install Chromium on demand only if stale auth-state validation reruns the setup project locally:
 
-| Job           | Browsers installed | RAM                                        |
-| ------------- | ------------------ | ------------------------------------------ |
-| Chromium      | chromium           | ~1.0 GB                                    |
-| Mobile Chrome | chromium           | ~1.0 GB                                    |
-| Firefox       | chromium + firefox | ~1.4 GB                                    |
-| WebKit        | chromium + webkit  | ~1.2 GB                                    |
-| Mobile Safari | chromium + webkit  | ~1.2 GB                                    |
-| **Total**     |                    | **~5.8 GB active + ~2 GB Docker overhead** |
+| Job           | Test-container browsers                         | RAM                                        |
+| ------------- | ----------------------------------------------- | ------------------------------------------ |
+| Chromium      | chromium                                        | ~1.0 GB                                    |
+| Mobile Chrome | chromium                                        | ~1.0 GB                                    |
+| Firefox       | firefox (+ chromium if auth regenerates)        | ~1.4 GB                                    |
+| WebKit        | webkit (+ chromium if auth regenerates)         | ~1.2 GB                                    |
+| Mobile Safari | webkit (+ chromium if auth regenerates)         | ~1.2 GB                                    |
+| **Total**     | worst-case concurrent browser-install footprint | **~5.8 GB active + ~2 GB Docker overhead** |
 
 **8 GB Docker RAM (default) — run a single browser only**
 

@@ -112,10 +112,83 @@ jobs:
         # here lets the test command pass `--no-deps`, which skips the in-leg `setup` project
         # so the matrix legs do not re-authenticate against staging on every shard.
         uses: actions/download-artifact@v8
+        continue-on-error: true
         with:
           name: auth-state-${{ inputs.id }}
           path: playwright/typescript/.auth/
+      - name: Validate auth state
+        id: validate-auth-state
+        # Failed-job reruns can reuse artifacts from an earlier attempt. Validate the downloaded
+        # storage state metadata before the shard starts; if it is missing or stale, regenerate
+        # locally so authenticated tests do not land on the public login page.
+        run: |
+          MAX_AUTH_STATE_AGE_SECONDS=3600
+
+          should_regenerate_auth_state() {
+            if [ ! -s .auth/populated.json ] || [ ! -s .auth/empty.json ] || [ ! -s .auth/metadata.json ]; then
+              echo "Auth state files or metadata are missing; regenerating before shard run."
+              return 0
+            fi
+
+            GENERATED_AT=$(jq -r '.generatedAt // empty' .auth/metadata.json 2>/dev/null || true)
+            if [ -z "$GENERATED_AT" ]; then
+              echo "Auth state metadata has no generatedAt value; regenerating before shard run."
+              return 0
+            fi
+
+            GENERATED_EPOCH=$(node --input-type=module -e "const ms = Date.parse(process.argv[1]); if (!Number.isFinite(ms)) process.exit(1); console.log(Math.floor(ms / 1000));" "$GENERATED_AT" 2>/dev/null || echo 0)
+            if [ "$GENERATED_EPOCH" -eq 0 ]; then
+              echo "Auth state metadata has an unparsable generatedAt value; regenerating before shard run."
+              return 0
+            fi
+
+            NOW_EPOCH=$(date +%s)
+            AUTH_STATE_AGE=$((NOW_EPOCH - GENERATED_EPOCH))
+
+            if [ "$AUTH_STATE_AGE" -gt "$MAX_AUTH_STATE_AGE_SECONDS" ]; then
+              echo "Auth state metadata is stale; regenerating before shard run."
+              return 0
+            fi
+
+            return 1
+          }
+
+          if should_regenerate_auth_state; then
+            echo "regenerate=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Auth state metadata is fresh; using downloaded state."
+            echo "regenerate=false" >> "$GITHUB_OUTPUT"
+          fi
+        working-directory: playwright/typescript
+      - name: Set up Playwright Chromium for auth regeneration
+        # The setup project uses Playwright's default Chromium browser. Non-Chromium shard legs
+        # normally install only their project browser, so install Chromium only when auth setup
+        # must be rerun locally.
+        if: ${{ steps.validate-auth-state.outputs.regenerate == 'true' && inputs.browser != 'chromium' }}
+        uses: ./.github/actions/setup-playwright-browser
+        with:
+          browser: chromium
+      - name: Regenerate auth state
+        if: ${{ steps.validate-auth-state.outputs.regenerate == 'true' }}
+        run: |
+          cleanup_auth_regeneration_artifacts() {
+            rm -rf .auth-regeneration-results blob-report playwright-report test-results
+          }
+
+          trap cleanup_auth_regeneration_artifacts EXIT
+          cleanup_auth_regeneration_artifacts
+          npx playwright test --project=setup --reporter=line --trace=off --screenshot=off --video=off --output=.auth-regeneration-results
+        working-directory: playwright/typescript
+        env:
+          ENV: ${{ vars.ENV }}
+          ORWELLSTAT_USER: ${{ secrets.ORWELLSTAT_USER }}
+          ORWELLSTAT_PASSWORD: ${{ secrets.ORWELLSTAT_PASSWORD }}
+          ORWELLSTAT_USER_EMPTY: ${{ secrets.ORWELLSTAT_USER_EMPTY }}
+          ORWELLSTAT_PASSWORD_EMPTY: ${{ secrets.ORWELLSTAT_PASSWORD_EMPTY }}
+          BASIC_AUTH_USER: ${{ inputs.env == 'staging' && secrets.BASIC_AUTH_USER || '' }}
+          BASIC_AUTH_PASSWORD: ${{ inputs.env == 'staging' && secrets.BASIC_AUTH_PASSWORD || '' }}
       - name: Run Playwright tests
+        id: run-playwright-tests
         run: |
           SHARD_ARGS=()
           if [ "${TOTAL_SHARDS}" -gt 1 ]; then
@@ -174,19 +247,19 @@ jobs:
             echo "running=true" >> "$GITHUB_OUTPUT"
           fi
       - uses: actions/upload-artifact@v7
-        if: ${{ !cancelled() && steps.detect-act.outputs.running != 'true' }}
+        if: ${{ !cancelled() && steps.detect-act.outputs.running != 'true' && steps.run-playwright-tests.outcome != 'skipped' }}
         with:
           name: playwright-report-${{ inputs.id }}-${{ inputs.shard }}
           path: playwright/typescript/playwright-report/
           retention-days: 30
       - uses: actions/upload-artifact@v7
-        if: ${{ !cancelled() && steps.detect-act.outputs.running != 'true' }}
+        if: ${{ !cancelled() && steps.detect-act.outputs.running != 'true' && steps.run-playwright-tests.outcome != 'skipped' }}
         with:
           name: blob-report-${{ inputs.id }}-${{ inputs.shard }}
           path: playwright/typescript/blob-report/
           retention-days: 30
       - name: Collect self-healing data
-        if: ${{ failure() }}
+        if: ${{ failure() && steps.run-playwright-tests.outcome == 'failure' }}
         working-directory: playwright/typescript
         run: |
           mkdir -p self-healing-data
@@ -204,7 +277,7 @@ jobs:
             done
           done
       - uses: actions/upload-artifact@v7
-        if: ${{ failure() && steps.detect-act.outputs.running != 'true' }}
+        if: ${{ failure() && steps.run-playwright-tests.outcome == 'failure' && steps.detect-act.outputs.running != 'true' }}
         with:
           name: self-healing-data-${{ inputs.id }}-${{ inputs.shard }}
           path: playwright/typescript/self-healing-data/
