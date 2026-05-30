@@ -1,13 +1,13 @@
 {
   "private": true,
   "devDependencies": {
-    "@usebruno/cli": "3.4.0"
+    "@usebruno/cli": "3.4.2"
   },
   "scripts": {
     "test": "bru run --env production"
   },
   "overrides": {
-    "axios": ">=1.15.2",
+    "axios": ">=1.16.0",
     "fast-xml-parser": ">=5.7.0",
     "picomatch": ">=2.3.2",
     "protobufjs": "7.5.6",
