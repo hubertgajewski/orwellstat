@@ -16,5 +16,11 @@
     "escape_rate": "5%",
     "mttr": "13.7 hours",
     "coverage": "83%"
+  },
+  {
+    "date": "2026-06-01",
+    "escape_rate": "4%",
+    "mttr": "1.0 days",
+    "coverage": "96%"
   }
 ]
