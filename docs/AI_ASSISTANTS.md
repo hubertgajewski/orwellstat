@@ -77,9 +77,9 @@ Five MCP servers are declared in [`.mcp.json`](../.mcp.json) and loaded automati
 
 ### playwright-report-mcp
 
-Runs through `npx playwright-report-mcp@3.2.1`. The version is pinned in `.mcp.json`.
+Runs through `npx playwright-report-mcp@3.2.2`. The version is pinned in `.mcp.json`.
 
-`playwright-report-mcp@3.2.1` declares `node >=22`; use the repository baseline Node.js 26.x for local Playwright, Bruno, and MCP workflows.
+`playwright-report-mcp@3.2.2` declares `node >=22`; use the repository baseline Node.js 26.x for local Playwright, Bruno, and MCP workflows.
 
 Every tool call should pass `workingDirectory: "playwright/typescript"` in the main checkout, or a sibling worktree path such as `"../orwellstat-330/playwright/typescript"`. The default `.` points at the repo root, which has no Playwright config and will fail.
 

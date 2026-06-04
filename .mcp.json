@@ -12,7 +12,7 @@
     },
     "playwright-report-mcp": {
       "command": "npx",
-      "args": ["--min-release-age=0", "playwright-report-mcp@3.2.1"],
+      "args": ["--min-release-age=0", "playwright-report-mcp@3.2.2"],
       "type": "stdio",
       "env": {
         "PW_ALLOWED_DIRS": ".."
