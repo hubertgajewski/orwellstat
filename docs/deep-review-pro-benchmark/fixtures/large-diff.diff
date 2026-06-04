@@ -1,0 +1,24 @@
+diff --git a/docs/AI_ASSISTANTS.md b/docs/AI_ASSISTANTS.md
+--- a/docs/AI_ASSISTANTS.md
++++ b/docs/AI_ASSISTANTS.md
+@@ -1,3 +1,4 @@
+ # AI Assistants
++Large benchmark fixture documentation change.
+diff --git a/scripts/self-healing.py b/scripts/self-healing.py
+--- a/scripts/self-healing.py
++++ b/scripts/self-healing.py
+@@ -1,3 +1,4 @@
+ #!/usr/bin/env python3
++FIXTURE_FLAG = True
+diff --git a/playwright/typescript/tests/home.spec.ts b/playwright/typescript/tests/home.spec.ts
+--- a/playwright/typescript/tests/home.spec.ts
++++ b/playwright/typescript/tests/home.spec.ts
+@@ -1,3 +1,4 @@
+ import { test, expect } from '@fixtures/base.fixture';
++test.describe('large fixture', () => {});
+diff --git a/.github/workflows/playwright-run.yml b/.github/workflows/playwright-run.yml
+--- a/.github/workflows/playwright-run.yml
++++ b/.github/workflows/playwright-run.yml
+@@ -1,4 +1,5 @@
+ name: Playwright
++run-name: large benchmark fixture

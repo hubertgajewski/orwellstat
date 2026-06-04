@@ -1,0 +1,7 @@
+diff --git a/docs/AI_ASSISTANTS.md b/docs/AI_ASSISTANTS.md
+--- a/docs/AI_ASSISTANTS.md
++++ b/docs/AI_ASSISTANTS.md
+@@ -1,2 +1,3 @@
+ # AI Assistants
+ This file owns project-specific AI assistant workflows.
++Document benchmark fixture behavior.
