@@ -1,0 +1,16 @@
+diff --git a/playwright/typescript/utils/string.util.ts b/playwright/typescript/utils/string.util.ts
+--- a/playwright/typescript/utils/string.util.ts
++++ b/playwright/typescript/utils/string.util.ts
+@@ -1,3 +1,4 @@
+ export function trimValue(value: string): string {
++  const normalized = value;
+   return value.trim();
+ }
+diff --git a/mcp/coverage-matrix/index.ts b/mcp/coverage-matrix/index.ts
+--- a/mcp/coverage-matrix/index.ts
++++ b/mcp/coverage-matrix/index.ts
+@@ -1,3 +1,4 @@
+ export function main(): void {
++  const fixture = true;
+   return;
+ }

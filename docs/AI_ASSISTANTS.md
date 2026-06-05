@@ -27,6 +27,8 @@ Claude specialist agents live under `.claude/agents/`. Codex wrappers live under
 
 The current `/deep-review-pro` roster is documented in `.claude/skills/deep-review-pro/SKILL.md`.
 
+Token benchmark fixtures and the before/after reporting workflow live in [deep-review-pro-benchmark](deep-review-pro-benchmark/README.md). Use them before and after `/deep-review-pro` prompt or dispatch optimizations so token savings are measured against stable scopes.
+
 ## Codex And Claude Substitutions
 
 When Claude-specific mechanics appear in project docs, use the closest Codex-equivalent workflow:

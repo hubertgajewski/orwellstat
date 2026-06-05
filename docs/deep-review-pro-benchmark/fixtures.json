@@ -1,0 +1,121 @@
+[
+  {
+    "name": "docs-only",
+    "scope_file": "fixtures/docs-only.diff",
+    "description": "Documentation-only change that should exercise only the always-on agents.",
+    "expected_dispatched": [
+      "deep-review-security",
+      "deep-review-project-checklist",
+      "deep-review-simplification",
+      "deep-review-code",
+      "deep-review-architecture",
+      "deep-review-docs"
+    ],
+    "expected_skipped": [
+      "deep-review-typescript",
+      "deep-review-python",
+      "deep-review-ci",
+      "deep-review-qa",
+      "deep-review-unit-test"
+    ]
+  },
+  {
+    "name": "playwright-test",
+    "scope_file": "fixtures/playwright-test.diff",
+    "description": "Playwright spec change that should dispatch TypeScript and QA specialists.",
+    "expected_dispatched": [
+      "deep-review-security",
+      "deep-review-project-checklist",
+      "deep-review-simplification",
+      "deep-review-code",
+      "deep-review-architecture",
+      "deep-review-docs",
+      "deep-review-typescript",
+      "deep-review-qa"
+    ],
+    "expected_skipped": [
+      "deep-review-python",
+      "deep-review-ci",
+      "deep-review-unit-test"
+    ]
+  },
+  {
+    "name": "workflow",
+    "scope_file": "fixtures/workflow.diff",
+    "description": "GitHub Actions workflow change that should dispatch the CI specialist.",
+    "expected_dispatched": [
+      "deep-review-security",
+      "deep-review-project-checklist",
+      "deep-review-simplification",
+      "deep-review-code",
+      "deep-review-architecture",
+      "deep-review-docs",
+      "deep-review-ci"
+    ],
+    "expected_skipped": [
+      "deep-review-typescript",
+      "deep-review-python",
+      "deep-review-qa",
+      "deep-review-unit-test"
+    ]
+  },
+  {
+    "name": "mixed-typescript",
+    "scope_file": "fixtures/mixed-typescript.diff",
+    "description": "Mixed TypeScript utility and MCP server change that should dispatch TypeScript and unit-test specialists.",
+    "expected_dispatched": [
+      "deep-review-security",
+      "deep-review-project-checklist",
+      "deep-review-simplification",
+      "deep-review-code",
+      "deep-review-architecture",
+      "deep-review-docs",
+      "deep-review-typescript",
+      "deep-review-unit-test"
+    ],
+    "expected_skipped": [
+      "deep-review-python",
+      "deep-review-ci",
+      "deep-review-qa"
+    ]
+  },
+  {
+    "name": "large-diff",
+    "scope_file": "fixtures/large-diff.diff",
+    "description": "Broad multi-area diff that should dispatch every specialist.",
+    "expected_dispatched": [
+      "deep-review-security",
+      "deep-review-project-checklist",
+      "deep-review-simplification",
+      "deep-review-code",
+      "deep-review-architecture",
+      "deep-review-docs",
+      "deep-review-typescript",
+      "deep-review-python",
+      "deep-review-ci",
+      "deep-review-qa",
+      "deep-review-unit-test"
+    ],
+    "expected_skipped": []
+  },
+  {
+    "name": "high-lines",
+    "scope_file": "fixtures/high-lines.diff",
+    "generator": "scripts/generate-deep-review-high-lines-fixture.py",
+    "description": "Synthetic 3,000+ line broad diff that should dispatch every specialist and stress high-line-count review behavior.",
+    "expected_dispatched": [
+      "deep-review-security",
+      "deep-review-project-checklist",
+      "deep-review-simplification",
+      "deep-review-code",
+      "deep-review-architecture",
+      "deep-review-docs",
+      "deep-review-typescript",
+      "deep-review-python",
+      "deep-review-ci",
+      "deep-review-qa",
+      "deep-review-unit-test"
+    ],
+    "expected_skipped": []
+  }
+]

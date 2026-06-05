@@ -1,0 +1,8 @@
+diff --git a/.github/workflows/playwright-run.yml b/.github/workflows/playwright-run.yml
+--- a/.github/workflows/playwright-run.yml
++++ b/.github/workflows/playwright-run.yml
+@@ -1,3 +1,4 @@
+ name: Playwright
++run-name: benchmark fixture
+ on:
+   workflow_dispatch:
