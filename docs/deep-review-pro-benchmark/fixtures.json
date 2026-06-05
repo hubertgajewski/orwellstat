@@ -2,16 +2,16 @@
   {
     "name": "docs-only",
     "scope_file": "fixtures/docs-only.diff",
-    "description": "Documentation-only change that should exercise only the always-on agents.",
+    "description": "Documentation-only change that should skip low-risk security and project-checklist agents.",
     "expected_dispatched": [
-      "deep-review-security",
-      "deep-review-project-checklist",
       "deep-review-simplification",
       "deep-review-code",
       "deep-review-architecture",
       "deep-review-docs"
     ],
     "expected_skipped": [
+      "deep-review-security",
+      "deep-review-project-checklist",
       "deep-review-typescript",
       "deep-review-python",
       "deep-review-ci",
@@ -22,18 +22,18 @@
   {
     "name": "playwright-test",
     "scope_file": "fixtures/playwright-test.diff",
-    "description": "Playwright spec change that should dispatch TypeScript and QA specialists.",
+    "description": "Playwright spec change that should dispatch Playwright, TypeScript, and QA specialists while skipping low-risk docs and security agents.",
     "expected_dispatched": [
-      "deep-review-security",
       "deep-review-project-checklist",
       "deep-review-simplification",
       "deep-review-code",
       "deep-review-architecture",
-      "deep-review-docs",
       "deep-review-typescript",
       "deep-review-qa"
     ],
     "expected_skipped": [
+      "deep-review-security",
+      "deep-review-docs",
       "deep-review-python",
       "deep-review-ci",
       "deep-review-unit-test"
@@ -75,6 +75,26 @@
     ],
     "expected_skipped": [
       "deep-review-python",
+      "deep-review-ci",
+      "deep-review-qa"
+    ]
+  },
+  {
+    "name": "script-code-only",
+    "scope_file": "fixtures/script-code-only.diff",
+    "description": "Non-Playwright Python code change with no docs trigger that should skip project-checklist and docs while still running security.",
+    "expected_dispatched": [
+      "deep-review-security",
+      "deep-review-simplification",
+      "deep-review-code",
+      "deep-review-architecture",
+      "deep-review-python",
+      "deep-review-unit-test"
+    ],
+    "expected_skipped": [
+      "deep-review-project-checklist",
+      "deep-review-docs",
+      "deep-review-typescript",
       "deep-review-ci",
       "deep-review-qa"
     ]

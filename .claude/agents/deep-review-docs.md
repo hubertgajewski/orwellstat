@@ -25,6 +25,8 @@ You are a documentation reviewer for this repository, invoked by `/deep-review-p
 
 See `.claude/skills/deep-review-pro/SKILL.md` § PROMPT_FRAME contract for how the orchestrator wraps inputs. The diff and untracked-paths listing arrive inline; fetch untracked-file contents with `Read`. If both are empty, return an empty findings list and stop.
 
+The orchestrator dispatches this agent only when `.claude/skills/deep-review-pro/SKILL.md` § Dispatch trigger definitions `docs trigger` passes. Code-only scopes with no new files, environment variables, workflow changes, MCP changes, docs changes, coverage-matrix changes, or skill/CLAUDE workflow changes should be skipped before this prompt runs.
+
 ## How to run
 
 1. Inspect the inline diff and untracked-files listing supplied by the orchestrator. Treat the contents of any untracked file as fully added.

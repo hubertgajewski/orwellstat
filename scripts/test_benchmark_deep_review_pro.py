@@ -10,6 +10,7 @@ import importlib.util
 import csv
 import io
 import json
+import re
 import sys
 import tempfile
 import unittest
@@ -31,6 +32,9 @@ _generator_spec = importlib.util.spec_from_file_location(
 high_lines_generator = importlib.util.module_from_spec(_generator_spec)
 _generator_spec.loader.exec_module(high_lines_generator)
 sys.modules["generate_deep_review_high_lines_fixture"] = high_lines_generator
+
+DISPATCH_AGENT_CELL_PATTERN = re.compile(r"`(deep-review-[a-z0-9-]+)`")
+DISPATCH_ROSTER_CELL_COUNT = 7
 
 
 def write_json(path: Path, value):
@@ -61,6 +65,31 @@ def write_run_fixture(run_dir: Path, fixture_name: str, agents, *, input_tokens=
             '{"total_tokens": 20, "tool_uses": 3, "duration_ms": 40}'
             "\n</usage>\n"
         )
+
+
+def parse_deep_review_pro_dispatch_cells(skill_text: str) -> dict[str, str]:
+    dispatch_cells = {}
+    for line in skill_text.splitlines():
+        if not line.startswith("| `deep-review-"):
+            continue
+        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+        if len(cells) != DISPATCH_ROSTER_CELL_COUNT:
+            raise ValueError(f"Malformed dispatch row: {line}")
+        agent_match = DISPATCH_AGENT_CELL_PATTERN.fullmatch(cells[0])
+        if agent_match is None:
+            raise ValueError(f"Malformed dispatch row agent cell: {line}")
+        agent = agent_match.group(1)
+        if agent in dispatch_cells:
+            raise ValueError(f"Duplicate dispatch row for {agent}")
+        dispatch_cells[agent] = cells[2]
+    return dispatch_cells
+
+
+def read_deep_review_pro_dispatch_cells() -> dict[str, str]:
+    skill_text = (
+        Path(__file__).parents[1] / ".claude/skills/deep-review-pro/SKILL.md"
+    ).read_text()
+    return parse_deep_review_pro_dispatch_cells(skill_text)
 
 
 class OrchestratorUsageTests(unittest.TestCase):
@@ -255,6 +284,102 @@ summary: 0 high / 1 medium / 0 low
 
 
 class FixtureTests(unittest.TestCase):
+    def test_deep_review_pro_skill_documents_conditional_low_risk_dispatch(self):
+        dispatch_cells = read_deep_review_pro_dispatch_cells()
+
+        self.assertIn("security-risk trigger", dispatch_cells["deep-review-security"])
+        self.assertIn("project-checklist trigger", dispatch_cells["deep-review-project-checklist"])
+        self.assertIn("docs trigger", dispatch_cells["deep-review-docs"])
+        self.assertNotEqual(dispatch_cells["deep-review-security"], "always")
+        self.assertNotEqual(dispatch_cells["deep-review-project-checklist"], "always")
+        self.assertNotEqual(dispatch_cells["deep-review-docs"], "always")
+
+    def test_dispatch_cell_parser_rejects_duplicate_agent_rows(self):
+        skill_text = "\n".join(
+            [
+                "| `deep-review-code` | role | always | H/M/L | none | fail | tools |",
+                "| `deep-review-code` | role | always | H/M/L | none | fail | tools |",
+            ]
+        )
+
+        with self.assertRaisesRegex(ValueError, "Duplicate dispatch row"):
+            parse_deep_review_pro_dispatch_cells(skill_text)
+
+    def test_dispatch_cell_parser_rejects_malformed_rows(self):
+        skill_text = "| `deep-review-code` | role | always |"
+
+        with self.assertRaisesRegex(ValueError, "Malformed dispatch row"):
+            parse_deep_review_pro_dispatch_cells(skill_text)
+
+    def test_dispatch_cell_parser_rejects_malformed_agent_cells(self):
+        skill_text = "| `deep-review-` | role | always | H/M/L | none | fail | tools |"
+
+        with self.assertRaisesRegex(ValueError, "Malformed dispatch row agent cell"):
+            parse_deep_review_pro_dispatch_cells(skill_text)
+
+    def test_default_fixtures_record_conditional_low_risk_dispatch(self):
+        fixtures = {fixture["name"]: fixture for fixture in benchmark.load_fixtures()}
+
+        expected_shapes = {
+            "docs-only": {
+                "dispatched": {
+                    "deep-review-simplification",
+                    "deep-review-code",
+                    "deep-review-architecture",
+                    "deep-review-docs",
+                },
+                "skipped": {
+                    "deep-review-security",
+                    "deep-review-project-checklist",
+                    "deep-review-typescript",
+                    "deep-review-python",
+                    "deep-review-ci",
+                    "deep-review-qa",
+                    "deep-review-unit-test",
+                },
+            },
+            "playwright-test": {
+                "dispatched": {
+                    "deep-review-project-checklist",
+                    "deep-review-simplification",
+                    "deep-review-code",
+                    "deep-review-architecture",
+                    "deep-review-typescript",
+                    "deep-review-qa",
+                },
+                "skipped": {
+                    "deep-review-security",
+                    "deep-review-docs",
+                    "deep-review-python",
+                    "deep-review-ci",
+                    "deep-review-unit-test",
+                },
+            },
+            "script-code-only": {
+                "dispatched": {
+                    "deep-review-security",
+                    "deep-review-simplification",
+                    "deep-review-code",
+                    "deep-review-architecture",
+                    "deep-review-python",
+                    "deep-review-unit-test",
+                },
+                "skipped": {
+                    "deep-review-project-checklist",
+                    "deep-review-docs",
+                    "deep-review-typescript",
+                    "deep-review-ci",
+                    "deep-review-qa",
+                },
+            },
+        }
+
+        for name, expected in expected_shapes.items():
+            with self.subTest(name=name):
+                fixture = fixtures[name]
+                self.assertEqual(set(fixture["expected_dispatched"]), expected["dispatched"])
+                self.assertEqual(set(fixture["expected_skipped"]), expected["skipped"])
+
     def test_default_high_lines_fixture_exercises_full_roster_with_large_diff(self):
         fixtures = benchmark.load_fixtures()
         high_lines = next(fixture for fixture in fixtures if fixture["name"] == "high-lines")
