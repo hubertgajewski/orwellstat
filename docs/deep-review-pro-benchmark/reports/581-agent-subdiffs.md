@@ -25,36 +25,37 @@ Exact runtime token usage is unavailable in Codex because Codex does not expose 
 
 | Fixture | Agents | Prompt Chars Before | Prompt Chars After | Est. Tokens Before | Est. Tokens After | Delta |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| `docs-only` | 4 | 39,179 | 39,439 | 9,795 | 9,860 | 65 |
-| `playwright-test` | 6 | 63,224 | 63,728 | 15,806 | 15,932 | 126 |
-| `workflow` | 7 | 76,281 | 76,841 | 19,071 | 19,211 | 140 |
-| `mixed-typescript` | 8 | 88,698 | 89,137 | 22,175 | 22,285 | 110 |
-| `script-code-only` | 6 | 71,116 | 71,518 | 17,779 | 17,880 | 101 |
-| `large-diff` | 11 | 133,153 | 130,997 | 33,289 | 32,750 | -539 |
-| `high-lines` | 11 | 3,280,935 | 1,565,832 | 820,234 | 391,458 | -428,776 |
-| **Total** | **53** | **3,752,586** | **2,037,492** | **938,147** | **509,373** | **-428,774** |
+| `docs-only` | 4 | 37,656 | 37,916 | 9,414 | 9,479 | 65 |
+| `playwright-test` | 6 | 60,952 | 61,456 | 15,238 | 15,364 | 126 |
+| `workflow` | 7 | 73,631 | 74,191 | 18,408 | 18,548 | 140 |
+| `mixed-typescript` | 8 | 85,659 | 86,098 | 21,415 | 21,525 | 110 |
+| `script-code-only` | 6 | 68,815 | 69,217 | 17,204 | 17,305 | 101 |
+| `large-diff` | 11 | 128,951 | 126,795 | 32,238 | 31,699 | -539 |
+| `high-lines` | 11 | 3,276,733 | 1,563,316 | 819,184 | 390,829 | -428,355 |
+| **Total** | **53** | **3,732,397** | **2,018,989** | **933,101** | **504,749** | **-428,352** |
 
 Interpretation:
 
-- high-line stress fixture: estimated prompt-input proxy drops from 820,234 to 391,458 tokens, a 52.27% reduction
-- representative set excluding `high-lines`: estimated prompt-input proxy is effectively flat, 117,913 to 117,915 tokens, because the manifest overhead offsets savings on tiny fixture hunks
-- full fixture set including `high-lines`: estimated prompt-input proxy drops from 938,147 to 509,373 tokens, a 45.70% reduction
+- high-line stress fixture: estimated prompt-input proxy drops from 819,184 to 390,829 tokens, a 52.29% reduction
+- representative set excluding `high-lines`: estimated prompt-input proxy is effectively flat, 113,917 to 113,920 tokens, because the manifest and trusted-preamble overhead offsets savings on tiny fixture hunks
+- full fixture set including `high-lines`: estimated prompt-input proxy drops from 933,101 to 504,749 tokens, a 45.91% reduction
 
 ## Fixture Validation
 
 `scripts/test_benchmark_deep_review_pro.py` verifies:
 
-- `.claude/skills/deep-review-pro/SKILL.md` documents `CHANGED_FILES`, `<changed-files>`, and `PROMPT_FRAME_<Agent>`
-- broad agents (`security`, `simplification`, `code`, and `architecture`) are explicitly documented as full-diff recipients
-- scoped specialists (`project-checklist`, `docs`, `typescript`, `python`, `ci`, `qa`, and `unit-test`) are explicitly documented as relevant-hunk recipients
-- every specialist prompt documents the complete changed-file manifest and the fact that the inline diff can omit unrelated hunks
+- `.claude/skills/deep-review-pro/SKILL.md` documents `CHANGED_FILES`, `<changed-files>`, `PROMPT_FRAME_<Agent>`, and the shared contract that scoped diffs may omit unrelated hunks
+- the master roster owns each agent's prompt scope, with broad agents (`security`, `simplification`, `code`, and `architecture`) marked as full-diff recipients and scoped specialists marked as relevant-hunk recipients
+- every specialist prompt references the shared `PROMPT_FRAME` contract instead of duplicating the manifest and untrusted-content wording
+- the benchmark helper builds mixed-diff prompt frames that keep broad reviewers on the full diff, scope file specialists to matching hunks, send a complete changed-file manifest and trusted preamble to every non-empty frame, and encode fence-tag text inside untrusted blocks
+- docs prompt scoping includes rename and copy source paths for top-level docs, workflow, MCP, and environment example surfaces
 
 Focused validation output:
 
 ```text
-.......................................
+...............................................
 ----------------------------------------------------------------------
-Ran 39 tests in 0.035s
+Ran 47 tests in 0.025s
 
 OK
 ```
@@ -64,8 +65,8 @@ Focused coverage output:
 ```text
 Name                                        Stmts   Miss  Cover   Missing
 -------------------------------------------------------------------------
-scripts/benchmark-deep-review-pro.py          262      7    97%   96, 252, 423-427
-scripts/test_benchmark_deep_review_pro.py     402      1    99%   1007
+scripts/benchmark-deep-review-pro.py          435      8    98%   268, 438, 594, 765-769
+scripts/test_benchmark_deep_review_pro.py     505      0   100%
 -------------------------------------------------------------------------
-TOTAL                                         664      8    99%
+TOTAL                                         940      8    99%
 ```
