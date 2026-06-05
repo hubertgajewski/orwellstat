@@ -280,13 +280,40 @@ Tool grants are **not** passed by the orchestrator — the `Task(…)` API has n
 
 **Agent error handling** — if a Task call times out or errors, retry it once **sequentially** (single Task call, not bundled with others). If it still fails, mark the agent as `UNAVAILABLE: <reason>` for the aggregate report and continue with the others.
 
+## Agent result reuse cache
+
+The first review iteration always evaluates the current triggers and dispatches every matching roster row. Reuse is allowed only on later iterations in the re-review convergence loop, after scope resolution, trigger evaluation, and every `PROMPT_FRAME_<Agent>` value have been rebuilt from the current diff.
+
+For each dispatched, schema-valid agent result, store a cache record with a result reuse key containing:
+
+- agent name
+- agent prompt hash: SHA-256 of `.claude/agents/<Agent>.md`
+- `REFERENCES.md` hash: SHA-256 of `.claude/skills/deep-review-pro/REFERENCES.md`
+- scoped prompt-frame hash: SHA-256 of the exact `PROMPT_FRAME_<Agent>` string sent to that agent
+- read-dependency identity list: sorted tuples of repo-relative file path plus content identity for every file the harness reports the agent read. Use a git blob SHA for a tracked file at the reviewed state, or a SHA-256 file-content hash for a safely readable untracked file.
+
+If the harness does not expose read dependencies, record `read-deps: unavailable` in the cache metadata, mark the agent result cache-ineligible, and dispatch that agent fresh on the next matching iteration. If the harness exposes a read-dependency path but its content identity cannot be computed safely, invalidate that agent instead of reusing its cached result. Prompt or reference changes invalidate cached results because they change the agent prompt hash or `REFERENCES.md` hash. Agent results with schema violations, `UNAVAILABLE`, missing summaries, blocking findings, or incomplete read-dependency identities are not reusable; they remain targeted rerun candidates.
+
+On each later iteration:
+
+1. Rebuild `DIFF`, `UNTRACKED`, derived scope values, triggers, and `PROMPT_FRAME_<Agent>` values from the current state. Do not reuse a prior trigger decision.
+2. Dispatch every currently matching agent that had a blocking finding in the previous aggregate.
+3. Dispatch every agent whose trigger newly matches because a changed path, added line, or untracked path now falls inside that agent's trigger or prompt-scope surface. This includes agents that were previously skipped and agents that were previously cached.
+4. Dispatch every currently matching agent whose result reuse key differs from the cached key. A changed agent prompt file, changed `REFERENCES.md`, changed scoped prompt frame, changed known read-dependency path, or changed known read-dependency content identity must produce a different key or explicit invalidation.
+5. Reuse only currently matching agents whose cache record is non-blocking and whose complete reuse key matches the current key. Emit the cached result body and summary unchanged, but prefix the agent section with `REUSED: unchanged result from iteration <N> (cache key <short-hash>).`
+6. Emit normal `SKIPPED:` sections for rows whose current trigger does not match.
+
+All fresh dispatches for an iteration still go in one parallel Task message. Reused rows do not receive a Task call in that iteration. The aggregate's total counts use the cached summary counts for reused rows exactly as if the agent had just returned them, and each reused section must be visibly marked with `REUSED:` so the caller can distinguish reused evidence from fresh review evidence.
+
+If cached results or targeted reruns were used anywhere in the current convergence loop and the aggregate is about to emit `status: ready`, run one final full matching-agent pass before emitting readiness. For this guard pass, disable reuse and dispatch every currently matching roster row in one parallel Task message; still emit `SKIPPED:` for rows whose current triggers do not match. Only the final full matching-agent pass may emit `status: ready`. If it reports blocking findings, emit `status: blocked` with those findings and do not run another automatic guard pass unless the caller makes another fix.
+
 ## Aggregate output
 
 For each row in the master roster, in roster order, emit one section in the row's **Format**:
 
-```
+```text
 ### <Agent>
-<verbatim findings, OR the row's Empty-state sentinel, OR SKIPPED: <Dispatch cell> not satisfied, OR UNAVAILABLE: <reason>>
+<verbatim findings, OR the row's Empty-state sentinel, OR REUSED: ... plus cached findings, OR SKIPPED: <Dispatch cell> not satisfied, OR UNAVAILABLE: <reason>>
 <summary line>
 ```
 
@@ -309,13 +336,14 @@ After every per-agent section, emit:
 [UNAVAILABLE: <Agent>: <reason>   ← one line per UNAVAILABLE agent, if any]
 total: <enumerate every non-skipped row's format-relevant placeholders, in roster order, separated by " / ". Both format families contribute all of their counts; concrete tokens follow the three-row example table above.>
 status: ready if every metric named in each row's Blocking column is zero (a SKIPPED row contributes 0); otherwise blocked.
+reuse: dispatched <N> / skipped <N> / reused <N> / final_full_matching_pass <yes|no>
 ```
 
 A `SKIPPED:` agent contributes 0 to all counts and never blocks. The **Blocking** column of the master roster is the sole source of truth for which counts gate `status: ready`.
 
 ## Re-review convergence loop (cap = 3)
 
-The orchestrator does **not** modify source files. The caller decides which findings to fix. After the caller (or a follow-up turn in the same session) makes any change in response to a finding, re-dispatch every roster agent against the updated scope. Repeat until status is `ready`.
+The orchestrator does **not** modify source files. The caller decides which findings to fix. After the caller (or a follow-up turn in the same session) makes any change in response to a finding, rebuild the scope and apply the **Agent result reuse cache** rules: rerun prior blockers, rerun newly matching or invalidated agents, reuse only unchanged non-blocking cache hits, and run the final full matching-agent pass before emitting `status: ready` whenever cached or targeted reruns were used. Repeat until status is `ready`.
 
 Stop after **3 iterations** — if still blocked, surface the remaining findings to the user and ask how to proceed. Do not loop indefinitely. Schema violations (an agent emitting prose that doesn't match its documented format) are themselves a finding to surface to the user — do not silently drop or rewrite the agent's output.
 
@@ -371,9 +399,11 @@ The in-flight model turn (the one emitting this report) is not flushed to JSONL 
 
 **SKIPPED rows** — emit one row per agent skipped in dispatch with all numeric columns set to `—` and the `Summary` column reading `SKIPPED: <Dispatch cell> not satisfied`.
 
+**REUSED rows** — emit one row per agent reused from the result cache. Result reuse is separate from the model cache, so do not put reuse counts in `Cache read` or `Cache creation`. If the orchestrator can prove no Task call was issued for the reused row in this iteration, set that row's `Total`, `Tool uses`, and `Wall-clock` to `0`; otherwise render those cells as `(unavailable)` and include the limitation in the row summary. The `Summary` cell begins with `REUSED: unchanged result from iteration <N>` followed by the cached summary line.
+
 **Totals row** — sum each numeric column across non-skipped rows. The orchestrator's `Input`, `Output`, `Cache read`, `Cache creation` contribute (only if its row is not `(unavailable)`). Sub-agent rows contribute their `Total`. The totals row's `Total` cell is `(orchestrator input + orchestrator output) + Σ(sub-agent Total)` so the column reflects the full bill regardless of which side reported it.
 
-After the table, emit one line: `iterations: <M>` (the re-review loop iteration count).
+After the table, emit one line: `iterations: <M> (dispatched <D>, skipped <S>, reused <R>, final_full_matching_pass <yes|no>)`.
 
 Static-tool dispatches (e.g. `actionlint`, `shellcheck`) consume 0 LLM tokens — they run as `Bash` calls inside `deep-review-ci` and contribute only to that agent's `Tool uses` count via the harness `<usage>` aggregate, not to its `Total` token column. The harness exposes a single aggregate `tool_uses` per sub-agent with no per-tool breakdown, so the orchestrator cannot subtract them from the per-agent total; treat the `Tool uses` cell as inclusive of static-tool calls.
 
