@@ -8,10 +8,11 @@ This directory contains repeatable benchmark fixtures for measuring `/deep-revie
 
 | Fixture | Scope | Expected shape |
 | --- | --- | --- |
-| `docs-only` | Documentation-only diff | Always-on agents dispatch; TypeScript, Python, CI, QA, and unit-test agents skip |
-| `playwright-test` | Playwright spec diff | TypeScript and QA agents dispatch in addition to always-on agents |
-| `workflow` | GitHub Actions workflow diff | CI agent dispatches in addition to always-on agents |
-| `mixed-typescript` | Playwright utility plus MCP TypeScript diff | TypeScript and unit-test agents dispatch in addition to always-on agents |
+| `docs-only` | Documentation-only diff | Docs dispatches; security and project-checklist skip with TypeScript, Python, CI, QA, and unit-test agents |
+| `playwright-test` | Playwright spec diff | Project-checklist, TypeScript, and QA dispatch; docs, security, Python, CI, and unit-test agents skip |
+| `workflow` | GitHub Actions workflow diff | Security, project-checklist, docs, and CI dispatch with the always-on agents |
+| `mixed-typescript` | Playwright utility plus MCP TypeScript diff | Security, project-checklist, docs, TypeScript, and unit-test dispatch |
+| `script-code-only` | Existing non-Playwright Python script diff | Security, Python, and unit-test dispatch; project-checklist and docs skip |
 | `large-diff` | Docs, Python script, Playwright test, and workflow diff | Every specialist dispatches |
 | `high-lines` | Synthetic 3,000+ line docs, Python, TypeScript, Playwright test, and workflow diff | Every specialist dispatches; stresses high-line-count review behavior |
 
@@ -103,6 +104,10 @@ The command writes:
 - `deep-review-pro-benchmark.json` for machine-readable fixture, before, and after data.
 - `deep-review-pro-benchmark.csv` for spreadsheet-friendly deltas.
 - `deep-review-pro-benchmark.md` for the human-readable summary.
+
+## Recorded Reports
+
+Issue-specific benchmark reports can be stored under `reports/` when a workflow change needs durable review evidence. Each report should name the fixture set, before/after basis, exact commands or harness limitation, and whether token fields are exact, best-effort, or unavailable.
 
 ## Field Accuracy
 

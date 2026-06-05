@@ -27,6 +27,8 @@ Claude specialist agents live under `.claude/agents/`. Codex wrappers live under
 
 The current `/deep-review-pro` roster is documented in `.claude/skills/deep-review-pro/SKILL.md`.
 
+`/deep-review-pro` dispatches several broad, low-risk reviewers conditionally. `deep-review-project-checklist` runs only for Playwright, Bruno, or workflow convention surfaces; `deep-review-docs` runs only when docs-consistency triggers are present; `deep-review-security` runs for source, workflow, manifest, config/environment, auth/session/crypto, deny-path, or credential-like added-line risk triggers and skips only clearly low-risk docs/generated/test-only scopes after those checks pass. Skipped agents appear in the aggregate as `SKIPPED: <trigger> not satisfied` and contribute zero blocking findings.
+
 Token benchmark fixtures and the before/after reporting workflow live in [deep-review-pro-benchmark](deep-review-pro-benchmark/README.md). Use them before and after `/deep-review-pro` prompt or dispatch optimizations so token savings are measured against stable scopes.
 
 ## Codex And Claude Substitutions

@@ -63,6 +63,19 @@ def write_run_fixture(run_dir: Path, fixture_name: str, agents, *, input_tokens=
         )
 
 
+def read_deep_review_pro_dispatch_cells() -> dict[str, str]:
+    skill_text = (
+        Path(__file__).parents[1] / ".claude/skills/deep-review-pro/SKILL.md"
+    ).read_text()
+    dispatch_cells = {}
+    for line in skill_text.splitlines():
+        if not line.startswith("| `deep-review-"):
+            continue
+        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+        dispatch_cells[cells[0].strip("`")] = cells[2]
+    return dispatch_cells
+
+
 class OrchestratorUsageTests(unittest.TestCase):
     def test_sums_exact_jsonl_usage_fields(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -255,6 +268,79 @@ summary: 0 high / 1 medium / 0 low
 
 
 class FixtureTests(unittest.TestCase):
+    def test_deep_review_pro_skill_documents_conditional_low_risk_dispatch(self):
+        dispatch_cells = read_deep_review_pro_dispatch_cells()
+
+        self.assertIn("security-risk trigger", dispatch_cells["deep-review-security"])
+        self.assertIn("project-checklist trigger", dispatch_cells["deep-review-project-checklist"])
+        self.assertIn("docs trigger", dispatch_cells["deep-review-docs"])
+        self.assertNotEqual(dispatch_cells["deep-review-security"], "always")
+        self.assertNotEqual(dispatch_cells["deep-review-project-checklist"], "always")
+        self.assertNotEqual(dispatch_cells["deep-review-docs"], "always")
+
+    def test_default_fixtures_record_conditional_low_risk_dispatch(self):
+        fixtures = {fixture["name"]: fixture for fixture in benchmark.load_fixtures()}
+
+        expected_shapes = {
+            "docs-only": {
+                "dispatched": {
+                    "deep-review-simplification",
+                    "deep-review-code",
+                    "deep-review-architecture",
+                    "deep-review-docs",
+                },
+                "skipped": {
+                    "deep-review-security",
+                    "deep-review-project-checklist",
+                    "deep-review-typescript",
+                    "deep-review-python",
+                    "deep-review-ci",
+                    "deep-review-qa",
+                    "deep-review-unit-test",
+                },
+            },
+            "playwright-test": {
+                "dispatched": {
+                    "deep-review-project-checklist",
+                    "deep-review-simplification",
+                    "deep-review-code",
+                    "deep-review-architecture",
+                    "deep-review-typescript",
+                    "deep-review-qa",
+                },
+                "skipped": {
+                    "deep-review-security",
+                    "deep-review-docs",
+                    "deep-review-python",
+                    "deep-review-ci",
+                    "deep-review-unit-test",
+                },
+            },
+            "script-code-only": {
+                "dispatched": {
+                    "deep-review-security",
+                    "deep-review-simplification",
+                    "deep-review-code",
+                    "deep-review-architecture",
+                    "deep-review-python",
+                    "deep-review-unit-test",
+                },
+                "skipped": {
+                    "deep-review-project-checklist",
+                    "deep-review-docs",
+                    "deep-review-typescript",
+                    "deep-review-ci",
+                    "deep-review-qa",
+                },
+            },
+        }
+
+        for name, expected in expected_shapes.items():
+            with self.subTest(name=name):
+                fixture = fixtures[name]
+                self.assertEqual(set(fixture["expected_dispatched"]), expected["dispatched"])
+                self.assertEqual(set(fixture["expected_skipped"]), expected["skipped"])
+
     def test_default_high_lines_fixture_exercises_full_roster_with_large_diff(self):
         fixtures = benchmark.load_fixtures()
         high_lines = next(fixture for fixture in fixtures if fixture["name"] == "high-lines")

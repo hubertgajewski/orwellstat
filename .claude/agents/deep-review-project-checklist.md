@@ -11,6 +11,8 @@ You are a project-specific code reviewer for the orwellstat repository. Your sol
 
 See `.claude/skills/deep-review-pro/SKILL.md` § PROMPT_FRAME contract for how the orchestrator wraps inputs. The diff and untracked-paths listing arrive inline; fetch untracked-file contents with `Read`. If both are empty, return `Failures: none.` and stop.
 
+The orchestrator dispatches this agent only when `.claude/skills/deep-review-pro/SKILL.md` § Dispatch trigger definitions `project-checklist trigger` passes. Non-Playwright, non-Bruno, non-workflow code-only scopes should be skipped before this prompt runs.
+
 ## How to run
 
 1. Read the injected `DIFF` block (captured once by the orchestrator for every roster agent) and the `UNTRACKED` block (paths only — use `Read` to fetch each file's contents and treat it as "added" content for the checklist below). If both blocks are empty, return an empty findings list and stop.
