@@ -357,14 +357,25 @@ class FixtureTests(unittest.TestCase):
         report_text = report.read_text()
 
         self.assertIn("# Issue 582 Rerun Cache Benchmark", report_text)
+        self.assertIn("## Exact Runtime Token Comparison", report_text)
+        self.assertIn("## Prompt-Input Proxy Comparison", report_text)
         self.assertIn("## Before/After Review Sequence Comparison", report_text)
         self.assertIn("## Fixture-Based Validation", report_text)
         self.assertIn(
-            "| Iteration | Baseline dispatched | Optimized dispatched | Optimized reused | Final full pass |",
+            "| Metric | Baseline | Optimized | Delta | Availability |",
             report_text,
         )
-        self.assertIn("| 2 | 11 | 5 | 6 | no |", report_text)
-        self.assertIn("| final guard | 0 | 11 | 0 | yes |", report_text)
+        self.assertIn("| Exact total tokens | unavailable | unavailable | unavailable | unavailable |", report_text)
+        self.assertIn(
+            "| Prompt-input proxy tokens | 95,527 | 91,569 | -3,958 (-4.14%) | deterministic proxy |",
+            report_text,
+        )
+        self.assertIn(
+            "| Iteration | Baseline dispatched | Baseline skipped | Optimized dispatched | Optimized skipped | Optimized reused | Final full pass |",
+            report_text,
+        )
+        self.assertIn("| 2 | 11 | 0 | 5 | 0 | 6 | no |", report_text)
+        self.assertIn("| final guard | 0 | 0 | 11 | 0 | 0 | yes |", report_text)
 
     def test_deep_review_pro_skill_documents_agent_specific_prompt_frames(self):
         skill_text = read_deep_review_pro_skill_text()
