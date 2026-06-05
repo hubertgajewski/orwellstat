@@ -10,6 +10,7 @@ import importlib.util
 import csv
 import io
 import json
+import re
 import sys
 import tempfile
 import unittest
@@ -31,6 +32,9 @@ _generator_spec = importlib.util.spec_from_file_location(
 high_lines_generator = importlib.util.module_from_spec(_generator_spec)
 _generator_spec.loader.exec_module(high_lines_generator)
 sys.modules["generate_deep_review_high_lines_fixture"] = high_lines_generator
+
+DISPATCH_AGENT_CELL_PATTERN = re.compile(r"`(deep-review-[a-z0-9-]+)`")
+DISPATCH_ROSTER_CELL_COUNT = 7
 
 
 def write_json(path: Path, value):
@@ -63,17 +67,29 @@ def write_run_fixture(run_dir: Path, fixture_name: str, agents, *, input_tokens=
         )
 
 
-def read_deep_review_pro_dispatch_cells() -> dict[str, str]:
-    skill_text = (
-        Path(__file__).parents[1] / ".claude/skills/deep-review-pro/SKILL.md"
-    ).read_text()
+def parse_deep_review_pro_dispatch_cells(skill_text: str) -> dict[str, str]:
     dispatch_cells = {}
     for line in skill_text.splitlines():
         if not line.startswith("| `deep-review-"):
             continue
         cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
-        dispatch_cells[cells[0].strip("`")] = cells[2]
+        if len(cells) != DISPATCH_ROSTER_CELL_COUNT:
+            raise ValueError(f"Malformed dispatch row: {line}")
+        agent_match = DISPATCH_AGENT_CELL_PATTERN.fullmatch(cells[0])
+        if agent_match is None:
+            raise ValueError(f"Malformed dispatch row agent cell: {line}")
+        agent = agent_match.group(1)
+        if agent in dispatch_cells:
+            raise ValueError(f"Duplicate dispatch row for {agent}")
+        dispatch_cells[agent] = cells[2]
     return dispatch_cells
+
+
+def read_deep_review_pro_dispatch_cells() -> dict[str, str]:
+    skill_text = (
+        Path(__file__).parents[1] / ".claude/skills/deep-review-pro/SKILL.md"
+    ).read_text()
+    return parse_deep_review_pro_dispatch_cells(skill_text)
 
 
 class OrchestratorUsageTests(unittest.TestCase):
@@ -277,6 +293,29 @@ class FixtureTests(unittest.TestCase):
         self.assertNotEqual(dispatch_cells["deep-review-security"], "always")
         self.assertNotEqual(dispatch_cells["deep-review-project-checklist"], "always")
         self.assertNotEqual(dispatch_cells["deep-review-docs"], "always")
+
+    def test_dispatch_cell_parser_rejects_duplicate_agent_rows(self):
+        skill_text = "\n".join(
+            [
+                "| `deep-review-code` | role | always | H/M/L | none | fail | tools |",
+                "| `deep-review-code` | role | always | H/M/L | none | fail | tools |",
+            ]
+        )
+
+        with self.assertRaisesRegex(ValueError, "Duplicate dispatch row"):
+            parse_deep_review_pro_dispatch_cells(skill_text)
+
+    def test_dispatch_cell_parser_rejects_malformed_rows(self):
+        skill_text = "| `deep-review-code` | role | always |"
+
+        with self.assertRaisesRegex(ValueError, "Malformed dispatch row"):
+            parse_deep_review_pro_dispatch_cells(skill_text)
+
+    def test_dispatch_cell_parser_rejects_malformed_agent_cells(self):
+        skill_text = "| `deep-review-` | role | always | H/M/L | none | fail | tools |"
+
+        with self.assertRaisesRegex(ValueError, "Malformed dispatch row agent cell"):
+            parse_deep_review_pro_dispatch_cells(skill_text)
 
     def test_default_fixtures_record_conditional_low_risk_dispatch(self):
         fixtures = {fixture["name"]: fixture for fixture in benchmark.load_fixtures()}

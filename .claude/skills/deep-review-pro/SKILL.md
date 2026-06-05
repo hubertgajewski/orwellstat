@@ -226,7 +226,8 @@ Dispatch `deep-review-security` when any deterministic risk trigger is present:
 - any path component containing `auth`, `session`, `crypto`, `token`, `cookie`, `credential`, `secret`, or `password`
 - any path component matching the deny patterns named above
 - any `ADDED_LINES` entry matching a credential-shaped assignment or header, case-insensitive: `secret`, `token`, `password`, `passwd`, `api_key`, `api-key`, `private_key`, `private-key`, `credential`, `authorization`, `cookie`, or `session` followed on the same line by `=`, `:`, `=>`, or `${{`
-- any untracked file that is not clearly docs/generated/test-only, or whose content cannot be safely scanned before skipping
+- any untracked file whose path component matches a deny pattern named above; this triggers from the path alone with no content read
+- any other untracked file whose path is not clearly docs/generated/test-only by extension or directory; if a safe content scan would be required to prove low risk, dispatch instead
 
 Skip `deep-review-security` only when every changed path is clearly low-risk docs/generated/test-only scope and none of the checks above fired. Low-risk scopes are:
 
