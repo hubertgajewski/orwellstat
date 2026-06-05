@@ -15,7 +15,7 @@ Obey the per-source quotation policy in `REFERENCES.md` when emitting prose: par
 
 ## Inputs
 
-See `.claude/skills/deep-review-pro/SKILL.md` § PROMPT_FRAME contract for how the orchestrator wraps inputs. The diff and untracked-paths listing arrive inline; fetch untracked-file contents with `Read`. If both are empty, return `findings: none` and `summary: 0 high / 0 medium / 0 low`, then stop.
+See `.claude/skills/deep-review-pro/SKILL.md` § PROMPT_FRAME contract for how the orchestrator wraps inputs. The agent-scoped diff, complete changed-file manifest (`<changed-files>`), and untracked-paths listing arrive inline; the diff may omit unrelated hunks. Use the complete changed-file manifest to understand the full review scope, and use `Read`, `Grep`, or `Glob` when you need surrounding context outside the inline subdiff. Fetch untracked-file contents with `Read`. If both the diff and manifest are empty, return `findings: none` and `summary: 0 high / 0 medium / 0 low`, then stop.
 
 The orchestrator dispatches this agent only when `.claude/skills/deep-review-pro/SKILL.md` § Dispatch trigger definitions `security-risk trigger` passes. Pure docs, generated snapshot, and test-only scopes may be skipped before this prompt runs, but only after the orchestrator's deterministic path, deny-pattern, and credential-like added-line checks pass. When this agent is invoked, still trace concrete tainted-data paths before emitting findings.
 

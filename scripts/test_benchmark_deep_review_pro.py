@@ -35,6 +35,19 @@ sys.modules["generate_deep_review_high_lines_fixture"] = high_lines_generator
 
 DISPATCH_AGENT_CELL_PATTERN = re.compile(r"`(deep-review-[a-z0-9-]+)`")
 DISPATCH_ROSTER_CELL_COUNT = 7
+AGENT_NAMES = (
+    "deep-review-security",
+    "deep-review-project-checklist",
+    "deep-review-simplification",
+    "deep-review-code",
+    "deep-review-architecture",
+    "deep-review-docs",
+    "deep-review-typescript",
+    "deep-review-python",
+    "deep-review-ci",
+    "deep-review-qa",
+    "deep-review-unit-test",
+)
 
 
 def write_json(path: Path, value):
@@ -90,6 +103,14 @@ def read_deep_review_pro_dispatch_cells() -> dict[str, str]:
         Path(__file__).parents[1] / ".claude/skills/deep-review-pro/SKILL.md"
     ).read_text()
     return parse_deep_review_pro_dispatch_cells(skill_text)
+
+
+def read_deep_review_pro_skill_text() -> str:
+    return (Path(__file__).parents[1] / ".claude/skills/deep-review-pro/SKILL.md").read_text()
+
+
+def read_agent_prompt(agent_name: str) -> str:
+    return (Path(__file__).parents[1] / ".claude/agents" / f"{agent_name}.md").read_text()
 
 
 class OrchestratorUsageTests(unittest.TestCase):
@@ -293,6 +314,53 @@ class FixtureTests(unittest.TestCase):
         self.assertNotEqual(dispatch_cells["deep-review-security"], "always")
         self.assertNotEqual(dispatch_cells["deep-review-project-checklist"], "always")
         self.assertNotEqual(dispatch_cells["deep-review-docs"], "always")
+
+    def test_deep_review_pro_skill_documents_agent_specific_prompt_frames(self):
+        skill_text = read_deep_review_pro_skill_text()
+
+        self.assertIn("`CHANGED_FILES`", skill_text)
+        self.assertIn("`{{CHANGED_FILES}}`", skill_text)
+        self.assertIn("`<changed-files>`", skill_text)
+        self.assertIn("<changed-files>\n{{CHANGED_FILES}}\n</changed-files>", skill_text)
+        self.assertIn("## Scope builder and per-agent prompt frames", skill_text)
+        self.assertIn("PROMPT_FRAME_<Agent>", skill_text)
+        self.assertIn("Task(subagent_type=<Agent>", skill_text)
+        self.assertIn("prompt=PROMPT_FRAME_<Agent>", skill_text)
+        self.assertIn(
+            "contributor-controlled (`{{DIFF}}`, `{{CHANGED_FILES}}`, `{{UNTRACKED}}`, `{{PR_DESC}}`)",
+            skill_text,
+        )
+
+    def test_deep_review_pro_skill_documents_full_diff_agents_and_scoped_specialists(self):
+        skill_text = read_deep_review_pro_skill_text()
+
+        for agent in (
+            "deep-review-security",
+            "deep-review-simplification",
+            "deep-review-code",
+            "deep-review-architecture",
+        ):
+            with self.subTest(agent=agent):
+                self.assertIn(f"`{agent}` — conservative full `DIFF`", skill_text)
+
+        for agent in (
+            "deep-review-project-checklist",
+            "deep-review-docs",
+            "deep-review-typescript",
+            "deep-review-python",
+            "deep-review-ci",
+            "deep-review-qa",
+            "deep-review-unit-test",
+        ):
+            with self.subTest(agent=agent):
+                self.assertIn(f"`{agent}` — relevant hunks only", skill_text)
+
+    def test_agent_prompts_document_changed_file_manifest(self):
+        for agent in AGENT_NAMES:
+            with self.subTest(agent=agent):
+                prompt = read_agent_prompt(agent)
+                self.assertIn("complete changed-file manifest", prompt)
+                self.assertIn("<changed-files>", prompt)
 
     def test_dispatch_cell_parser_rejects_duplicate_agent_rows(self):
         skill_text = "\n".join(

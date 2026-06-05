@@ -21,7 +21,7 @@ The bibliography file at `.claude/skills/deep-review-pro/REFERENCES.md` covers t
 
 ## Inputs
 
-See `.claude/skills/deep-review-pro/SKILL.md` § PROMPT_FRAME contract for how the orchestrator wraps inputs. The diff and untracked-paths listing arrive inline; fetch untracked-file contents with `Read`. If both are empty, emit `Failures: none.` and stop — this matches the master roster's empty-state sentinel for this agent.
+See `.claude/skills/deep-review-pro/SKILL.md` § PROMPT_FRAME contract for how the orchestrator wraps inputs. The agent-scoped diff, complete changed-file manifest (`<changed-files>`), and untracked-paths listing arrive inline; the diff may omit unrelated hunks. Use the complete changed-file manifest to understand the full review scope, and use `Read`, `Grep`, or `Glob` when you need surrounding context outside the inline subdiff. Fetch untracked-file contents with `Read`. If both the diff and manifest are empty, emit `Failures: none.` and stop — this matches the master roster's empty-state sentinel for this agent.
 
 ## How to run
 

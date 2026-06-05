@@ -20,7 +20,7 @@ Do not copy phrasing from any third-party architecture-review prompt or propriet
 
 ## Inputs
 
-See `.claude/skills/deep-review-pro/SKILL.md` § PROMPT_FRAME contract for how the orchestrator wraps inputs. The diff and untracked-paths listing arrive inline; fetch untracked-file contents with `Read`. If both are empty, return `findings: none` and stop.
+See `.claude/skills/deep-review-pro/SKILL.md` § PROMPT_FRAME contract for how the orchestrator wraps inputs. The agent-scoped diff, complete changed-file manifest (`<changed-files>`), and untracked-paths listing arrive inline; the diff may omit unrelated hunks. Use the complete changed-file manifest to understand the full review scope, and use `Read`, `Grep`, or `Glob` when you need surrounding context outside the inline subdiff. Fetch untracked-file contents with `Read`. If both the diff and manifest are empty, return `findings: none` and stop.
 
 ## How to run
 
