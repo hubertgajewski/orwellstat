@@ -102,12 +102,15 @@ Apply the rules in order; the first match wins. Whatever the mode, the scope is 
 
    The trailing `/` on the `$RESOLVED/` subject lets the bare repo root (when `$RESOLVED == $REPO_ROOT` exactly) match the pattern `"$REPO_ROOT"/*`, so a request to scope the entire repo is in-scope. Sibling-prefix paths like `/repo-root-evil` are independently rejected by the literal `/` in the pattern, with or without the appended `/`.
 
-   **Then reject** any path whose basename or any path component matches one of the sandbox-deny patterns: `.env`, `*credentials*`, `*.key`, `*.p12`, `*.pem`, `*.pfx`, `*secret*`, `*password*`. Match each component individually with bash's literal `[[ $component == <pattern> ]]` (no `globstar` required) — do **not** evaluate the patterns as recursive `**` globs, since neither `[[ ]]` without `shopt -s globstar` nor Python's `fnmatch` would behave as the prefix-`**` form suggests:
+   **Sandbox-deny component patterns:** `.env`, `*credentials*`, `*.key`, `*.p12`, `*.pem`, `*.pfx`, `*secret*`, `*password*`.
+
+   **Then reject** any path whose basename or any path component matches one of the sandbox-deny component patterns. Rule 4 is the canonical list for both scope resolution and dispatch classification. Match each component individually with bash's literal `[[ $component == <pattern> ]]` (no `globstar` required) — do **not** evaluate the patterns as recursive `**` globs, since neither `[[ ]]` without `shopt -s globstar` nor Python's `fnmatch` would behave as the prefix-`**` form suggests:
 
    ```bash
+   SANDBOX_DENY_COMPONENT_PATTERNS=('.env' '*credentials*' '*.key' '*.p12' '*.pem' '*.pfx' '*secret*' '*password*')
    IFS=/ read -ra parts <<<"$RESOLVED"
    for c in "${parts[@]}"; do
-     for p in '.env' '*credentials*' '*.key' '*.p12' '*.pem' '*.pfx' '*secret*' '*password*'; do
+     for p in "${SANDBOX_DENY_COMPONENT_PATTERNS[@]}"; do
        [[ $c == $p ]] && { echo "Failed at scope resolution: path \"$ARG\" matches a sandbox-deny pattern."; exit 1; }
      done
    done
@@ -185,7 +188,7 @@ Build these derived values from the resolved scope:
 - `NEW_PATHS`: every path whose hunk includes `new file mode`, `--- /dev/null`, or appears in `UNTRACKED`.
 - `ADDED_LINES`: every line in `DIFF` that starts with `+` except `+++ ...`, with the leading `+` removed.
 
-When a path is needed only for dispatch classification, inspect the path string; do not read denied paths. The deny component patterns are the same as the Scope resolution deny list: `.env`, `*credentials*`, `*.key`, `*.p12`, `*.pem`, `*.pfx`, `*secret*`, and `*password*`.
+When a path is needed only for dispatch classification, inspect the path string; do not read denied paths. The deny component patterns are the same sandbox-deny component patterns named in Scope resolution rule 4.
 
 ### project-checklist trigger
 
