@@ -109,6 +109,16 @@ The command writes:
 
 Issue-specific benchmark reports can be stored under `reports/` when a workflow change needs durable review evidence. Each report should name the fixture set, before/after basis, exact commands or harness limitation, and whether token fields are exact, best-effort, or unavailable.
 
+## Cost Proxy Policy
+
+Exact `total_tokens` from captured Claude usage is the preferred cost metric. When exact token usage is unavailable, record it as unavailable and add only the proxy that matches the story's cost surface:
+
+- Dispatch and prompt-input changes (#580, #581, #584, #585, #586): use the prompt-footprint proxy. Sum, for each dispatched agent, the agent prompt text, roster domain string, and the exact prompt frame sent to that agent. Estimate tokens as `ceil(characters / 4)`. If a story changes per-agent subdiffs, use the per-agent prompt frame, not the full fixture diff. Report the same three totals when they apply: affected fixtures, representative set excluding `high-lines`, and full fixture set.
+- Output verbosity changes (#583): use an output-footprint proxy only when exact output tokens are unavailable. Sum the aggregate output text that would be emitted before and after, estimate tokens as `ceil(characters / 4)`, and keep this separate from prompt-input estimates.
+- Rerun/cache changes (#582): compare complete review sequences, not a single fixture pass. Record dispatched, skipped, reused, and final full matching-pass counts per iteration. If exact tokens are unavailable, do not convert reused results to zero token cost unless the harness proves no model call occurred.
+
+Proxy estimates are not billing data. They exclude model-specific tokenization, harness overhead, cache behavior, conversation history, and hidden system/tool framing. Use them as deterministic before/after evidence only when the exact usage fields are unavailable.
+
 ## Field Accuracy
 
 Exact fields:

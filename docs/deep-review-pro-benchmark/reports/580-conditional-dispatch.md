@@ -48,7 +48,7 @@ The `before` column reflects the pre-#580 roster where `deep-review-security`, `
 
 Exact runtime token usage is unavailable in Codex, but the branch can still estimate prompt-input footprint from repository text. This estimate sums, for each dispatched agent, the current agent prompt file, the roster domain string passed as the task description, and the benchmark fixture diff wrapped in the prompt frame. It then uses `ceil(characters / 4)` as a heuristic token estimate.
 
-This is not billing data. It excludes harness overhead, cache effects, conversation history, model-specific tokenization, and agent output tokens. It is useful only as a deterministic before/after proxy for the prompt text this change stops sending.
+This follows the benchmark README's Cost Proxy Policy. It is not billing data. It excludes harness overhead, cache effects, conversation history, model-specific tokenization, and agent output tokens. It is useful only as a deterministic before/after proxy for the prompt text this change stops sending.
 
 | Fixture | Agents Before | Agents After | Prompt Chars Before | Prompt Chars After | Est. Tokens Before | Est. Tokens After | Delta |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
