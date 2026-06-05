@@ -346,7 +346,7 @@ class FixtureTests(unittest.TestCase):
         self.assertIn("content identity", skill_text)
         self.assertIn("cache-ineligible", skill_text)
         self.assertIn("REUSED:", skill_text)
-        self.assertIn("cached or targeted reruns were used", skill_text)
+        self.assertIn("cached results or targeted reruns were used", skill_text)
         self.assertIn("final full matching-agent pass", skill_text)
         self.assertIn("Prompt or reference changes invalidate cached results", skill_text)
 

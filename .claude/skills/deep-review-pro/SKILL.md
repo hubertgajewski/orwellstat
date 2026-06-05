@@ -311,7 +311,7 @@ If cached results or targeted reruns were used anywhere in the current convergen
 
 For each row in the master roster, in roster order, emit one section in the row's **Format**:
 
-```
+```text
 ### <Agent>
 <verbatim findings, OR the row's Empty-state sentinel, OR REUSED: ... plus cached findings, OR SKIPPED: <Dispatch cell> not satisfied, OR UNAVAILABLE: <reason>>
 <summary line>
