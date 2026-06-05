@@ -290,9 +290,9 @@ For each dispatched, schema-valid agent result, store a cache record with a resu
 - agent prompt hash: SHA-256 of `.claude/agents/<Agent>.md`
 - `REFERENCES.md` hash: SHA-256 of `.claude/skills/deep-review-pro/REFERENCES.md`
 - scoped prompt-frame hash: SHA-256 of the exact `PROMPT_FRAME_<Agent>` string sent to that agent
-- read-dependency identity list: sorted tuples of repo-relative file path plus content identity for every file the harness reports the agent read, if the harness exposes them. Use a git blob SHA for a tracked file at the reviewed state, or a SHA-256 file-content hash for a safely readable untracked file.
+- read-dependency identity list: sorted tuples of repo-relative file path plus content identity for every file the harness reports the agent read. Use a git blob SHA for a tracked file at the reviewed state, or a SHA-256 file-content hash for a safely readable untracked file.
 
-If the harness does not expose read dependencies, record `read-deps: unavailable` in the cache metadata and do not claim that surrounding file context was proven unchanged. If the harness exposes a read-dependency path but its content identity cannot be computed safely, invalidate that agent instead of reusing its cached result. Prompt or reference changes invalidate cached results because they change the agent prompt hash or `REFERENCES.md` hash. Agent results with schema violations, `UNAVAILABLE`, missing summaries, or blocking findings are not reusable; they remain targeted rerun candidates.
+If the harness does not expose read dependencies, record `read-deps: unavailable` in the cache metadata, mark the agent result cache-ineligible, and dispatch that agent fresh on the next matching iteration. If the harness exposes a read-dependency path but its content identity cannot be computed safely, invalidate that agent instead of reusing its cached result. Prompt or reference changes invalidate cached results because they change the agent prompt hash or `REFERENCES.md` hash. Agent results with schema violations, `UNAVAILABLE`, missing summaries, blocking findings, or incomplete read-dependency identities are not reusable; they remain targeted rerun candidates.
 
 On each later iteration:
 

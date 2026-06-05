@@ -344,6 +344,7 @@ class FixtureTests(unittest.TestCase):
         self.assertIn("scoped prompt-frame hash", skill_text)
         self.assertIn("read-dependency identity list", skill_text)
         self.assertIn("content identity", skill_text)
+        self.assertIn("cache-ineligible", skill_text)
         self.assertIn("REUSED:", skill_text)
         self.assertIn("cached or targeted reruns were used", skill_text)
         self.assertIn("final full matching-agent pass", skill_text)
