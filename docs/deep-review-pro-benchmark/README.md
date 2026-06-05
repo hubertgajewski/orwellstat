@@ -109,6 +109,60 @@ The command writes:
 
 Issue-specific benchmark reports can be stored under `reports/` when a workflow change needs durable review evidence. Each report should name the fixture set, before/after basis, exact commands or harness limitation, and whether token fields are exact, best-effort, or unavailable.
 
+For the #587 optimization epic, issue-specific reports must also include the generated `## Epic Comparable Benchmark` section from `reports/587-epic-token-cost-matrix.md`. That section is the comparable surface across child stories. Story-specific prompt-only, output-only, dispatch-only, or rerun/cache tables may appear below it, but they must not replace it.
+
+## Epic Matrix Policy
+
+The #587 epic uses fixed checkpoints:
+
+| Checkpoint | Meaning |
+| --- | --- |
+| `original-580` | Baseline after #579 and before #580 |
+| `post-580` | After #580 conditional dispatch |
+| `post-581` | After #581 agent-specific subdiffs |
+| `post-582` | After #582 rerun cache contract |
+| `post-583` | After #583 compact aggregate output |
+| `post-584` | Reserved for #584 shared-boilerplate compaction |
+| `post-585` | Reserved for #585 static pre-pass and ownership cleanup |
+| `post-586` | Reserved for #586 large-diff risk bucketing |
+
+Every child story in #587 must report two comparable deltas:
+
+- **Incremental delta**: previous checkpoint to this story's checkpoint.
+- **Cumulative delta**: `original-580` to this story's checkpoint.
+
+The comparable tables must use the same fixture set and these columns:
+
+```text
+Combined chars before
+Combined chars after
+Char delta
+Combined est. tokens before
+Combined est. tokens after
+Token delta
+```
+
+The matrix recalculation command is:
+
+```bash
+python3 scripts/benchmark_deep_review_epic_matrix.py
+```
+
+For a later child story, first add or update that story's checkpoint in `scripts/benchmark_deep_review_epic_matrix.py::DEFAULT_CHECKPOINTS`, including the previous checkpoint link and the output mode. Then run the matrix command above.
+
+To print the generated section for an issue report:
+
+```bash
+python3 scripts/benchmark_deep_review_epic_matrix.py --issue-section 583
+```
+
+This writes:
+
+- `reports/587-epic-token-cost-matrix.md`
+- `reports/587-epic-token-cost-matrix.json`
+
+The matrix is generated from historical checkpoint commits with `git show`, while every checkpoint uses the same current fixture set. This supersedes any older report-local proxy that used a different fixture set, unit, or branch-local prompt text. If a historical report contains a value such as `Prompt Chars Before`, do not compare it to a later `est. tokens` value; use the generated matrix's combined chars and combined estimated tokens instead.
+
 ## Cost Proxy Policy
 
 Exact `total_tokens` from captured Claude usage is the preferred cost metric. When exact token usage is unavailable, record it as unavailable and add only the proxy that matches the story's cost surface:

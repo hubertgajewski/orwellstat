@@ -2,6 +2,26 @@
 
 This report records the `/deep-review-pro` benchmark evidence for issue #580, which changes the low-risk agents `deep-review-security`, `deep-review-project-checklist`, and `deep-review-docs` from unconditional dispatch to deterministic trigger-based dispatch.
 
+## Epic Comparable Benchmark
+
+These rows are generated from `587-epic-token-cost-matrix.md` so this issue can be compared with every other #587 child story using the same units.
+
+Use this section for cross-ticket comparison. Story-specific tables below are retained as local evidence and may use a narrower prompt-only, output-only, dispatch-only, or rerun/cache proxy surface.
+
+### Incremental Delta: original-580 -> post-580
+
+| Metric | Before | After | Delta |
+| --- | ---: | ---: | ---: |
+| Combined chars | 3,802,267 | 3,748,414 | -53,853 (-1.42%) |
+| Combined est. tokens | 950,573 | 937,108 | -13,465 (-1.42%) |
+
+### Cumulative Delta: original-580 -> post-580
+
+| Metric | Original #580 baseline | Current checkpoint | Delta |
+| --- | ---: | ---: | ---: |
+| Combined chars | 3,802,267 | 3,748,414 | -53,853 (-1.42%) |
+| Combined est. tokens | 950,573 | 937,108 | -13,465 (-1.42%) |
+
 ## Harness
 
 - Fixture source: `docs/deep-review-pro-benchmark/fixtures.json`

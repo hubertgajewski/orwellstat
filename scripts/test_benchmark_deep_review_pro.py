@@ -350,6 +350,97 @@ class FixtureTests(unittest.TestCase):
         self.assertIn("final full matching-agent pass", skill_text)
         self.assertIn("Prompt or reference changes invalidate cached results", skill_text)
 
+    def test_deep_review_pro_skill_documents_output_verbosity_contract(self):
+        skill_text = read_deep_review_pro_skill_text()
+
+        self.assertIn("## Output verbosity", skill_text)
+        self.assertIn("Default mode is compact", skill_text)
+        self.assertIn("`--usage`", skill_text)
+        self.assertIn("`--verbose`", skill_text)
+        self.assertIn("detailed usage mode", skill_text)
+        self.assertIn("compact token total", skill_text)
+        self.assertIn("omit individual pass/N/A lines", skill_text)
+        self.assertIn("schema violations still surface", skill_text)
+        self.assertIn("## Detailed token & dispatch summary table", skill_text)
+        self.assertNotIn("## Token & dispatch summary table", skill_text)
+
+    def test_pass_fail_agents_document_compact_auditability_summary(self):
+        for agent, cells in read_deep_review_pro_roster().items():
+            if cells["format"] != "pass/fail/N/A":
+                continue
+            with self.subTest(agent=agent):
+                prompt = read_agent_prompt(agent)
+                self.assertIn("compact aggregate mode", prompt)
+                self.assertIn("summary line preserves count evidence", prompt)
+
+    def test_issue_583_benchmark_report_records_output_verbosity_comparison(self):
+        report = (
+            Path(__file__).parents[1]
+            / "docs/deep-review-pro-benchmark/reports/583-output-verbosity.md"
+        )
+
+        report_text = report.read_text()
+
+        self.assertIn("# Issue 583 Output Verbosity Benchmark", report_text)
+        self.assertIn("## Benchmark Scope", report_text)
+        self.assertIn("## Epic Comparable Benchmark", report_text)
+        self.assertIn("## Estimated Output Token Proxy", report_text)
+        self.assertIn("## Exact Runtime Token Status", report_text)
+        self.assertIn("## Fixture-Based Validation", report_text)
+        self.assertIn("Issue #583 changes only the final aggregate text", report_text)
+        self.assertIn("does not change which agents dispatch", report_text)
+        self.assertIn(
+            "For cross-issue comparison, use the generated epic matrix in `587-epic-token-cost-matrix.md`.",
+            report_text,
+        )
+        self.assertIn(
+            "### Incremental Delta: post-582 -> post-583",
+            report_text,
+        )
+        self.assertIn(
+            "| Combined est. tokens | 508,384 | 507,147 | -1,237 (-0.24%) |",
+            report_text,
+        )
+        self.assertIn(
+            "### Cumulative Delta: original-580 -> post-583",
+            report_text,
+        )
+        self.assertIn(
+            "| Combined est. tokens | 950,573 | 507,147 | -443,426 (-46.65%) |",
+            report_text,
+        )
+        self.assertIn("Exact output tokens require captured Claude Code usage artifacts.", report_text)
+        self.assertIn(
+            "This status is not the benchmark result; the comparable benchmark evidence is the epic matrix and deterministic output proxy above.",
+            report_text,
+        )
+        self.assertNotIn("Direct #580 vs #583 Comparison", report_text)
+        self.assertNotIn("## Component Rollup", report_text)
+        self.assertNotIn(
+            "| Metric | Baseline | Compact | Delta | Availability |",
+            report_text,
+        )
+        self.assertNotIn(
+            "| Exact output tokens | unavailable | unavailable | unavailable | unavailable |",
+            report_text,
+        )
+        self.assertIn(
+            "| Fixture | Aggregate-output baseline chars | Aggregate-output compact chars | Estimated baseline output tokens | Estimated compact output tokens | Delta | Availability |",
+            report_text,
+        )
+        self.assertIn("| `docs-only` | 3,530 | 1,086 | 883 | 272 | -611 (-69.20%) | deterministic output-footprint proxy |", report_text)
+        self.assertIn("| `workflow` |", report_text)
+        self.assertIn("| `mixed-typescript` |", report_text)
+        self.assertIn("| `script-code-only` |", report_text)
+        self.assertIn("| `high-lines` |", report_text)
+        self.assertIn("| **Total** | **31,879** | **7,448** | **7,972** | **1,864** | **-6,108 (-76.62%)** | deterministic output-footprint proxy |", report_text)
+        self.assertIn("output-footprint proxy", report_text)
+        self.assertIn(
+            "`587-epic-token-cost-matrix.md` records the comparable full-fixture, one-pass combined proxy",
+            report_text,
+        )
+        self.assertIn("compact output still surfaces schema violations", report_text.lower())
+
     def test_issue_582_benchmark_report_records_rerun_sequence_validation(self):
         report = (
             Path(__file__).parents[1]

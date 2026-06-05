@@ -47,4 +47,6 @@ Failures (in order of priority):
   2. ...
 ```
 
+In compact aggregate mode, `/deep-review-pro` may omit individual pass/N/A lines when this agent has no failures. Keep the summary counts accurate because the summary line preserves count evidence for auditability.
+
 If there are no failures, end after the summary line and write `Failures: none.` Do not propose edits — the calling skill (`/deep-review-pro`) decides whether to fix or surface the findings.

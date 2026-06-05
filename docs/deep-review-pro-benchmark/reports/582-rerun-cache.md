@@ -2,6 +2,26 @@
 
 This report records the `/deep-review-pro` benchmark evidence for issue #582, which adds conservative reuse of unchanged non-blocking agent results during re-review convergence and requires a final full matching-agent pass before `status: ready`.
 
+## Epic Comparable Benchmark
+
+These rows are generated from `587-epic-token-cost-matrix.md` so this issue can be compared with every other #587 child story using the same units.
+
+Use this section for cross-ticket comparison. Story-specific tables below are retained as local evidence and may use a narrower prompt-only, output-only, dispatch-only, or rerun/cache proxy surface.
+
+### Incremental Delta: post-581 -> post-582
+
+| Metric | Before | After | Delta |
+| --- | ---: | ---: | ---: |
+| Combined chars | 2,033,514 | 2,033,514 | 0 (0.00%) |
+| Combined est. tokens | 508,384 | 508,384 | 0 (0.00%) |
+
+### Cumulative Delta: original-580 -> post-582
+
+| Metric | Original #580 baseline | Current checkpoint | Delta |
+| --- | ---: | ---: | ---: |
+| Combined chars | 3,802,267 | 2,033,514 | -1,768,753 (-46.52%) |
+| Combined est. tokens | 950,573 | 508,384 | -442,189 (-46.52%) |
+
 ## Harness
 
 - Fixture source: `docs/deep-review-pro-benchmark/fixtures.json`
