@@ -334,6 +334,38 @@ class FixtureTests(unittest.TestCase):
         self.assertNotEqual(dispatch_cells["deep-review-project-checklist"], "always")
         self.assertNotEqual(dispatch_cells["deep-review-docs"], "always")
 
+    def test_deep_review_pro_skill_documents_rerun_cache_contract(self):
+        skill_text = read_deep_review_pro_skill_text()
+
+        self.assertIn("## Agent result reuse cache", skill_text)
+        self.assertIn("agent name", skill_text)
+        self.assertIn("agent prompt hash", skill_text)
+        self.assertIn("`REFERENCES.md` hash", skill_text)
+        self.assertIn("scoped prompt-frame hash", skill_text)
+        self.assertIn("read-dependency path list", skill_text)
+        self.assertIn("REUSED:", skill_text)
+        self.assertIn("cached or targeted reruns were used", skill_text)
+        self.assertIn("final full matching-agent pass", skill_text)
+        self.assertIn("Prompt or reference changes invalidate cached results", skill_text)
+
+    def test_issue_582_benchmark_report_records_rerun_sequence_validation(self):
+        report = (
+            Path(__file__).parents[1]
+            / "docs/deep-review-pro-benchmark/reports/582-rerun-cache.md"
+        )
+
+        report_text = report.read_text()
+
+        self.assertIn("# Issue 582 Rerun Cache Benchmark", report_text)
+        self.assertIn("## Before/After Review Sequence Comparison", report_text)
+        self.assertIn("## Fixture-Based Validation", report_text)
+        self.assertIn(
+            "| Iteration | Baseline dispatched | Optimized dispatched | Optimized reused | Final full pass |",
+            report_text,
+        )
+        self.assertIn("| 2 | 11 | 5 | 6 | no |", report_text)
+        self.assertIn("| final guard | 0 | 11 | 0 | yes |", report_text)
+
     def test_deep_review_pro_skill_documents_agent_specific_prompt_frames(self):
         skill_text = read_deep_review_pro_skill_text()
 
