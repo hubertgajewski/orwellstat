@@ -47,15 +47,16 @@ Interpretation:
 - `.claude/skills/deep-review-pro/SKILL.md` documents `CHANGED_FILES`, `<changed-files>`, `PROMPT_FRAME_<Agent>`, and the shared contract that scoped diffs may omit unrelated hunks
 - the master roster owns each agent's prompt scope, with broad agents (`security`, `simplification`, `code`, and `architecture`) marked as full-diff recipients and scoped specialists marked as relevant-hunk recipients
 - every specialist prompt references the shared `PROMPT_FRAME` contract instead of duplicating the manifest and untrusted-content wording
+- every H/M/L specialist prompt references the shared recount invariant instead of duplicating the output-schema rule
 - the benchmark helper builds mixed-diff prompt frames that keep broad reviewers on the full diff, scope file specialists to matching hunks, send a complete changed-file manifest and trusted preamble to every non-empty frame, and encode fence-tag text inside untrusted blocks
 - docs prompt scoping includes rename and copy source paths for top-level docs, workflow, MCP, and environment example surfaces
 
 Focused validation output:
 
 ```text
-...............................................
+................................................
 ----------------------------------------------------------------------
-Ran 47 tests in 0.025s
+Ran 48 tests in 0.027s
 
 OK
 ```
@@ -66,7 +67,7 @@ Focused coverage output:
 Name                                        Stmts   Miss  Cover   Missing
 -------------------------------------------------------------------------
 scripts/benchmark-deep-review-pro.py          435      8    98%   268, 438, 594, 765-769
-scripts/test_benchmark_deep_review_pro.py     505      0   100%
+scripts/test_benchmark_deep_review_pro.py     517      0   100%
 -------------------------------------------------------------------------
-TOTAL                                         940      8    99%
+TOTAL                                         952      8    99%
 ```

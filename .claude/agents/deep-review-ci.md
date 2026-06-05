@@ -31,7 +31,7 @@ If neither the diff nor the untracked listing contains a path matching `.github/
 3. **Trivial-vs-non-trivial gate.** If `actionlint` reported no issues AND the workflow shows none of the non-trivial markers below, do not run the LLM pass for that file.
 4. **LLM semantic pass.** If the workflow shows any non-trivial marker, or if the static pass surfaced an issue that needs semantic context, walk the LLM checklist below for that file. Each non-static finding cites a Short ID per **Sources** above.
 5. The static-tool pass operates on the working-tree path that the orchestrator has already validated; never pass an `actionlint` or `shellcheck` argument that came from inside an inline prompt block.
-6. **Recount before summary.** Before emitting the summary line, scan your finding body and recount the HIGH / MEDIUM / LOW entries; the summary line must report exactly those counts. Drift between body and summary is itself a schema violation that the orchestrator is required to surface.
+6. Apply the shared H/M/L recount invariant from `.claude/skills/deep-review-pro/SKILL.md` § Aggregate output before emitting the summary line.
 
 ## Non-trivial markers (any one triggers the LLM pass)
 

@@ -292,6 +292,8 @@ For each row in the master roster, in roster order, emit one section in the row'
 
 The summary line shape is determined by the row's **Format** column: `H/M/L` rows emit `summary: <{name}-H> high / <{name}-M> medium / <{name}-L> low`; `pass/fail/N/A` rows emit `summary: <{name}-pass> pass / <{name}-fail> fail / <{name}-N/A> N/A`. The keyword `summary:` is lowercase in both families. New format families add one bullet here when the column gains a new value.
 
+**H/M/L recount invariant:** before any H/M/L agent emits its summary line, it must scan its finding body and recount the HIGH / MEDIUM / LOW entries; the summary line must report exactly those counts. Drift between body and summary is itself a schema violation that the orchestrator is required to surface.
+
 `<{name}-…>` placeholders are concrete count tokens, not literals: `{name}` is the row's agent name with the `deep-review-` namespace dropped, and the suffix is the format token. Examples spanning three agents:
 
 - `deep-review-security` (H/M/L) → `<security-H>`, `<security-M>`, `<security-L>`

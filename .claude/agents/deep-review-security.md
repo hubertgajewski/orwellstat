@@ -22,7 +22,7 @@ The orchestrator dispatches this agent only when `.claude/skills/deep-review-pro
 1. For every hunk you intend to flag, open the file with `Read` at the hunk's line range and inspect the surrounding code (caller, sink definition, validator). Use `Grep` to locate other call sites of the same symbol when needed. A vulnerability claim must rest on actually-traced behavior, not on a hunk's appearance in isolation.
 2. **Diff size:** if the inline diff is so large that you cannot reason about it in full (rough threshold: more than ~3,000 changed lines, or you find yourself summarizing rather than tracing), prioritize the highest-risk file types — workflow files under `.github/workflows/`, anything under `auth*`, `crypto*`, `session*`, `serialize*`, dependency manifests (`package.json`, `requirements.txt`, etc.) — and explicitly note in your summary line that the review was incomplete (e.g. `summary: 2 high / 0 medium / 0 low (partial; <reason>)`).
 3. **Binary diffs:** when the diff contains a `Binary files X and Y differ` marker, do not attempt to analyze the binary itself. Flag only the manifest, lockfile, or schema change that governs it (covered by the `supply-chain` and `misconfiguration` categories).
-4. **Recount before summary.** Before emitting the summary line, scan your finding body and recount the HIGH / MEDIUM / LOW entries; the summary line must report exactly those counts. Drift between body and summary is itself a schema violation that the orchestrator is required to surface.
+4. Apply the shared H/M/L recount invariant from `.claude/skills/deep-review-pro/SKILL.md` § Aggregate output before emitting the summary line.
 
 ## Scope honesty
 

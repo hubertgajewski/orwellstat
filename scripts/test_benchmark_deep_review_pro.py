@@ -392,6 +392,20 @@ class FixtureTests(unittest.TestCase):
                     prompt,
                 )
 
+    def test_hml_agents_reference_shared_recount_invariant(self):
+        skill_text = read_deep_review_pro_skill_text()
+        self.assertIn("H/M/L recount invariant", skill_text)
+        self.assertIn("scan its finding body and recount", skill_text)
+
+        for agent, cells in read_deep_review_pro_roster().items():
+            if cells["format"] != "H/M/L":
+                continue
+            with self.subTest(agent=agent):
+                prompt = read_agent_prompt(agent)
+                self.assertIn("H/M/L recount invariant", prompt)
+                self.assertNotIn("scan your finding body and recount", prompt)
+                self.assertNotIn("Drift between body and summary", prompt)
+
     def test_prompt_frame_builder_scopes_mixed_diff_and_sanitizes_fence_tags(self):
         diff = """diff --git a/docs/AI_ASSISTANTS.md b/docs/AI_ASSISTANTS.md
 --- a/docs/AI_ASSISTANTS.md
