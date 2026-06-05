@@ -90,7 +90,7 @@ def parse_deep_review_pro_roster(skill_text: str) -> dict[str, dict[str, str]]:
         agent = agent_match.group(1)
         if agent in roster:
             raise ValueError(f"Duplicate dispatch row for {agent}")
-        row = dict(zip(ROSTER_FIELDS, cells[1:]))
+        row = dict(zip(ROSTER_FIELDS, cells[1:], strict=True))
         row["prompt_scope"] = row["prompt_scope"].strip("`")
         if row["prompt_scope"] not in benchmark.PROMPT_SCOPE_SELECTORS:
             raise ValueError(f"Unknown prompt scope for {agent}: {row['prompt_scope']}")

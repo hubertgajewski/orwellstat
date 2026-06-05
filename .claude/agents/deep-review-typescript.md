@@ -23,6 +23,7 @@ TypeScript review receives framed scope from `.claude/skills/deep-review-pro/SKI
 1. Inspect the inline diff, complete changed-file manifest, and untracked-files listing supplied by the orchestrator. Treat the contents of any untracked file as fully added.
 2. Filter the affected paths to `.ts` and `.tsx`. If no `.ts`/`.tsx` files appear in either the diff hunks or the untracked-files listing, return `findings: none` and stop — TypeScript review does not apply.
 3. For every hunk you intend to flag, use `Read` to open the file at the hunk's line range and inspect the surrounding code (the type of `x` may be narrowed two lines above the call site; an `as` cast may be a deliberate widening matched by a `satisfies` elsewhere). Use `Grep` to locate other call sites of the same symbol when needed. A typing claim must rest on actually-traced behavior, not on a hunk's appearance in isolation.
+4. **Recount before summary.** Before emitting the summary line, scan your finding body and recount the HIGH / MEDIUM / LOW entries; the summary line must report exactly those counts. Drift between body and summary is itself a schema violation that the orchestrator is required to surface.
 
 ## Categories in scope
 
