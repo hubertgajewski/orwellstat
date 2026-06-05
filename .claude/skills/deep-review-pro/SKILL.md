@@ -290,16 +290,16 @@ For each dispatched, schema-valid agent result, store a cache record with a resu
 - agent prompt hash: SHA-256 of `.claude/agents/<Agent>.md`
 - `REFERENCES.md` hash: SHA-256 of `.claude/skills/deep-review-pro/REFERENCES.md`
 - scoped prompt-frame hash: SHA-256 of the exact `PROMPT_FRAME_<Agent>` string sent to that agent
-- read-dependency path list: sorted repo-relative file paths the harness reports the agent read, if the harness exposes them
+- read-dependency identity list: sorted tuples of repo-relative file path plus content identity for every file the harness reports the agent read, if the harness exposes them. Use a git blob SHA for a tracked file at the reviewed state, or a SHA-256 file-content hash for a safely readable untracked file.
 
-If the harness does not expose read dependencies, record `read-deps: unavailable` in the cache metadata and do not claim that surrounding file context was proven unchanged. Prompt or reference changes invalidate cached results because they change the agent prompt hash or `REFERENCES.md` hash. Agent results with schema violations, `UNAVAILABLE`, missing summaries, or blocking findings are not reusable; they remain targeted rerun candidates.
+If the harness does not expose read dependencies, record `read-deps: unavailable` in the cache metadata and do not claim that surrounding file context was proven unchanged. If the harness exposes a read-dependency path but its content identity cannot be computed safely, invalidate that agent instead of reusing its cached result. Prompt or reference changes invalidate cached results because they change the agent prompt hash or `REFERENCES.md` hash. Agent results with schema violations, `UNAVAILABLE`, missing summaries, or blocking findings are not reusable; they remain targeted rerun candidates.
 
 On each later iteration:
 
 1. Rebuild `DIFF`, `UNTRACKED`, derived scope values, triggers, and `PROMPT_FRAME_<Agent>` values from the current state. Do not reuse a prior trigger decision.
 2. Dispatch every currently matching agent that had a blocking finding in the previous aggregate.
 3. Dispatch every agent whose trigger newly matches because a changed path, added line, or untracked path now falls inside that agent's trigger or prompt-scope surface. This includes agents that were previously skipped and agents that were previously cached.
-4. Dispatch every currently matching agent whose result reuse key differs from the cached key. A changed agent prompt file, changed `REFERENCES.md`, changed scoped prompt frame, or changed known read-dependency path must produce a different key or explicit invalidation.
+4. Dispatch every currently matching agent whose result reuse key differs from the cached key. A changed agent prompt file, changed `REFERENCES.md`, changed scoped prompt frame, changed known read-dependency path, or changed known read-dependency content identity must produce a different key or explicit invalidation.
 5. Reuse only currently matching agents whose cache record is non-blocking and whose complete reuse key matches the current key. Emit the cached result body and summary unchanged, but prefix the agent section with `REUSED: unchanged result from iteration <N> (cache key <short-hash>).`
 6. Emit normal `SKIPPED:` sections for rows whose current trigger does not match.
 
