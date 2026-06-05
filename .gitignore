@@ -28,3 +28,6 @@ runner/
 
 # Python bytecode
 scripts/__pycache__/
+
+# Generated benchmark fixtures
+docs/deep-review-pro-benchmark/fixtures/high-lines.diff

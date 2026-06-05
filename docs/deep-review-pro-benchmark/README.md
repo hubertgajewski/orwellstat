@@ -13,8 +13,16 @@ This directory contains repeatable benchmark fixtures for measuring `/deep-revie
 | `workflow` | GitHub Actions workflow diff | CI agent dispatches in addition to always-on agents |
 | `mixed-typescript` | Playwright utility plus MCP TypeScript diff | TypeScript and unit-test agents dispatch in addition to always-on agents |
 | `large-diff` | Docs, Python script, Playwright test, and workflow diff | Every specialist dispatches |
+| `high-lines` | Synthetic 3,000+ line docs, Python, TypeScript, Playwright test, and workflow diff | Every specialist dispatches; stresses high-line-count review behavior |
 
 The `.diff` files in `fixtures/` are stable scope inputs. For controlled benchmark runs, apply one fixture in a disposable worktree so `/deep-review-pro` reviews it through normal local-diff mode, then reset the worktree before applying the next fixture. Do not pass the fixture text as a freeform `/deep-review-pro` argument; freeform mode is reserved for reviewer bias over the current local diff.
+
+`high-lines.diff` is generated on demand to avoid committing a repetitive 3,000+ line payload:
+
+```bash
+python3 scripts/generate-deep-review-high-lines-fixture.py \
+  --out docs/deep-review-pro-benchmark/fixtures/high-lines.diff
+```
 
 ## Capturing Runs
 

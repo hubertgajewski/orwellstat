@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import importlib.util
 import csv
+import io
 import json
 import sys
 import tempfile
@@ -22,6 +23,14 @@ _spec = importlib.util.spec_from_file_location(
 benchmark = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(benchmark)
 sys.modules["benchmark_deep_review_pro"] = benchmark
+
+_generator_spec = importlib.util.spec_from_file_location(
+    "generate_deep_review_high_lines_fixture",
+    Path(__file__).parent / "generate-deep-review-high-lines-fixture.py",
+)
+high_lines_generator = importlib.util.module_from_spec(_generator_spec)
+_generator_spec.loader.exec_module(high_lines_generator)
+sys.modules["generate_deep_review_high_lines_fixture"] = high_lines_generator
 
 
 def write_json(path: Path, value):
@@ -246,6 +255,115 @@ summary: 0 high / 1 medium / 0 low
 
 
 class FixtureTests(unittest.TestCase):
+    def test_default_high_lines_fixture_exercises_full_roster_with_large_diff(self):
+        fixtures = benchmark.load_fixtures()
+        high_lines = next(fixture for fixture in fixtures if fixture["name"] == "high-lines")
+        diff_text = high_lines_generator.build_high_lines_fixture()
+        added_lines = sum(
+            1 for line in diff_text.splitlines() if line.startswith("+") and not line.startswith("+++")
+        )
+
+        self.assertGreaterEqual(added_lines, 3000)
+        self.assertEqual(high_lines["generator"], "scripts/generate-deep-review-high-lines-fixture.py")
+        self.assertEqual(high_lines["expected_skipped"], [])
+        self.assertEqual(
+            set(high_lines["expected_dispatched"]),
+            {
+                "deep-review-security",
+                "deep-review-project-checklist",
+                "deep-review-simplification",
+                "deep-review-code",
+                "deep-review-architecture",
+                "deep-review-docs",
+                "deep-review-typescript",
+                "deep-review-python",
+                "deep-review-ci",
+                "deep-review-qa",
+                "deep-review-unit-test",
+            },
+        )
+
+    def test_high_lines_generator_writes_requested_output_path(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out_path = Path(tmp) / "high-lines.diff"
+
+            with patch("sys.stdout", new_callable=io.StringIO) as stdout:
+                exit_code = high_lines_generator.main(
+                    ["--out", str(out_path), "--doc-lines", "3"]
+                )
+
+            generated = out_path.read_text()
+
+        self.assertEqual(exit_code, 0)
+        self.assertIn(str(out_path), stdout.getvalue())
+        self.assertIn("Synthetic benchmark line 0003", generated)
+        self.assertIn("+++ b/playwright/typescript/tests/deep-review-high-lines.spec.ts", generated)
+        self.assertIn("+++ b/.github/workflows/deep-review-high-lines.yml", generated)
+
+    def test_fixture_with_missing_scope_file_can_reference_repo_generator(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            fixtures_path = root / "fixtures.json"
+            write_json(
+                fixtures_path,
+                [
+                    {
+                        "name": "generated",
+                        "scope_file": "fixtures/generated.diff",
+                        "generator": "scripts/generate-deep-review-high-lines-fixture.py",
+                        "description": "Generated fixture.",
+                        "expected_dispatched": ["deep-review-docs"],
+                        "expected_skipped": [],
+                    }
+                ],
+            )
+
+            fixtures = benchmark.load_fixtures(fixtures_path)
+
+        self.assertEqual(fixtures[0]["name"], "generated")
+
+    def test_rejects_generated_fixture_with_generator_outside_repo(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            fixtures_path = root / "fixtures.json"
+            write_json(
+                fixtures_path,
+                [
+                    {
+                        "name": "generated",
+                        "scope_file": "fixtures/generated.diff",
+                        "generator": "/tmp/outside-generator.py",
+                        "description": "Generated fixture.",
+                        "expected_dispatched": ["deep-review-docs"],
+                        "expected_skipped": [],
+                    }
+                ],
+            )
+
+            with self.assertRaisesRegex(ValueError, "generator .* resolves outside"):
+                benchmark.load_fixtures(fixtures_path)
+
+    def test_rejects_generated_fixture_with_missing_generator(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            fixtures_path = root / "fixtures.json"
+            write_json(
+                fixtures_path,
+                [
+                    {
+                        "name": "generated",
+                        "scope_file": "fixtures/generated.diff",
+                        "generator": "scripts/missing-generator.py",
+                        "description": "Generated fixture.",
+                        "expected_dispatched": ["deep-review-docs"],
+                        "expected_skipped": [],
+                    }
+                ],
+            )
+
+            with self.assertRaisesRegex(ValueError, "generator .* does not exist"):
+                benchmark.load_fixtures(fixtures_path)
+
     def test_fixture_metadata_records_expected_dispatch_shape(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

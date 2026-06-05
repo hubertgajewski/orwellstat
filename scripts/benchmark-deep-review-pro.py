@@ -233,7 +233,14 @@ def load_fixtures(path=DEFAULT_FIXTURES):
         if not scope_path.is_relative_to(root):
             raise ValueError(f"{path}: scope_file {fixture['scope_file']} resolves outside {root}")
         if not scope_path.exists():
-            raise ValueError(f"{path}: scope_file {fixture['scope_file']} does not exist")
+            generator = fixture.get("generator")
+            if not generator:
+                raise ValueError(f"{path}: scope_file {fixture['scope_file']} does not exist")
+            generator_path = (REPO_ROOT / generator).resolve()
+            if not generator_path.is_relative_to(REPO_ROOT):
+                raise ValueError(f"{path}: generator {generator} resolves outside {REPO_ROOT}")
+            if not generator_path.exists():
+                raise ValueError(f"{path}: generator {generator} does not exist")
     return fixtures
 
 
