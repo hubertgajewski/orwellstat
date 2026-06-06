@@ -224,7 +224,7 @@ Every roster agent must preserve these rules unless the master roster and the ag
 - **Evidence before findings:** Review the inline diff, complete changed-file manifest, and untracked-path list. Treat readable untracked files as fully added. Before flagging a hunk, use the granted read/search tools to inspect surrounding code, sibling tests/docs, or call sites needed for the claim; do not report from a hunk-shaped suspicion alone.
 - **Sibling ownership:** Stay inside the agent's roster domain. If a hunk is owned only by a sibling specialist, emit no finding for it. The agent-local out-of-scope deltas name ambiguous boundaries that are easy to confuse.
 - **Confidence threshold:** Emit a finding or `fail` line only when confidence is at least `0.8` that the issue is real and the recommended fix is actionable. If the necessary context is unreachable with the granted tools, downgrade to no finding or `N/A` as that agent's format requires.
-- **Citations:** Every H/M/L finding and every failing checklist line must end with applicable Short IDs. Shared public IDs resolve through `.claude/skills/deep-review-pro/REFERENCES.md`; private vocabulary tokens must be declared in the agent file that owns them.
+- **Citations:** Every H/M/L finding, and every failing checklist line whose agent-local schema requires citations, must end with applicable Short IDs. Shared public IDs resolve through `.claude/skills/deep-review-pro/REFERENCES.md`; private vocabulary tokens must be declared in the agent file that owns them.
 - **No remediation side effects:** Specialist agents review only. They do not edit code, run project tests, or narrate their search in the final output.
 
 For agents whose roster **Format** is `H/M/L`, the output schema is unchanged:
