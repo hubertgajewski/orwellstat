@@ -52,19 +52,43 @@ class EpicBenchmarkMatrixTests(unittest.TestCase):
 
         self.assertEqual(
             names,
-            ["original-580", "post-580", "post-581", "post-582", "post-583"],
+            [
+                "original-580",
+                "post-580",
+                "post-581",
+                "post-582",
+                "post-583",
+                "post-584",
+            ],
         )
         self.assertEqual(epic.DEFAULT_CHECKPOINTS[0].ref, "4398fc9")
         self.assertEqual(epic.DEFAULT_CHECKPOINTS[1].previous, "original-580")
         self.assertEqual(epic.DEFAULT_CHECKPOINTS[4].ref, "f3952ee")
         self.assertEqual(epic.DEFAULT_CHECKPOINTS[4].issue, 583)
+        self.assertEqual(epic.DEFAULT_CHECKPOINTS[5].ref, "HEAD")
+        self.assertEqual(epic.DEFAULT_CHECKPOINTS[5].issue, 584)
+        self.assertEqual(epic.DEFAULT_CHECKPOINTS[5].previous, "post-583")
         self.assertEqual(
             [checkpoint.dispatch_contract for checkpoint in epic.DEFAULT_CHECKPOINTS],
-            ["dispatch-v1", "dispatch-v1", "dispatch-v1", "dispatch-v1", "dispatch-v1"],
+            [
+                "dispatch-v1",
+                "dispatch-v1",
+                "dispatch-v1",
+                "dispatch-v1",
+                "dispatch-v1",
+                "dispatch-v1",
+            ],
         )
         self.assertEqual(
             [checkpoint.prompt_frame_contract for checkpoint in epic.DEFAULT_CHECKPOINTS],
-            ["full-v1", "full-v1", "scoped-v1", "scoped-v1", "scoped-v1"],
+            [
+                "full-v1",
+                "full-v1",
+                "scoped-v1",
+                "scoped-v1",
+                "scoped-v1",
+                "scoped-v1",
+            ],
         )
         self.assertEqual(
             [checkpoint.output_contract for checkpoint in epic.DEFAULT_CHECKPOINTS],
@@ -73,6 +97,7 @@ class EpicBenchmarkMatrixTests(unittest.TestCase):
                 "detailed-v1",
                 "detailed-v1",
                 "detailed-reuse-v1",
+                "compact-v1",
                 "compact-v1",
             ],
         )
@@ -413,11 +438,16 @@ class EpicBenchmarkMatrixTests(unittest.TestCase):
         self.assertIn("Combined chars", section)
         self.assertIn("Combined est. tokens", section)
 
+        post_584_section = epic.render_issue_comparable_section(matrix, 584)
+
+        self.assertIn("Incremental Delta: post-583 -> post-584", post_584_section)
+        self.assertIn("Cumulative Delta: original-580 -> post-584", post_584_section)
+
     def test_missing_issue_section_fails_clearly(self):
         matrix = epic.build_epic_matrix()
 
-        with self.assertRaisesRegex(ValueError, "post-584 is not present"):
-            epic.render_issue_comparable_section(matrix, 584)
+        with self.assertRaisesRegex(ValueError, "post-585 is not present"):
+            epic.render_issue_comparable_section(matrix, 585)
 
     def test_cli_issue_section_prints_section_without_path_noise(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -506,13 +536,13 @@ class EpicBenchmarkMatrixTests(unittest.TestCase):
                         "--json-out",
                         str(json_out),
                         "--issue-section",
-                        "584",
+                        "585",
                     ]
                 )
 
         self.assertEqual(result, 2)
         self.assertEqual(stdout.getvalue(), "")
-        self.assertIn("error: post-584 is not present in the epic matrix", stderr.getvalue())
+        self.assertIn("error: post-585 is not present in the epic matrix", stderr.getvalue())
         self.assertFalse(markdown_out.exists())
         self.assertFalse(json_out.exists())
 

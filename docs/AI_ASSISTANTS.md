@@ -27,6 +27,8 @@ Claude specialist agents live under `.claude/agents/`. Codex wrappers live under
 
 The current `/deep-review-pro` roster is documented in `.claude/skills/deep-review-pro/SKILL.md`.
 
+Specialist agents keep a short inline safety/schema reminder, while the shared prompt-frame, sibling-ownership, confidence, citation, sentinel, and summary-count rules live in `.claude/skills/deep-review-pro/SKILL.md` § Shared specialist-agent contract. When adding or changing an agent, update that shared contract and the agent-specific deltas together.
+
 `/deep-review-pro` dispatches several broad, low-risk reviewers conditionally. `deep-review-project-checklist` runs only for Playwright, Bruno, or workflow convention surfaces; `deep-review-docs` runs only when docs-consistency triggers are present; `deep-review-security` runs for source, workflow, manifest, config/environment, auth/session/crypto, deny-path, or credential-like added-line risk triggers and skips only clearly low-risk docs/generated/test-only scopes after those checks pass. Skipped agents appear in the aggregate as `SKIPPED: <trigger> not satisfied` and contribute zero blocking findings.
 
 `/deep-review-pro` uses compact output by default. Compact output keeps findings, summary counts, skipped/unavailable rows, schema violations, readiness status, reuse counts, and a single token total, while omitting successful pass/N/A checklist detail. Use `/deep-review-pro --usage` or `/deep-review-pro --verbose` to emit the full token/dispatch table and complete per-agent detail.
