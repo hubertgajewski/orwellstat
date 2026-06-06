@@ -155,8 +155,9 @@ SECURITY_SENSITIVE_COMPONENT_MARKERS_V1 = (
     "password",
 )
 SECURITY_CREDENTIAL_LINE_RE_V1 = re.compile(
-    r"\b(secret|token|password|passwd|api_key|api-key|private_key|private-key|"
-    r"credential|authorization|cookie|session)\b.*(=|:|=>|\${{)",
+    r"(?:^|[\s'\"`{,\[])"
+    r"(?:secret|token|password|passwd|api[_-]key|private[_-]key|"
+    r"credential|authorization|cookie|session)\s*(?:=|:|=>|\${{)",
     re.IGNORECASE,
 )
 PROMPT_SCOPE_FULL = "full"
@@ -397,6 +398,10 @@ def is_project_checklist_path_v1(path):
     )
 
 
+def is_project_checklist_path_static_v1(path):
+    return path.startswith("playwright/typescript/") or path.startswith("bruno/")
+
+
 def is_docs_path_v1(block):
     return (
         block["status"] == "added"
@@ -499,6 +504,11 @@ def dispatch_project_checklist_v1(parsed_blocks, untracked_paths=""):
     return any(is_project_checklist_path_v1(path) for path in paths)
 
 
+def dispatch_project_checklist_static_v1(parsed_blocks, untracked_paths=""):
+    paths = changed_paths(parsed_blocks, untracked_paths)
+    return any(is_project_checklist_path_static_v1(path) for path in paths)
+
+
 def dispatch_docs_v1(parsed_blocks, untracked_paths=""):
     if any(is_docs_path_v1(block) for block in parsed_blocks):
         return True
@@ -547,7 +557,7 @@ def changed_paths(parsed_blocks, untracked_paths=""):
 
 
 is_workflow_path = is_workflow_path_v1
-is_project_checklist_path = is_project_checklist_path_v1
+is_project_checklist_path = is_project_checklist_path_static_v1
 is_docs_path = is_docs_path_v1
 is_typescript_path = is_typescript_path_v1
 is_python_path = is_python_path_v1
@@ -565,7 +575,20 @@ PROMPT_SCOPE_SELECTORS_V1 = MappingProxyType({
     "qa": lambda block: any_block_path(block, is_qa_path_v1),
     "unit-test": lambda block: any_block_path(block, is_unit_test_surface_path_v1),
 })
-PROMPT_SCOPE_SELECTORS = PROMPT_SCOPE_SELECTORS_V1
+PROMPT_SCOPE_SELECTORS_STATIC_V1 = MappingProxyType({
+    PROMPT_SCOPE_FULL: lambda block: True,
+    "project-checklist": lambda block: any_block_path(
+        block,
+        is_project_checklist_path_static_v1,
+    ),
+    "docs": is_docs_path_v1,
+    "typescript": lambda block: any_block_path(block, is_typescript_path_v1),
+    "python": lambda block: any_block_path(block, is_python_path_v1),
+    "ci": lambda block: any_block_path(block, is_workflow_path_v1),
+    "qa": lambda block: any_block_path(block, is_qa_path_v1),
+    "unit-test": lambda block: any_block_path(block, is_unit_test_surface_path_v1),
+})
+PROMPT_SCOPE_SELECTORS = PROMPT_SCOPE_SELECTORS_STATIC_V1
 AGENT_DISPATCH_PROMPT_SCOPES_V1 = MappingProxyType({
     "deep-review-typescript": "typescript",
     "deep-review-python": "python",
@@ -609,12 +632,39 @@ def dispatch_matches_v1(agent, cells, parsed_blocks, untracked_paths=""):
     raise ValueError(f"Unknown dispatch trigger for {agent}: {dispatch}")
 
 
+def dispatch_matches_static_v1(agent, cells, parsed_blocks, untracked_paths=""):
+    dispatch = cells["dispatch"]
+    if dispatch == "always":
+        return True
+    if dispatch == "project-checklist trigger":
+        return dispatch_project_checklist_static_v1(parsed_blocks, untracked_paths)
+    if dispatch == "docs trigger":
+        return dispatch_docs_v1(parsed_blocks, untracked_paths)
+    if dispatch == "security-risk trigger":
+        return dispatch_security_risk_v1(parsed_blocks, untracked_paths)
+    if dispatch.startswith("scope contains"):
+        prompt_scope = AGENT_DISPATCH_PROMPT_SCOPES_V1.get(agent, cells["prompt_scope"])
+        if prompt_scope == PROMPT_SCOPE_FULL:
+            raise ValueError(f"Cannot derive scope trigger for {agent}: {dispatch}")
+        return dispatch_scope_v1(parsed_blocks, prompt_scope)
+    raise ValueError(f"Unknown dispatch trigger for {agent}: {dispatch}")
+
+
 def selected_agents_for_diff_v1(roster, diff_text, untracked_paths=""):
     parsed_blocks = parse_diff(diff_text)
     return [
         agent
         for agent, cells in roster.items()
         if dispatch_matches_v1(agent, cells, parsed_blocks, untracked_paths)
+    ]
+
+
+def selected_agents_for_diff_static_v1(roster, diff_text, untracked_paths=""):
+    parsed_blocks = parse_diff(diff_text)
+    return [
+        agent
+        for agent, cells in roster.items()
+        if dispatch_matches_static_v1(agent, cells, parsed_blocks, untracked_paths)
     ]
 
 
@@ -692,7 +742,7 @@ def build_scoped_prompt_frames_v1(diff_text, *, roster):
     )
 
 
-selected_agents_for_diff = selected_agents_for_diff_v1
+selected_agents_for_diff = selected_agents_for_diff_static_v1
 
 
 def load_fixtures(path=DEFAULT_FIXTURES):

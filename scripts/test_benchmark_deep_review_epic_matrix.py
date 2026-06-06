@@ -59,6 +59,7 @@ class EpicBenchmarkMatrixTests(unittest.TestCase):
                 "post-582",
                 "post-583",
                 "post-584",
+                "post-585",
             ],
         )
         self.assertEqual(epic.DEFAULT_CHECKPOINTS[0].ref, "4398fc9")
@@ -68,6 +69,9 @@ class EpicBenchmarkMatrixTests(unittest.TestCase):
         self.assertEqual(epic.DEFAULT_CHECKPOINTS[5].ref, "0d7add0")
         self.assertEqual(epic.DEFAULT_CHECKPOINTS[5].issue, 584)
         self.assertEqual(epic.DEFAULT_CHECKPOINTS[5].previous, "post-583")
+        self.assertEqual(epic.DEFAULT_CHECKPOINTS[6].ref, "WORKTREE")
+        self.assertEqual(epic.DEFAULT_CHECKPOINTS[6].issue, 585)
+        self.assertEqual(epic.DEFAULT_CHECKPOINTS[6].previous, "post-584")
         self.assertEqual(
             [checkpoint.dispatch_contract for checkpoint in epic.DEFAULT_CHECKPOINTS],
             [
@@ -77,6 +81,7 @@ class EpicBenchmarkMatrixTests(unittest.TestCase):
                 "dispatch-v1",
                 "dispatch-v1",
                 "dispatch-v1",
+                "dispatch-static-v1",
             ],
         )
         self.assertEqual(
@@ -84,6 +89,7 @@ class EpicBenchmarkMatrixTests(unittest.TestCase):
             [
                 "full-v1",
                 "full-v1",
+                "scoped-v1",
                 "scoped-v1",
                 "scoped-v1",
                 "scoped-v1",
@@ -99,15 +105,37 @@ class EpicBenchmarkMatrixTests(unittest.TestCase):
                 "detailed-reuse-v1",
                 "compact-v1",
                 "compact-v1",
+                "compact-static-v1",
             ],
         )
         self.assertEqual(epic.output_mode_for_contract("detailed-v1"), "detailed")
         self.assertEqual(epic.output_mode_for_contract("detailed-reuse-v1"), "detailed")
         self.assertEqual(epic.output_mode_for_contract("compact-v1"), "compact")
+        self.assertEqual(epic.output_mode_for_contract("compact-static-v1"), "compact")
         self.assertRegex(epic.resolve_ref("HEAD"), r"^[0-9a-f]+$")
+        self.assertEqual(epic.resolve_ref("WORKTREE"), "WORKTREE")
         self.assertEqual(
             epic.resolve_ref("refs/heads/does-not-exist-for-test"),
             "refs/heads/does-not-exist-for-test",
+        )
+
+    def test_worktree_checkpoint_reads_current_files(self):
+        checkpoint = epic.Checkpoint(
+            name="post-585",
+            ref="WORKTREE",
+            issue=585,
+            previous="post-584",
+            dispatch_contract="dispatch-static-v1",
+            prompt_frame_contract="scoped-v1",
+            output_contract="compact-static-v1",
+            label="Worktree checkpoint",
+        )
+
+        roster = epic.load_checkpoint_roster(checkpoint)
+
+        self.assertIn(
+            "path-alias / loadEnv",
+            roster["deep-review-project-checklist"]["domain"],
         )
 
     def test_missing_checkpoint_refs_fail_before_fixture_loading(self):
@@ -301,6 +329,52 @@ class EpicBenchmarkMatrixTests(unittest.TestCase):
         self.assertIn("reuse: dispatched 1 / skipped 1 / reused 0", output)
         self.assertIn("tokens: total <value|unavailable>", output)
 
+    def test_compact_static_output_proxy_models_static_prepass_contract(self):
+        roster = {
+            "deep-review-code": {
+                "format": "H/M/L",
+                "empty_state": "findings: none",
+                "dispatch": "always",
+            },
+            "deep-review-ci": {
+                "format": "H/M/L",
+                "empty_state": "findings: none",
+                "dispatch": "scope contains `.github/workflows/**.yml`",
+            },
+        }
+
+        output = epic.compact_static_output_proxy(
+            fixture={"name": "workflow"},
+            roster=roster,
+            agents=["deep-review-code", "deep-review-ci"],
+            skipped=[],
+            diff_text="+++ b/.github/workflows/review.yml\n+on: push\n",
+        )
+
+        self.assertIn("### static-pre-pass", output)
+        self.assertIn("- [pass] actionlint-shellcheck:", output)
+        self.assertIn("- [pass] secret-scan:", output)
+        self.assertIn("summary: 2 pass / 0 fail / 0 unavailable / 3 N/A", output)
+        self.assertIn("total: 0 static-fail", output)
+        self.assertIn("0 static-unavailable", output)
+
+    def test_compact_static_output_proxy_ignores_static_prepass_prose(self):
+        output = epic.compact_static_output_proxy(
+            fixture={"name": "docs"},
+            roster={},
+            agents=[],
+            skipped=[],
+            diff_text=(
+                "+++ b/docs/AI_ASSISTANTS.md\n"
+                "+The pre-pass reports deny-pattern/secret-scan, then SKIPPED: example.\n"
+                "+++ b/scripts/test_benchmark_deep_review_epic_matrix.py\n"
+                "+        self.assertIn(\"- [pass] secret-scan:\", output)\n"
+            ),
+        )
+
+        self.assertIn("- [pass] secret-scan:", output)
+        self.assertIn("summary: 1 pass / 0 fail / 0 unavailable / 4 N/A", output)
+
     def test_detailed_output_proxy_models_detailed_table_contract(self):
         roster = {
             "deep-review-docs": {
@@ -443,11 +517,16 @@ class EpicBenchmarkMatrixTests(unittest.TestCase):
         self.assertIn("Incremental Delta: post-583 -> post-584", post_584_section)
         self.assertIn("Cumulative Delta: original-580 -> post-584", post_584_section)
 
+        post_585_section = epic.render_issue_comparable_section(matrix, 585)
+
+        self.assertIn("Incremental Delta: post-584 -> post-585", post_585_section)
+        self.assertIn("Cumulative Delta: original-580 -> post-585", post_585_section)
+
     def test_missing_issue_section_fails_clearly(self):
         matrix = epic.build_epic_matrix()
 
-        with self.assertRaisesRegex(ValueError, "post-585 is not present"):
-            epic.render_issue_comparable_section(matrix, 585)
+        with self.assertRaisesRegex(ValueError, "post-999 is not present"):
+            epic.render_issue_comparable_section(matrix, 999)
 
     def test_cli_issue_section_prints_section_without_path_noise(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -536,13 +615,13 @@ class EpicBenchmarkMatrixTests(unittest.TestCase):
                         "--json-out",
                         str(json_out),
                         "--issue-section",
-                        "585",
+                        "999",
                     ]
                 )
 
         self.assertEqual(result, 2)
         self.assertEqual(stdout.getvalue(), "")
-        self.assertIn("error: post-585 is not present in the epic matrix", stderr.getvalue())
+        self.assertIn("error: post-999 is not present in the epic matrix", stderr.getvalue())
         self.assertFalse(markdown_out.exists())
         self.assertFalse(json_out.exists())
 

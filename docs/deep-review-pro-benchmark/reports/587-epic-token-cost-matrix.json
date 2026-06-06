@@ -1233,6 +1233,210 @@
         "dispatched_agents": 53,
         "skipped_agents": 24
       }
+    },
+    {
+      "name": "post-585",
+      "ref": "WORKTREE",
+      "resolved_ref": "WORKTREE",
+      "issue": 585,
+      "previous": "post-584",
+      "output_mode": "compact",
+      "dispatch_contract": "dispatch-static-v1",
+      "prompt_frame_contract": "scoped-v1",
+      "output_contract": "compact-static-v1",
+      "label": "After #585 static pre-pass and ownership cleanup",
+      "fixtures": [
+        {
+          "fixture": "docs-only",
+          "prompt_input_chars": 34659,
+          "prompt_input_est_tokens": 8665,
+          "aggregate_output_chars": 2094,
+          "aggregate_output_est_tokens": 524,
+          "combined_chars": 36753,
+          "combined_est_tokens": 9189,
+          "dispatched_agents": 4,
+          "skipped_agents": 7,
+          "agents": [
+            "deep-review-simplification",
+            "deep-review-code",
+            "deep-review-architecture",
+            "deep-review-docs"
+          ],
+          "skipped": [
+            "deep-review-security",
+            "deep-review-project-checklist",
+            "deep-review-typescript",
+            "deep-review-python",
+            "deep-review-ci",
+            "deep-review-qa",
+            "deep-review-unit-test"
+          ]
+        },
+        {
+          "fixture": "playwright-test",
+          "prompt_input_chars": 54084,
+          "prompt_input_est_tokens": 13521,
+          "aggregate_output_chars": 2105,
+          "aggregate_output_est_tokens": 527,
+          "combined_chars": 56189,
+          "combined_est_tokens": 14048,
+          "dispatched_agents": 6,
+          "skipped_agents": 5,
+          "agents": [
+            "deep-review-project-checklist",
+            "deep-review-simplification",
+            "deep-review-code",
+            "deep-review-architecture",
+            "deep-review-typescript",
+            "deep-review-qa"
+          ],
+          "skipped": [
+            "deep-review-security",
+            "deep-review-docs",
+            "deep-review-python",
+            "deep-review-ci",
+            "deep-review-unit-test"
+          ]
+        },
+        {
+          "fixture": "workflow",
+          "prompt_input_chars": 58584,
+          "prompt_input_est_tokens": 14646,
+          "aggregate_output_chars": 2125,
+          "aggregate_output_est_tokens": 532,
+          "combined_chars": 60709,
+          "combined_est_tokens": 15178,
+          "dispatched_agents": 6,
+          "skipped_agents": 5,
+          "agents": [
+            "deep-review-security",
+            "deep-review-simplification",
+            "deep-review-code",
+            "deep-review-architecture",
+            "deep-review-docs",
+            "deep-review-ci"
+          ],
+          "skipped": [
+            "deep-review-project-checklist",
+            "deep-review-typescript",
+            "deep-review-python",
+            "deep-review-qa",
+            "deep-review-unit-test"
+          ]
+        },
+        {
+          "fixture": "mixed-typescript",
+          "prompt_input_chars": 77549,
+          "prompt_input_est_tokens": 19388,
+          "aggregate_output_chars": 2217,
+          "aggregate_output_est_tokens": 555,
+          "combined_chars": 79766,
+          "combined_est_tokens": 19943,
+          "dispatched_agents": 8,
+          "skipped_agents": 3,
+          "agents": [
+            "deep-review-security",
+            "deep-review-project-checklist",
+            "deep-review-simplification",
+            "deep-review-code",
+            "deep-review-architecture",
+            "deep-review-docs",
+            "deep-review-typescript",
+            "deep-review-unit-test"
+          ],
+          "skipped": [
+            "deep-review-python",
+            "deep-review-ci",
+            "deep-review-qa"
+          ]
+        },
+        {
+          "fixture": "script-code-only",
+          "prompt_input_chars": 61461,
+          "prompt_input_est_tokens": 15366,
+          "aggregate_output_chars": 2034,
+          "aggregate_output_est_tokens": 509,
+          "combined_chars": 63495,
+          "combined_est_tokens": 15875,
+          "dispatched_agents": 6,
+          "skipped_agents": 5,
+          "agents": [
+            "deep-review-security",
+            "deep-review-simplification",
+            "deep-review-code",
+            "deep-review-architecture",
+            "deep-review-python",
+            "deep-review-unit-test"
+          ],
+          "skipped": [
+            "deep-review-project-checklist",
+            "deep-review-docs",
+            "deep-review-typescript",
+            "deep-review-ci",
+            "deep-review-qa"
+          ]
+        },
+        {
+          "fixture": "large-diff",
+          "prompt_input_chars": 111983,
+          "prompt_input_est_tokens": 27996,
+          "aggregate_output_chars": 2124,
+          "aggregate_output_est_tokens": 531,
+          "combined_chars": 114107,
+          "combined_est_tokens": 28527,
+          "dispatched_agents": 11,
+          "skipped_agents": 0,
+          "agents": [
+            "deep-review-security",
+            "deep-review-project-checklist",
+            "deep-review-simplification",
+            "deep-review-code",
+            "deep-review-architecture",
+            "deep-review-docs",
+            "deep-review-typescript",
+            "deep-review-python",
+            "deep-review-ci",
+            "deep-review-qa",
+            "deep-review-unit-test"
+          ],
+          "skipped": []
+        },
+        {
+          "fixture": "high-lines",
+          "prompt_input_chars": 1548504,
+          "prompt_input_est_tokens": 387126,
+          "aggregate_output_chars": 2124,
+          "aggregate_output_est_tokens": 531,
+          "combined_chars": 1550628,
+          "combined_est_tokens": 387657,
+          "dispatched_agents": 11,
+          "skipped_agents": 0,
+          "agents": [
+            "deep-review-security",
+            "deep-review-project-checklist",
+            "deep-review-simplification",
+            "deep-review-code",
+            "deep-review-architecture",
+            "deep-review-docs",
+            "deep-review-typescript",
+            "deep-review-python",
+            "deep-review-ci",
+            "deep-review-qa",
+            "deep-review-unit-test"
+          ],
+          "skipped": []
+        }
+      ],
+      "totals": {
+        "prompt_input_chars": 1946824,
+        "prompt_input_est_tokens": 486708,
+        "aggregate_output_chars": 14823,
+        "aggregate_output_est_tokens": 3709,
+        "combined_chars": 1961647,
+        "combined_est_tokens": 490417,
+        "dispatched_agents": 52,
+        "skipped_agents": 25
+      }
     }
   ],
   "deltas": {
@@ -1365,12 +1569,39 @@
         "dispatched_agents": -6,
         "skipped_agents": 6
       }
+    },
+    "post-585": {
+      "issue": 585,
+      "from_checkpoint": "post-584",
+      "to_checkpoint": "post-585",
+      "cumulative_from": "original-580",
+      "incremental": {
+        "prompt_input_chars": -17323,
+        "prompt_input_est_tokens": -4332,
+        "aggregate_output_chars": 3262,
+        "aggregate_output_est_tokens": 815,
+        "combined_chars": -14061,
+        "combined_est_tokens": -3517,
+        "dispatched_agents": -1,
+        "skipped_agents": 1
+      },
+      "cumulative": {
+        "prompt_input_chars": -1842336,
+        "prompt_input_est_tokens": -460586,
+        "aggregate_output_chars": -18210,
+        "aggregate_output_est_tokens": -4552,
+        "combined_chars": -1860546,
+        "combined_est_tokens": -465138,
+        "dispatched_agents": -7,
+        "skipped_agents": 7
+      }
     }
   },
   "notes": [
     "Exact runtime tokens are unavailable in this Codex run.",
     "Proxy tokens are estimated as ceil(characters / 4) per fixture and summed.",
     "Historical prompt data is read from checkpoint commits with git show.",
+    "The active WORKTREE checkpoint reads current files directly.",
     "The same current fixture set is used for every checkpoint."
   ]
 }

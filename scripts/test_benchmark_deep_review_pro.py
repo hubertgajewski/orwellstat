@@ -453,6 +453,10 @@ class FixtureTests(unittest.TestCase):
         self.assertIn("`CHANGED_FILES`", skill_text)
         self.assertIn("`{{CHANGED_FILES}}`", skill_text)
         self.assertIn("`<changed-files>`", skill_text)
+        self.assertIn("## Static pre-pass", skill_text)
+        self.assertIn("### static-pre-pass", skill_text)
+        self.assertIn("actionlint-shellcheck", skill_text)
+        self.assertIn("coverage-matrix", skill_text)
         self.assertIn("<changed-files>\n{{CHANGED_FILES}}\n</changed-files>", skill_text)
         self.assertIn("## Scope builder and per-agent prompt frames", skill_text)
         self.assertIn("PROMPT_FRAME_<Agent>", skill_text)
@@ -693,7 +697,7 @@ Binary files a/image.png and b/image.png differ
 
     def test_prompt_scope_matchers_cover_trigger_surfaces(self):
         self.assertTrue(support.is_project_checklist_path("bruno/check.bru"))
-        self.assertTrue(support.is_project_checklist_path(".github/workflows/review.yml"))
+        self.assertFalse(support.is_project_checklist_path(".github/workflows/review.yml"))
         self.assertTrue(
             support.is_docs_path(
                 {
@@ -866,6 +870,26 @@ copy to {target_path}
             )
         self.assertEqual(support.build_full_prompt_frame_v1(""), "")
 
+    def test_credential_line_regex_ignores_static_prepass_prose(self):
+        positive_lines = [
+            "tok" + "en = example",
+            "Authori" + "zation: Bearer example",
+            "api" + "-key => example",
+            "cook" + "ie: sess" + "ion=example",
+        ]
+        prose_lines = [
+            "The pre-pass reports deny-pattern/secret-scan, then SKIPPED: example.",
+            "self.assertIn(\"- [pass] secret-scan:\", output)",
+            "| `secret-scan` | Always | Credential-shaped rows use blocking=yes |",
+        ]
+
+        for line in positive_lines:
+            with self.subTest(line=line):
+                self.assertRegex(line, support.SECURITY_CREDENTIAL_LINE_RE_V1)
+        for line in prose_lines:
+            with self.subTest(line=line):
+                self.assertIsNone(support.SECURITY_CREDENTIAL_LINE_RE_V1.search(line))
+
     def test_default_fixtures_record_conditional_low_risk_dispatch(self):
         fixtures = {fixture["name"]: fixture for fixture in benchmark.load_fixtures()}
 
@@ -901,6 +925,23 @@ copy to {target_path}
                     "deep-review-docs",
                     "deep-review-python",
                     "deep-review-ci",
+                    "deep-review-unit-test",
+                },
+            },
+            "workflow": {
+                "dispatched": {
+                    "deep-review-security",
+                    "deep-review-simplification",
+                    "deep-review-code",
+                    "deep-review-architecture",
+                    "deep-review-docs",
+                    "deep-review-ci",
+                },
+                "skipped": {
+                    "deep-review-project-checklist",
+                    "deep-review-typescript",
+                    "deep-review-python",
+                    "deep-review-qa",
                     "deep-review-unit-test",
                 },
             },

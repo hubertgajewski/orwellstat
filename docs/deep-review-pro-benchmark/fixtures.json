@@ -45,7 +45,6 @@
     "description": "GitHub Actions workflow change that should dispatch the CI specialist.",
     "expected_dispatched": [
       "deep-review-security",
-      "deep-review-project-checklist",
       "deep-review-simplification",
       "deep-review-code",
       "deep-review-architecture",
@@ -53,6 +52,7 @@
       "deep-review-ci"
     ],
     "expected_skipped": [
+      "deep-review-project-checklist",
       "deep-review-typescript",
       "deep-review-python",
       "deep-review-qa",

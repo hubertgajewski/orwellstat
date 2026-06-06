@@ -10,7 +10,7 @@ This directory contains repeatable benchmark fixtures for measuring `/deep-revie
 | --- | --- | --- |
 | `docs-only` | Documentation-only diff | Docs dispatches; security and project-checklist skip with TypeScript, Python, CI, QA, and unit-test agents |
 | `playwright-test` | Playwright spec diff | Project-checklist, TypeScript, and QA dispatch; docs, security, Python, CI, and unit-test agents skip |
-| `workflow` | GitHub Actions workflow diff | Security, project-checklist, docs, and CI dispatch with the always-on agents |
+| `workflow` | GitHub Actions workflow diff | Security, docs, and CI dispatch with the always-on agents; project-checklist skips workflow-only scope |
 | `mixed-typescript` | Playwright utility plus MCP TypeScript diff | Security, project-checklist, docs, TypeScript, and unit-test dispatch |
 | `script-code-only` | Existing non-Playwright Python script diff | Security, Python, and unit-test dispatch; project-checklist and docs skip |
 | `large-diff` | Docs, Python script, Playwright test, and workflow diff | Every specialist dispatches |
@@ -123,7 +123,7 @@ The #587 epic uses fixed checkpoints:
 | `post-582` | After #582 rerun cache contract |
 | `post-583` | After #583 compact aggregate output |
 | `post-584` | After #584 shared-boilerplate compaction |
-| `post-585` | Reserved for #585 static pre-pass and ownership cleanup |
+| `post-585` | After #585 static pre-pass and ownership cleanup |
 | `post-586` | Reserved for #586 large-diff risk bucketing |
 
 Every child story in #587 must report two comparable deltas:
@@ -153,7 +153,7 @@ This writes:
 - `reports/587-epic-token-cost-matrix.md`
 - `reports/587-epic-token-cost-matrix.json`
 
-For a later child story, first add or update that story's checkpoint in `scripts/benchmark_deep_review_epic_matrix.py::DEFAULT_CHECKPOINTS`, including the previous checkpoint link and the output mode. A `HEAD` ref may appear only while preparing the active final checkpoint, and the generated report records it as the resolved short commit SHA. Before treating the report as durable evidence, pin the completed checkpoint to a stable commit ref. Then run the matrix command above.
+For a later child story, first add or update that story's checkpoint in `scripts/benchmark_deep_review_epic_matrix.py::DEFAULT_CHECKPOINTS`, including the previous checkpoint link and the output mode. `WORKTREE` or `HEAD` may appear only while preparing the active final checkpoint; `WORKTREE` reads the current files directly, while `HEAD` reads committed files via `git show`. Before treating the report as durable evidence after merge, pin the completed checkpoint to a stable commit ref. Then run the matrix command above.
 
 Each checkpoint also pins the prompt-frame and aggregate-output contract used for that historical row. Do not let a current helper change retroactively alter earlier checkpoints; add a new contract value when a child story changes prompt framing or aggregate output shape.
 
@@ -169,13 +169,13 @@ Validate the matrix generator with:
 python3 scripts/test_benchmark_deep_review_epic_matrix.py
 ```
 
-The matrix is generated from historical checkpoint commits with `git show`, while every checkpoint uses the same current fixture set. This supersedes any older report-local proxy that used a different fixture set, unit, or branch-local prompt text. If a historical report contains a value such as `Prompt Chars Before`, do not compare it to a later `est. tokens` value; use the generated matrix's combined chars and combined estimated tokens instead.
+The matrix is generated from historical checkpoint commits with `git show`, except an active final `WORKTREE` checkpoint, which reads current files directly before the branch is committed. Every checkpoint uses the same current fixture set. This supersedes any older report-local proxy that used a different fixture set, unit, or branch-local prompt text. If a historical report contains a value such as `Prompt Chars Before`, do not compare it to a later `est. tokens` value; use the generated matrix's combined chars and combined estimated tokens instead.
 
 ## Cost Proxy Policy
 
 Exact `total_tokens` from captured Claude usage is the preferred cost metric. When exact token usage is unavailable, record it as unavailable and add only the proxy that matches the story's cost surface:
 
-- Dispatch and prompt-input changes (#580, #581, #584, #585, #586): use the prompt-footprint proxy. Sum, for each dispatched agent, the agent prompt text, roster domain string, and the exact prompt frame sent to that agent. Estimate tokens as `ceil(characters / 4)`. If a story changes per-agent subdiffs, use the per-agent prompt frame, not the full fixture diff. Report the same three totals when they apply: affected fixtures, representative set excluding `high-lines`, and full fixture set.
+- Dispatch and prompt-input changes (#580, #581, #584, #585, #586): use the prompt-footprint proxy. Sum, for each dispatched agent, the agent prompt text, roster domain string, and the exact prompt frame sent to that agent. Estimate tokens as `ceil(characters / 4)`. If a story changes per-agent subdiffs, use the per-agent prompt frame, not the full fixture diff. For #585 and later, include the compact static-pre-pass aggregate-output proxy in the combined epic matrix because the static section is emitted before sub-agent results. Report the same three totals when they apply: affected fixtures, representative set excluding `high-lines`, and full fixture set.
 - Output verbosity changes (#583): use an output-footprint proxy only when exact output tokens are unavailable. Sum the aggregate output text that would be emitted before and after, estimate tokens as `ceil(characters / 4)`, and keep this separate from prompt-input estimates.
 - Rerun/cache changes (#582): compare complete review sequences, not a single fixture pass. Record dispatched, skipped, reused, and final full matching-pass counts per iteration. If exact tokens are unavailable, do not convert reused results to zero token cost unless the harness proves no model call occurred.
 
