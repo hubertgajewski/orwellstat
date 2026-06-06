@@ -14,18 +14,32 @@ import json
 import math
 import subprocess
 import sys
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Literal
+
+from deep_review_benchmark_support import (
+    build_full_prompt_frame_v1,
+    build_scoped_prompt_frames_v1,
+    load_fixtures,
+    parse_deep_review_pro_roster,
+    selected_agents_for_diff_v1,
+)
 
 
 REPO_ROOT = Path(__file__).parent.parent
 REPORTS_DIR = REPO_ROOT / "docs/deep-review-pro-benchmark/reports"
 MATRIX_MD = REPORTS_DIR / "587-epic-token-cost-matrix.md"
 MATRIX_JSON = REPORTS_DIR / "587-epic-token-cost-matrix.json"
-BENCHMARK_SCRIPT = REPO_ROOT / "scripts/benchmark-deep-review-pro.py"
 SKILL_PATH = ".claude/skills/deep-review-pro/SKILL.md"
 AGENT_DIR = ".claude/agents"
 ORIGINAL_580_REF = "4398fc9"
+OutputMode = Literal["detailed", "compact"]
+DeltaKey = Literal["incremental", "cumulative"]
+PromptFrameContract = Literal["full-v1", "scoped-v1"]
+OutputContract = Literal["detailed-v1", "detailed-reuse-v1", "compact-v1"]
+DispatchContract = Literal["dispatch-v1"]
 
 
 def load_module(name: str, path: Path):
@@ -36,17 +50,33 @@ def load_module(name: str, path: Path):
     return module
 
 
-benchmark = load_module("benchmark_deep_review_pro", BENCHMARK_SCRIPT)
-
-
 @dataclass(frozen=True)
 class Checkpoint:
     name: str
     ref: str
     issue: int | None
     previous: str | None
-    output_mode: str
+    dispatch_contract: DispatchContract
+    prompt_frame_contract: PromptFrameContract
+    output_contract: OutputContract
     label: str
+
+
+@dataclass(frozen=True)
+class FormatSpec:
+    detailed_body_template: str
+    compact_body_template: str
+    summary_template: str
+    total_template: str
+
+
+@dataclass(frozen=True)
+class AggregateRenderContext:
+    fixture: dict
+    roster: dict[str, dict[str, str]]
+    agents: list[str]
+    skipped: list[str]
+    output_contract: OutputContract
 
 
 DEFAULT_CHECKPOINTS = (
@@ -55,7 +85,9 @@ DEFAULT_CHECKPOINTS = (
         ref=ORIGINAL_580_REF,
         issue=None,
         previous=None,
-        output_mode="detailed",
+        dispatch_contract="dispatch-v1",
+        prompt_frame_contract="full-v1",
+        output_contract="detailed-v1",
         label="Original #580 baseline, after #579 and before #580",
     ),
     Checkpoint(
@@ -63,7 +95,9 @@ DEFAULT_CHECKPOINTS = (
         ref="f57b577",
         issue=580,
         previous="original-580",
-        output_mode="detailed",
+        dispatch_contract="dispatch-v1",
+        prompt_frame_contract="full-v1",
+        output_contract="detailed-v1",
         label="After #580 conditional dispatch",
     ),
     Checkpoint(
@@ -71,7 +105,9 @@ DEFAULT_CHECKPOINTS = (
         ref="5e6947f",
         issue=581,
         previous="post-580",
-        output_mode="detailed",
+        dispatch_contract="dispatch-v1",
+        prompt_frame_contract="scoped-v1",
+        output_contract="detailed-v1",
         label="After #581 agent-specific subdiffs",
     ),
     Checkpoint(
@@ -79,15 +115,19 @@ DEFAULT_CHECKPOINTS = (
         ref="f1013ec",
         issue=582,
         previous="post-581",
-        output_mode="detailed",
+        dispatch_contract="dispatch-v1",
+        prompt_frame_contract="scoped-v1",
+        output_contract="detailed-reuse-v1",
         label="After #582 rerun cache contract",
     ),
     Checkpoint(
         name="post-583",
-        ref="HEAD",
+        ref="f3952ee",
         issue=583,
         previous="post-582",
-        output_mode="compact",
+        dispatch_contract="dispatch-v1",
+        prompt_frame_contract="scoped-v1",
+        output_contract="compact-v1",
         label="After #583 compact aggregate output",
     ),
 )
@@ -103,6 +143,42 @@ METRIC_FIELDS = (
     "dispatched_agents",
     "skipped_agents",
 )
+
+
+FORMAT_SPECS = {
+    "H/M/L": FormatSpec(
+        detailed_body_template="findings: none\n{summary}",
+        compact_body_template="findings: none",
+        summary_template="summary: 0 high / 0 medium / 0 low",
+        total_template="0 {name}-H / 0 {name}-M / 0 {name}-L",
+    ),
+    "pass/fail/N/A": FormatSpec(
+        detailed_body_template=(
+            "- [pass] {name} primary checklist satisfied.\n"
+            "- [pass] {name} ownership boundary satisfied.\n"
+            "- [pass] {name} citation requirement satisfied.\n"
+            "- [pass] {name} empty-state contract satisfied.\n"
+            "- [N/A] {name} optional edge case not present.\n"
+            "- [N/A] {name} unavailable-tool case not present.\n"
+            "{empty_state}\n{summary}"
+        ),
+        compact_body_template="{empty_state}",
+        summary_template="summary: 4 pass / 0 fail / 2 N/A",
+        total_template="4 {name}-pass / 0 {name}-fail / 2 {name}-N/A",
+    ),
+}
+OUTPUT_CONTRACT_MODES = {
+    "detailed-v1": "detailed",
+    "detailed-reuse-v1": "detailed",
+    "compact-v1": "compact",
+}
+
+
+def output_mode_for_contract(output_contract: OutputContract) -> OutputMode:
+    try:
+        return OUTPUT_CONTRACT_MODES[output_contract]
+    except KeyError as exc:
+        raise ValueError(f"Unknown aggregate-output contract: {output_contract}") from exc
 
 
 def estimate_tokens(char_count: int) -> int:
@@ -126,57 +202,25 @@ def git_show(ref: str, path: str) -> str:
 
 
 def resolve_ref(ref: str) -> str:
-    if ref == "HEAD":
-        return "HEAD"
     try:
         return run_git(["rev-parse", "--short", ref]).strip()
     except subprocess.CalledProcessError:
         return ref
 
 
-def parse_roster(skill_text: str) -> dict[str, dict[str, str]]:
-    roster: dict[str, dict[str, str]] = {}
-    for line in skill_text.splitlines():
-        if not line.startswith("| `deep-review-"):
-            continue
-        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
-        if len(cells) == 7:
-            agent, domain, dispatch, output_format, empty, blocking, tool_grant = cells
-            prompt_scope = "full"
-        elif len(cells) == 8:
-            (
-                agent,
-                domain,
-                dispatch,
-                prompt_scope,
-                output_format,
-                empty,
-                blocking,
-                tool_grant,
-            ) = cells
-        else:
-            raise ValueError(f"unexpected deep-review-pro roster row with {len(cells)} cells: {line}")
-        agent_name = agent.strip("`")
-        roster[agent_name] = {
-            "domain": domain,
-            "dispatch": dispatch,
-            "prompt_scope": prompt_scope.strip("`"),
-            "format": output_format,
-            "empty_state": empty.strip("`"),
-            "blocking": blocking,
-            "tool_grant": tool_grant,
-        }
-    if not roster:
-        raise ValueError("deep-review-pro roster not found")
-    return roster
-
-
 def load_checkpoint_roster(checkpoint: Checkpoint) -> dict[str, dict[str, str]]:
-    return parse_roster(git_show(checkpoint.ref, SKILL_PATH))
+    return parse_deep_review_pro_roster(git_show(checkpoint.ref, SKILL_PATH))
 
 
 def load_agent_prompt(ref: str, agent: str) -> str:
     return git_show(ref, f"{AGENT_DIR}/{agent}.md")
+
+
+def load_agent_prompt_lengths(ref: str, roster: dict[str, dict[str, str]]) -> dict[str, int]:
+    return {
+        agent: len(load_agent_prompt(ref, agent))
+        for agent in roster
+    }
 
 
 def generated_fixture_text(fixture: dict) -> str:
@@ -194,143 +238,341 @@ def generated_fixture_text(fixture: dict) -> str:
 
 def fixture_diff_text(fixture: dict) -> str:
     path = REPO_ROOT / "docs/deep-review-pro-benchmark" / fixture["scope_file"]
-    if path.exists():
+    try:
         return path.read_text()
-    return generated_fixture_text(fixture)
+    except FileNotFoundError:
+        return generated_fixture_text(fixture)
 
 
-def selected_agents(roster: dict[str, dict[str, str]], fixture: dict) -> list[str]:
-    expected_dispatched = set(fixture["expected_dispatched"])
-    agents = []
-    for agent, cells in roster.items():
-        if cells["dispatch"] == "always" or agent in expected_dispatched:
-            agents.append(agent)
-    return agents
+def skipped_agents(roster: dict[str, dict[str, str]], agents: list[str]) -> list[str]:
+    selected = set(agents)
+    return [agent for agent in roster if agent not in selected]
 
 
-def full_prompt_frame(diff_text: str) -> str:
-    diff = benchmark.sanitize_prompt_value(diff_text).strip()
-    if not diff:
-        return ""
-    return f"<untrusted-diff>\n{diff}\n</untrusted-diff>"
+def format_agent_name(agent: str) -> str:
+    return agent.removeprefix("deep-review-")
 
 
-def checkpoint_uses_scoped_frames(roster: dict[str, dict[str, str]]) -> bool:
-    return any(cells["prompt_scope"] != "full" for cells in roster.values())
+def format_spec(cells: dict[str, str]) -> FormatSpec:
+    try:
+        return FORMAT_SPECS[cells["format"]]
+    except KeyError as exc:
+        raise ValueError(f"Unknown agent output format: {cells['format']}") from exc
 
 
-def prompt_frame_for_agent(
+def agent_summary_line(agent: str, cells: dict[str, str]) -> str:
+    return format_spec(cells).summary_template.format(
+        name=format_agent_name(agent),
+        empty_state=cells["empty_state"],
+    )
+
+
+def prompt_frame_lengths(
     *,
-    agent: str,
+    checkpoint: Checkpoint,
     diff_text: str,
     roster: dict[str, dict[str, str]],
-    scoped_frames: dict[str, str] | None,
-) -> str:
-    if scoped_frames is None:
-        return full_prompt_frame(diff_text)
-    return scoped_frames[agent]
+    agents: list[str],
+) -> dict[str, int]:
+    try:
+        builder = PROMPT_FRAME_CONTRACT_BUILDERS[checkpoint.prompt_frame_contract]
+    except KeyError as exc:
+        raise ValueError(
+            f"Unknown prompt-frame contract: {checkpoint.prompt_frame_contract}"
+        ) from exc
+    return builder(diff_text=diff_text, roster=roster, agents=agents)
+
+
+def prompt_frame_lengths_full_v1(
+    *,
+    diff_text: str,
+    roster: dict[str, dict[str, str]],
+    agents: list[str],
+) -> dict[str, int]:
+    del roster
+    full_frame_length = len(build_full_prompt_frame_v1(diff_text))
+    return {
+        agent: full_frame_length
+        for agent in agents
+    }
+
+
+def prompt_frame_lengths_scoped_v1(
+    *,
+    diff_text: str,
+    roster: dict[str, dict[str, str]],
+    agents: list[str],
+) -> dict[str, int]:
+    selected_roster = {
+        agent: roster[agent]
+        for agent in agents
+    }
+    return {
+        agent: len(frame)
+        for agent, frame in build_scoped_prompt_frames_v1(
+            diff_text,
+            roster=selected_roster,
+        ).items()
+    }
+
+
+PROMPT_FRAME_CONTRACT_BUILDERS = {
+    "full-v1": prompt_frame_lengths_full_v1,
+    "scoped-v1": prompt_frame_lengths_scoped_v1,
+}
 
 
 def prompt_input_chars(
     *,
     checkpoint: Checkpoint,
-    fixture: dict,
+    diff_text: str,
     roster: dict[str, dict[str, str]],
+    prompt_lengths: dict[str, int],
     agents: list[str],
 ) -> int:
-    diff_text = fixture_diff_text(fixture)
-    scoped_frames = None
-    if checkpoint_uses_scoped_frames(roster):
-        scoped_frames = benchmark.build_prompt_frames(diff_text, roster=roster)
-
+    frame_lengths = prompt_frame_lengths(
+        checkpoint=checkpoint,
+        diff_text=diff_text,
+        roster=roster,
+        agents=agents,
+    )
     total = 0
     for agent in agents:
-        total += len(load_agent_prompt(checkpoint.ref, agent))
+        total += prompt_lengths[agent]
         total += len(roster[agent]["domain"])
-        total += len(
-            prompt_frame_for_agent(
-                agent=agent,
-                diff_text=diff_text,
-                roster=roster,
-                scoped_frames=scoped_frames,
-            )
-        )
+        total += frame_lengths[agent]
     return total
 
 
 def detailed_agent_section(agent: str, cells: dict[str, str]) -> str:
-    if cells["format"] == "H/M/L":
-        body = "findings: none\nsummary: 0 HIGH / 0 MEDIUM / 0 LOW"
-    else:
-        body = (
-            f"{cells['empty_state']}\n"
-            f"summary: <{agent.removeprefix('deep-review-')}-pass> pass / "
-            f"0 fail / <{agent.removeprefix('deep-review-')}-N/A> N/A"
-        )
+    body = format_spec(cells).detailed_body_template.format(
+        name=format_agent_name(agent),
+        empty_state=cells["empty_state"],
+        summary=agent_summary_line(agent, cells),
+    )
     return f"### {agent}\n{body}"
+
+
+def skipped_agent_section(agent: str, cells: dict[str, str]) -> str:
+    return f"### {agent}\nSKIPPED: {cells['dispatch']} not satisfied"
+
+
+def aggregate_total_line(
+    agents: list[str],
+    roster: dict[str, dict[str, str]],
+) -> str:
+    return "total: " + " / ".join(
+        aggregate_total_part(agent, roster[agent])
+        for agent in agents
+    )
+
+
+def aggregate_reuse_line(agents: list[str], skipped: list[str]) -> str:
+    return (
+        f"reuse: dispatched {len(agents)} / skipped {len(skipped)} / "
+        "reused 0 / final_full_matching_pass no"
+    )
+
+
+def iteration_footer(
+    output_contract: OutputContract,
+    agents: list[str],
+    skipped: list[str],
+) -> str:
+    if output_contract == "detailed-reuse-v1":
+        return (
+            f"iterations: 1 (dispatched {len(agents)}, skipped {len(skipped)}, "
+            "reused 0, final_full_matching_pass no)"
+        )
+    return "iterations: 1"
+
+
+def aggregate_output_proxy_text(
+    *,
+    context: AggregateRenderContext,
+    agent_section: Callable[[str, dict[str, str]], str],
+    aggregate_tail: list[str],
+) -> str:
+    lines = [
+        f"fixture: {context.fixture['name']}",
+        f"mode: {output_mode_for_contract(context.output_contract)} aggregate output",
+        "",
+    ]
+    lines.extend(agent_section(agent, context.roster[agent]) for agent in context.agents)
+    lines.extend(skipped_agent_section(agent, context.roster[agent]) for agent in context.skipped)
+    lines.extend(
+        [
+            "",
+            "### aggregate",
+            aggregate_total_line(context.agents, context.roster),
+            "status: ready",
+        ]
+    )
+    if context.output_contract in ("detailed-reuse-v1", "compact-v1"):
+        lines.append(aggregate_reuse_line(context.agents, context.skipped))
+    lines.extend(aggregate_tail)
+    return "\n".join(lines)
 
 
 def detailed_output_proxy(
     *,
-    checkpoint: Checkpoint,
     fixture: dict,
     roster: dict[str, dict[str, str]],
     agents: list[str],
+    skipped: list[str],
+    output_contract: OutputContract,
 ) -> str:
-    skipped = [agent for agent in roster if agent not in set(agents)]
-    lines = [
-        f"fixture: {fixture['name']}",
-        "mode: detailed aggregate output",
-        "",
-    ]
-    lines.extend(detailed_agent_section(agent, roster[agent]) for agent in agents)
-    lines.extend(
-        [
-            "",
-            "aggregate:",
-            f"summary: dispatched {len(agents)} / skipped {len(skipped)}",
-            "blocking: none",
-            "status: ready",
-            "",
-            "| Agent | Dispatch | Input | Output | Total | Tool uses | Duration |",
-            "| --- | --- | ---: | ---: | ---: | ---: | ---: |",
-            "| orchestrator | run | <input> | <output> | - | - | - |",
-        ]
+    context = AggregateRenderContext(
+        fixture=fixture,
+        roster=roster,
+        agents=agents,
+        skipped=skipped,
+        output_contract=output_contract,
     )
+    lines = [
+        "",
+        "| Layer | Model | Input | Output | Total | Cache read | Cache creation | Tool uses | Wall-clock | Summary |",
+        "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |",
+        "| orchestrator | claude | <input> | <output> | — | <cache-read> | <cache-create> | — | — | aggregate coordinator |",
+    ]
     lines.extend(
-        f"| {agent} | dispatched | - | - | <total> | <tools> | <duration> |"
+        f"| {agent} | claude | — | — | <total> | — | — | <tools> | <duration> | {agent_summary_line(agent, roster[agent])} |"
         for agent in agents
     )
-    lines.extend(
-        f"| {agent} | skipped | - | - | - | - | - |"
-        for agent in skipped
+    if output_contract in ("detailed-v1", "detailed-reuse-v1"):
+        lines.extend(
+            f"| {agent} | — | — | — | — | — | — | — | — | SKIPPED: {roster[agent]['dispatch']} not satisfied |"
+            for agent in skipped
+        )
+    lines.append("| totals | — | <input> | <output> | <billable-total> | <cache-read> | <cache-create> | <tools> | <duration> | all non-skipped layers |")
+    lines.append(iteration_footer(output_contract, agents, skipped))
+    return aggregate_output_proxy_text(
+        context=context,
+        agent_section=detailed_agent_section,
+        aggregate_tail=lines,
     )
-    return "\n".join(lines)
+
+
+def compact_agent_section(agent: str, cells: dict[str, str]) -> str:
+    body = format_spec(cells).compact_body_template.format(
+        name=format_agent_name(agent),
+        empty_state=cells["empty_state"],
+        summary=agent_summary_line(agent, cells),
+    )
+    return f"### {agent}\n{body}\n{agent_summary_line(agent, cells)}"
+
+
+def aggregate_total_part(agent: str, cells: dict[str, str]) -> str:
+    return format_spec(cells).total_template.format(
+        name=format_agent_name(agent),
+        empty_state=cells["empty_state"],
+        summary=agent_summary_line(agent, cells),
+    )
 
 
 def compact_output_proxy(
     *,
-    checkpoint: Checkpoint,
     fixture: dict,
     roster: dict[str, dict[str, str]],
     agents: list[str],
+    skipped: list[str],
 ) -> str:
-    skipped = [agent for agent in roster if agent not in set(agents)]
-    lines = [
-        f"fixture: {fixture['name']}",
-        "mode: compact aggregate output",
-        "failures: none",
-        f"summary: dispatched {len(agents)} / skipped {len(skipped)}",
-    ]
-    lines.extend(f"SKIPPED: {agent}" for agent in skipped)
-    lines.extend(
-        [
-            "schema violations: none",
-            "status: ready",
-            "tokens: total <value|unavailable> (use --usage or --verbose for the detailed table)",
-        ]
+    context = AggregateRenderContext(
+        fixture=fixture,
+        roster=roster,
+        agents=agents,
+        skipped=skipped,
+        output_contract="compact-v1",
     )
-    return "\n".join(lines)
+    return aggregate_output_proxy_text(
+        context=context,
+        agent_section=compact_agent_section,
+        aggregate_tail=[
+            "tokens: total <value|unavailable> (use --usage or --verbose for the detailed table)"
+        ],
+    )
+
+
+def aggregate_output_text_detailed_v1(
+    *,
+    fixture: dict,
+    roster: dict[str, dict[str, str]],
+    agents: list[str],
+    skipped: list[str],
+) -> str:
+    return detailed_output_proxy(
+        fixture=fixture,
+        roster=roster,
+        agents=agents,
+        skipped=skipped,
+        output_contract="detailed-v1",
+    )
+
+
+def aggregate_output_text_detailed_reuse_v1(
+    *,
+    fixture: dict,
+    roster: dict[str, dict[str, str]],
+    agents: list[str],
+    skipped: list[str],
+) -> str:
+    return detailed_output_proxy(
+        fixture=fixture,
+        roster=roster,
+        agents=agents,
+        skipped=skipped,
+        output_contract="detailed-reuse-v1",
+    )
+
+
+def aggregate_output_text_compact_v1(
+    *,
+    fixture: dict,
+    roster: dict[str, dict[str, str]],
+    agents: list[str],
+    skipped: list[str],
+) -> str:
+    return compact_output_proxy(
+        fixture=fixture,
+        roster=roster,
+        agents=agents,
+        skipped=skipped,
+    )
+
+
+OUTPUT_CONTRACT_BUILDERS = {
+    "detailed-v1": aggregate_output_text_detailed_v1,
+    "detailed-reuse-v1": aggregate_output_text_detailed_reuse_v1,
+    "compact-v1": aggregate_output_text_compact_v1,
+}
+
+
+def selected_agents_dispatch_v1(
+    *,
+    roster: dict[str, dict[str, str]],
+    diff_text: str,
+) -> list[str]:
+    return selected_agents_for_diff_v1(roster, diff_text)
+
+
+DISPATCH_CONTRACT_BUILDERS = {
+    "dispatch-v1": selected_agents_dispatch_v1,
+}
+
+
+def selected_agents_for_checkpoint(
+    *,
+    checkpoint: Checkpoint,
+    roster: dict[str, dict[str, str]],
+    diff_text: str,
+) -> list[str]:
+    try:
+        builder = DISPATCH_CONTRACT_BUILDERS[checkpoint.dispatch_contract]
+    except KeyError as exc:
+        raise ValueError(
+            f"Unknown dispatch contract: {checkpoint.dispatch_contract}"
+        ) from exc
+    return builder(roster=roster, diff_text=diff_text)
 
 
 def aggregate_output_chars(
@@ -339,34 +581,43 @@ def aggregate_output_chars(
     fixture: dict,
     roster: dict[str, dict[str, str]],
     agents: list[str],
+    skipped: list[str],
 ) -> int:
-    if checkpoint.output_mode == "compact":
-        return len(
-            compact_output_proxy(
-                checkpoint=checkpoint,
-                fixture=fixture,
-                roster=roster,
-                agents=agents,
-            )
-        )
+    try:
+        builder = OUTPUT_CONTRACT_BUILDERS[checkpoint.output_contract]
+    except KeyError as exc:
+        raise ValueError(
+            f"Unknown aggregate-output contract: {checkpoint.output_contract}"
+        ) from exc
     return len(
-        detailed_output_proxy(
-            checkpoint=checkpoint,
+        builder(
             fixture=fixture,
             roster=roster,
             agents=agents,
+            skipped=skipped,
         )
     )
 
 
-def checkpoint_fixture_metrics(checkpoint: Checkpoint, fixture: dict) -> dict:
-    roster = load_checkpoint_roster(checkpoint)
-    agents = selected_agents(roster, fixture)
-    skipped = [agent for agent in roster if agent not in set(agents)]
+def checkpoint_fixture_metrics(
+    checkpoint: Checkpoint,
+    fixture: dict,
+    *,
+    diff_text: str,
+    roster: dict[str, dict[str, str]],
+    prompt_lengths: dict[str, int],
+) -> dict:
+    agents = selected_agents_for_checkpoint(
+        checkpoint=checkpoint,
+        roster=roster,
+        diff_text=diff_text,
+    )
+    skipped = skipped_agents(roster, agents)
     prompt_chars = prompt_input_chars(
         checkpoint=checkpoint,
-        fixture=fixture,
+        diff_text=diff_text,
         roster=roster,
+        prompt_lengths=prompt_lengths,
         agents=agents,
     )
     output_chars = aggregate_output_chars(
@@ -374,6 +625,7 @@ def checkpoint_fixture_metrics(checkpoint: Checkpoint, fixture: dict) -> dict:
         fixture=fixture,
         roster=roster,
         agents=agents,
+        skipped=skipped,
     )
     prompt_tokens = estimate_tokens(prompt_chars)
     output_tokens = estimate_tokens(output_chars)
@@ -399,9 +651,30 @@ def sum_fixture_metrics(fixtures: list[dict]) -> dict[str, int]:
     }
 
 
-def build_checkpoint_metrics(checkpoint: Checkpoint, fixtures: list[dict]) -> dict:
+def validate_checkpoint_sequence(checkpoints: tuple[Checkpoint, ...]) -> None:
+    for index, checkpoint in enumerate(checkpoints):
+        if checkpoint.ref == "HEAD" and index != len(checkpoints) - 1:
+            raise ValueError(
+                f"{checkpoint.name} uses HEAD but is not the final checkpoint; "
+                "pin it to a stable ref before adding later checkpoints"
+            )
+
+
+def build_checkpoint_metrics(
+    checkpoint: Checkpoint,
+    fixtures: list[dict],
+    fixture_texts: dict[str, str],
+) -> dict:
+    roster = load_checkpoint_roster(checkpoint)
+    prompt_lengths = load_agent_prompt_lengths(checkpoint.ref, roster)
     fixture_metrics = [
-        checkpoint_fixture_metrics(checkpoint, fixture)
+        checkpoint_fixture_metrics(
+            checkpoint,
+            fixture,
+            diff_text=fixture_texts[fixture["name"]],
+            roster=roster,
+            prompt_lengths=prompt_lengths,
+        )
         for fixture in fixtures
     ]
     return {
@@ -410,7 +683,10 @@ def build_checkpoint_metrics(checkpoint: Checkpoint, fixtures: list[dict]) -> di
         "resolved_ref": resolve_ref(checkpoint.ref),
         "issue": checkpoint.issue,
         "previous": checkpoint.previous,
-        "output_mode": checkpoint.output_mode,
+        "output_mode": output_mode_for_contract(checkpoint.output_contract),
+        "dispatch_contract": checkpoint.dispatch_contract,
+        "prompt_frame_contract": checkpoint.prompt_frame_contract,
+        "output_contract": checkpoint.output_contract,
         "label": checkpoint.label,
         "fixtures": fixture_metrics,
         "totals": sum_fixture_metrics(fixture_metrics),
@@ -444,9 +720,14 @@ def build_epic_matrix(
     checkpoints: tuple[Checkpoint, ...] = DEFAULT_CHECKPOINTS,
     fixtures: list[dict] | None = None,
 ) -> dict:
-    fixtures = fixtures if fixtures is not None else benchmark.load_fixtures()
+    validate_checkpoint_sequence(checkpoints)
+    fixtures = fixtures if fixtures is not None else load_fixtures()
+    fixture_texts = {
+        fixture["name"]: fixture_diff_text(fixture)
+        for fixture in fixtures
+    }
     checkpoint_metrics = [
-        build_checkpoint_metrics(checkpoint, fixtures)
+        build_checkpoint_metrics(checkpoint, fixtures, fixture_texts)
         for checkpoint in checkpoints
     ]
     by_name = {checkpoint["name"]: checkpoint for checkpoint in checkpoint_metrics}
@@ -497,8 +778,15 @@ def checkpoint_table_row(checkpoint: dict) -> str:
     )
 
 
-def delta_table_row(matrix: dict, delta: dict, delta_key: str) -> str:
-    by_name = {checkpoint["name"]: checkpoint for checkpoint in matrix["checkpoints"]}
+def checkpoint_contract_row(checkpoint: dict) -> str:
+    return (
+        f"| {checkpoint['name']} | {checkpoint['dispatch_contract']} | "
+        f"{checkpoint['prompt_frame_contract']} | "
+        f"{checkpoint['output_contract']} |"
+    )
+
+
+def delta_table_row(by_name: dict[str, dict], delta: dict, delta_key: DeltaKey) -> str:
     before_name = delta["from_checkpoint"] if delta_key == "incremental" else delta["cumulative_from"]
     after_name = delta["to_checkpoint"]
     before = by_name[before_name]["totals"]
@@ -516,7 +804,8 @@ def delta_table_row(matrix: dict, delta: dict, delta_key: str) -> str:
     )
 
 
-def render_delta_table(matrix: dict, delta_key: str) -> list[str]:
+def render_delta_table(matrix: dict, delta_key: DeltaKey) -> list[str]:
+    by_name = {checkpoint["name"]: checkpoint for checkpoint in matrix["checkpoints"]}
     lines = [
         "| Issue | From | To | Combined chars before | Combined chars after | Char delta | Combined est. tokens before | Combined est. tokens after | Token delta |",
         "| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |",
@@ -524,7 +813,7 @@ def render_delta_table(matrix: dict, delta_key: str) -> list[str]:
     for checkpoint in matrix["checkpoints"]:
         delta = matrix["deltas"].get(checkpoint["name"])
         if delta:
-            lines.append(delta_table_row(matrix, delta, delta_key))
+            lines.append(delta_table_row(by_name, delta, delta_key))
     return lines
 
 
@@ -552,6 +841,15 @@ def render_epic_report(matrix: dict) -> str:
     lines.extend(checkpoint_table_row(checkpoint) for checkpoint in matrix["checkpoints"])
     lines.extend(
         [
+            "",
+            "## Checkpoint Contracts",
+            "",
+            "| Checkpoint | Dispatch contract | Prompt-frame contract | Aggregate-output contract |",
+            "| --- | --- | --- | --- |",
+            *(
+                checkpoint_contract_row(checkpoint)
+                for checkpoint in matrix["checkpoints"]
+            ),
             "",
             "## Incremental Deltas",
             "",
@@ -638,13 +936,23 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     matrix = build_epic_matrix()
+    issue_section = None
+    if args.issue_section is not None:
+        try:
+            issue_section = render_issue_comparable_section(matrix, args.issue_section)
+        except ValueError as error:
+            print(f"error: {error}", file=sys.stderr)
+            return 2
+
     args.markdown_out.parent.mkdir(parents=True, exist_ok=True)
+    args.json_out.parent.mkdir(parents=True, exist_ok=True)
     args.markdown_out.write_text(render_epic_report(matrix))
     args.json_out.write_text(json.dumps(matrix, indent=2) + "\n")
-    print(args.markdown_out)
-    print(args.json_out)
-    if args.issue_section is not None:
-        print(render_issue_comparable_section(matrix, args.issue_section))
+    output_stream = sys.stderr if issue_section else sys.stdout
+    print(args.markdown_out, file=output_stream)
+    print(args.json_out, file=output_stream)
+    if issue_section:
+        print(issue_section)
     return 0
 
 

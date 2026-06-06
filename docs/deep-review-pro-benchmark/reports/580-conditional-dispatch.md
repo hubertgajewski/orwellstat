@@ -12,15 +12,15 @@ Use this section for cross-ticket comparison. Story-specific tables below are re
 
 | Metric | Before | After | Delta |
 | --- | ---: | ---: | ---: |
-| Combined chars | 3,802,267 | 3,748,414 | -53,853 (-1.42%) |
-| Combined est. tokens | 950,573 | 937,108 | -13,465 (-1.42%) |
+| Combined chars | 3,822,193 | 3,767,358 | -54,835 (-1.43%) |
+| Combined est. tokens | 955,555 | 941,845 | -13,710 (-1.43%) |
 
 ### Cumulative Delta: original-580 -> post-580
 
 | Metric | Original #580 baseline | Current checkpoint | Delta |
 | --- | ---: | ---: | ---: |
-| Combined chars | 3,802,267 | 3,748,414 | -53,853 (-1.42%) |
-| Combined est. tokens | 950,573 | 937,108 | -13,465 (-1.42%) |
+| Combined chars | 3,822,193 | 3,767,358 | -54,835 (-1.43%) |
+| Combined est. tokens | 955,555 | 941,845 | -13,710 (-1.43%) |
 
 ## Harness
 

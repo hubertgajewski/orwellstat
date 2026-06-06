@@ -35,7 +35,7 @@ Dispatched agents receive per-agent prompt frames. Broad reviewers (`security`, 
 
 During re-review convergence, `/deep-review-pro` can reuse a non-blocking unchanged agent result when that agent's prompt file, shared references, scoped prompt frame, and complete read-dependency content identities are unchanged. Cached sections are marked `REUSED:` in the aggregate. Prior blockers, newly matched triggers, incomplete dependency telemetry, invalidated cache keys, and changed scoped inputs are dispatched again. If cached results or targeted reruns were used and the aggregate is otherwise ready, the workflow runs one final full matching-agent pass with reuse disabled before it may emit `status: ready`.
 
-Token benchmark fixtures and the before/after reporting workflow live in [deep-review-pro-benchmark](deep-review-pro-benchmark/README.md). Use them before and after `/deep-review-pro` prompt or dispatch optimizations so token savings are measured against stable scopes.
+Token benchmark fixtures and the before/after reporting workflow live in [deep-review-pro-benchmark](deep-review-pro-benchmark/README.md). Use them before and after `/deep-review-pro` token-cost changes so prompt framing, dispatch, rerun/cache, and aggregate-output effects are measured against stable scopes.
 
 ## Codex And Claude Substitutions
 

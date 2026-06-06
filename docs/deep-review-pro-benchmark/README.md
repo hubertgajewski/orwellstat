@@ -1,6 +1,6 @@
 # deep-review-pro Token Benchmark
 
-This directory contains repeatable benchmark fixtures for measuring `/deep-review-pro` token usage before and after prompt or dispatch optimizations.
+This directory contains repeatable benchmark fixtures for measuring `/deep-review-pro` token-cost changes across prompt framing, dispatch, rerun/cache, and aggregate-output optimizations.
 
 ## Fixtures
 
@@ -86,7 +86,7 @@ Run the same command after `/deep-review-pro` and write `orchestrator-after.json
 
 When both snapshot files are present, the harness subtracts `before` from `after` and records only the controlled invocation's delta. For older captured runs, a single `orchestrator.jsonl` or `session.jsonl` file is still supported, but that fallback is cumulative for the saved log and should only be used for an isolated fresh Claude session.
 
-The harness intentionally does not invoke Claude Code. It normalizes captured artifacts so optimization branches can compare the same fixture set without relying on live session state.
+The harness intentionally does not invoke Claude Code. It normalizes captured artifacts so optimization branches can compare the same fixture set without relying on live session state. Shared fixture validation and prompt-frame helpers live in `scripts/deep_review_benchmark_support.py`; both benchmark CLIs use that support module so prompt-frame construction cannot drift between report generators.
 
 ## Generating Reports
 
@@ -148,7 +148,14 @@ The matrix recalculation command is:
 python3 scripts/benchmark_deep_review_epic_matrix.py
 ```
 
-For a later child story, first add or update that story's checkpoint in `scripts/benchmark_deep_review_epic_matrix.py::DEFAULT_CHECKPOINTS`, including the previous checkpoint link and the output mode. Then run the matrix command above.
+This writes:
+
+- `reports/587-epic-token-cost-matrix.md`
+- `reports/587-epic-token-cost-matrix.json`
+
+For a later child story, first add or update that story's checkpoint in `scripts/benchmark_deep_review_epic_matrix.py::DEFAULT_CHECKPOINTS`, including the previous checkpoint link and the output mode. A `HEAD` ref may appear only while preparing the active final checkpoint, and the generated report records it as the resolved short commit SHA. Before treating the report as durable evidence, pin the completed checkpoint to a stable commit ref. Then run the matrix command above.
+
+Each checkpoint also pins the prompt-frame and aggregate-output contract used for that historical row. Do not let a current helper change retroactively alter earlier checkpoints; add a new contract value when a child story changes prompt framing or aggregate output shape.
 
 To print the generated section for an issue report:
 
@@ -156,10 +163,11 @@ To print the generated section for an issue report:
 python3 scripts/benchmark_deep_review_epic_matrix.py --issue-section 583
 ```
 
-This writes:
+Validate the matrix generator with:
 
-- `reports/587-epic-token-cost-matrix.md`
-- `reports/587-epic-token-cost-matrix.json`
+```bash
+python3 scripts/test_benchmark_deep_review_epic_matrix.py
+```
 
 The matrix is generated from historical checkpoint commits with `git show`, while every checkpoint uses the same current fixture set. This supersedes any older report-local proxy that used a different fixture set, unit, or branch-local prompt text. If a historical report contains a value such as `Prompt Chars Before`, do not compare it to a later `est. tokens` value; use the generated matrix's combined chars and combined estimated tokens instead.
 
