@@ -399,7 +399,7 @@ def is_project_checklist_path_v1(path):
 
 
 def is_project_checklist_path_static_v1(path):
-    return path.startswith("playwright/typescript/") or path.startswith("bruno/")
+    return is_playwright_typescript_dir_path_v1(path) or path.startswith("bruno/")
 
 
 def is_docs_path_v1(block):
@@ -414,6 +414,18 @@ def is_docs_path_v1(block):
 
 def is_typescript_path_v1(path):
     return path.endswith((".ts", ".tsx"))
+
+
+def is_playwright_typescript_dir_path_v1(path):
+    return path.startswith("playwright/typescript/")
+
+
+def is_playwright_spec_path_v1(path):
+    return path.startswith("playwright/typescript/tests/") and path.endswith(".spec.ts")
+
+
+def collect_added_lines(parsed_blocks):
+    return [line for block in parsed_blocks for line in block["added_lines"]]
 
 
 def is_python_path_v1(path):
@@ -517,11 +529,7 @@ def dispatch_docs_v1(parsed_blocks, untracked_paths=""):
 
 def dispatch_security_risk_v1(parsed_blocks, untracked_paths=""):
     paths = changed_paths(parsed_blocks, untracked_paths)
-    added_lines = [
-        line
-        for block in parsed_blocks
-        for line in block["added_lines"]
-    ]
+    added_lines = collect_added_lines(parsed_blocks)
     if any(is_security_trigger_path_v1(path) for path in paths):
         return True
     if any(SECURITY_CREDENTIAL_LINE_RE_V1.search(line) for line in added_lines):
@@ -576,17 +584,11 @@ PROMPT_SCOPE_SELECTORS_V1 = MappingProxyType({
     "unit-test": lambda block: any_block_path(block, is_unit_test_surface_path_v1),
 })
 PROMPT_SCOPE_SELECTORS_STATIC_V1 = MappingProxyType({
-    PROMPT_SCOPE_FULL: lambda block: True,
+    **PROMPT_SCOPE_SELECTORS_V1,
     "project-checklist": lambda block: any_block_path(
         block,
         is_project_checklist_path_static_v1,
     ),
-    "docs": is_docs_path_v1,
-    "typescript": lambda block: any_block_path(block, is_typescript_path_v1),
-    "python": lambda block: any_block_path(block, is_python_path_v1),
-    "ci": lambda block: any_block_path(block, is_workflow_path_v1),
-    "qa": lambda block: any_block_path(block, is_qa_path_v1),
-    "unit-test": lambda block: any_block_path(block, is_unit_test_surface_path_v1),
 })
 PROMPT_SCOPE_SELECTORS = PROMPT_SCOPE_SELECTORS_STATIC_V1
 AGENT_DISPATCH_PROMPT_SCOPES_V1 = MappingProxyType({
@@ -614,12 +616,18 @@ def block_matches_prompt_scope_v1(block, prompt_scope):
     return selector(block)
 
 
-def dispatch_matches_v1(agent, cells, parsed_blocks, untracked_paths=""):
+def _dispatch_matches(
+    agent,
+    cells,
+    parsed_blocks,
+    untracked_paths,
+    project_checklist_fn,
+):
     dispatch = cells["dispatch"]
     if dispatch == "always":
         return True
     if dispatch == "project-checklist trigger":
-        return dispatch_project_checklist_v1(parsed_blocks, untracked_paths)
+        return project_checklist_fn(parsed_blocks, untracked_paths)
     if dispatch == "docs trigger":
         return dispatch_docs_v1(parsed_blocks, untracked_paths)
     if dispatch == "security-risk trigger":
@@ -630,42 +638,53 @@ def dispatch_matches_v1(agent, cells, parsed_blocks, untracked_paths=""):
             raise ValueError(f"Cannot derive scope trigger for {agent}: {dispatch}")
         return dispatch_scope_v1(parsed_blocks, prompt_scope)
     raise ValueError(f"Unknown dispatch trigger for {agent}: {dispatch}")
+
+
+def dispatch_matches_v1(agent, cells, parsed_blocks, untracked_paths=""):
+    return _dispatch_matches(
+        agent,
+        cells,
+        parsed_blocks,
+        untracked_paths,
+        dispatch_project_checklist_v1,
+    )
 
 
 def dispatch_matches_static_v1(agent, cells, parsed_blocks, untracked_paths=""):
-    dispatch = cells["dispatch"]
-    if dispatch == "always":
-        return True
-    if dispatch == "project-checklist trigger":
-        return dispatch_project_checklist_static_v1(parsed_blocks, untracked_paths)
-    if dispatch == "docs trigger":
-        return dispatch_docs_v1(parsed_blocks, untracked_paths)
-    if dispatch == "security-risk trigger":
-        return dispatch_security_risk_v1(parsed_blocks, untracked_paths)
-    if dispatch.startswith("scope contains"):
-        prompt_scope = AGENT_DISPATCH_PROMPT_SCOPES_V1.get(agent, cells["prompt_scope"])
-        if prompt_scope == PROMPT_SCOPE_FULL:
-            raise ValueError(f"Cannot derive scope trigger for {agent}: {dispatch}")
-        return dispatch_scope_v1(parsed_blocks, prompt_scope)
-    raise ValueError(f"Unknown dispatch trigger for {agent}: {dispatch}")
+    return _dispatch_matches(
+        agent,
+        cells,
+        parsed_blocks,
+        untracked_paths,
+        dispatch_project_checklist_static_v1,
+    )
+
+
+def _selected_agents_for_diff(roster, diff_text, untracked_paths, dispatch_fn):
+    parsed_blocks = parse_diff(diff_text)
+    return [
+        agent
+        for agent, cells in roster.items()
+        if dispatch_fn(agent, cells, parsed_blocks, untracked_paths)
+    ]
 
 
 def selected_agents_for_diff_v1(roster, diff_text, untracked_paths=""):
-    parsed_blocks = parse_diff(diff_text)
-    return [
-        agent
-        for agent, cells in roster.items()
-        if dispatch_matches_v1(agent, cells, parsed_blocks, untracked_paths)
-    ]
+    return _selected_agents_for_diff(
+        roster,
+        diff_text,
+        untracked_paths,
+        dispatch_matches_v1,
+    )
 
 
 def selected_agents_for_diff_static_v1(roster, diff_text, untracked_paths=""):
-    parsed_blocks = parse_diff(diff_text)
-    return [
-        agent
-        for agent, cells in roster.items()
-        if dispatch_matches_static_v1(agent, cells, parsed_blocks, untracked_paths)
-    ]
+    return _selected_agents_for_diff(
+        roster,
+        diff_text,
+        untracked_paths,
+        dispatch_matches_static_v1,
+    )
 
 
 def build_prompt_frames_with_contract(

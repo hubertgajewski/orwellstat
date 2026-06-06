@@ -10,6 +10,7 @@ import importlib.util
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 from contextlib import redirect_stderr, redirect_stdout
 from io import StringIO
 from pathlib import Path
@@ -119,6 +120,10 @@ class EpicBenchmarkMatrixTests(unittest.TestCase):
             "refs/heads/does-not-exist-for-test",
         )
 
+    def test_git_show_worktree_raises_for_missing_path(self):
+        with self.assertRaises(FileNotFoundError):
+            epic.git_show("WORKTREE", "scripts/no_such_file_for_test.py")
+
     def test_worktree_checkpoint_reads_current_files(self):
         checkpoint = epic.Checkpoint(
             name="post-585",
@@ -133,9 +138,9 @@ class EpicBenchmarkMatrixTests(unittest.TestCase):
 
         roster = epic.load_checkpoint_roster(checkpoint)
 
-        self.assertIn(
-            "path-alias / loadEnv",
-            roster["deep-review-project-checklist"]["domain"],
+        self.assertEqual(
+            roster["deep-review-project-checklist"]["dispatch"],
+            "project-checklist trigger",
         )
 
     def test_missing_checkpoint_refs_fail_before_fixture_loading(self):
@@ -224,6 +229,33 @@ class EpicBenchmarkMatrixTests(unittest.TestCase):
         )
 
         with self.assertRaisesRegex(ValueError, "post-583 uses HEAD"):
+            epic.validate_checkpoint_sequence(checkpoints)
+
+    def test_worktree_checkpoint_must_be_final_checkpoint(self):
+        checkpoints = (
+            epic.Checkpoint(
+                name="post-585",
+                ref="WORKTREE",
+                issue=585,
+                previous="post-584",
+                dispatch_contract="dispatch-static-v1",
+                prompt_frame_contract="scoped-v1",
+                output_contract="compact-static-v1",
+                label="After #585",
+            ),
+            epic.Checkpoint(
+                name="post-586",
+                ref="next-ref",
+                issue=586,
+                previous="post-585",
+                dispatch_contract="dispatch-static-v1",
+                prompt_frame_contract="scoped-v1",
+                output_contract="compact-static-v1",
+                label="After #586",
+            ),
+        )
+
+        with self.assertRaisesRegex(ValueError, "post-585 uses WORKTREE"):
             epic.validate_checkpoint_sequence(checkpoints)
 
     def test_parse_roster_error_paths_are_explicit(self):
@@ -329,6 +361,49 @@ class EpicBenchmarkMatrixTests(unittest.TestCase):
         self.assertIn("reuse: dispatched 1 / skipped 1 / reused 0", output)
         self.assertIn("tokens: total <value|unavailable>", output)
 
+    def test_static_unavailable_blocking_count_filters_fallback_none_only(self):
+        blocking_row = (
+            "unavailable",
+            "format-check",
+            "owner=aggregate; blocking=yes; fallback=none; tool unavailable",
+        )
+        non_blocking_row = (
+            "unavailable",
+            "actionlint-shellcheck",
+            "owner=deep-review-ci; blocking=no; fallback=deep-review-ci; tool unavailable",
+        )
+
+        self.assertEqual(epic.static_unavailable_blocking_count([blocking_row]), 1)
+        self.assertEqual(
+            epic.static_unavailable_blocking_count([blocking_row, non_blocking_row]),
+            1,
+        )
+        self.assertEqual(epic.static_unavailable_blocking_count([non_blocking_row]), 0)
+
+    def test_compact_static_output_proxy_blocks_on_unavailable_blocking_rows(self):
+        def unavailable_blocking_rows(_diff_text: str):
+            return [
+                (
+                    "unavailable",
+                    "format-check",
+                    "owner=aggregate; blocking=yes; fallback=none; tool unavailable",
+                ),
+                ("pass", "secret-scan", "owner=deep-review-security; scanned clean"),
+            ]
+
+        with patch.object(epic, "static_prepass_proxy_rows", unavailable_blocking_rows):
+            output = epic.compact_static_output_proxy(
+                fixture={"name": "docs"},
+                roster={},
+                agents=[],
+                skipped=[],
+                diff_text="+++ b/docs/AI_ASSISTANTS.md\n+example\n",
+            )
+
+        self.assertIn("- [unavailable] format-check:", output)
+        self.assertIn("1 static-unavailable-blocking", output)
+        self.assertIn("status: blocked", output)
+
     def test_compact_static_output_proxy_models_static_prepass_contract(self):
         roster = {
             "deep-review-code": {
@@ -356,7 +431,38 @@ class EpicBenchmarkMatrixTests(unittest.TestCase):
         self.assertIn("- [pass] secret-scan:", output)
         self.assertIn("summary: 2 pass / 0 fail / 0 unavailable / 3 N/A", output)
         self.assertIn("total: 0 static-fail", output)
-        self.assertIn("0 static-unavailable", output)
+        self.assertIn("0 static-unavailable-blocking", output)
+        self.assertIn("status: ready", output)
+
+    def test_compact_static_output_proxy_reports_blocked_status_for_secret_scan_fail(self):
+        output = epic.compact_static_output_proxy(
+            fixture={"name": "script-code-only"},
+            roster={},
+            agents=[],
+            skipped=[],
+            diff_text="+++ b/scripts/example.py\n+token = secret_value\n",
+        )
+
+        self.assertIn("- [fail] secret-scan:", output)
+        self.assertIn("1 static-fail", output)
+        self.assertIn("status: blocked", output)
+
+    def test_compact_static_output_proxy_reports_typescript_and_spec_pass_rows(self):
+        output = epic.compact_static_output_proxy(
+            fixture={"name": "playwright-test"},
+            roster={},
+            agents=[],
+            skipped=[],
+            diff_text=(
+                "+++ b/playwright/typescript/tests/example.spec.ts\n"
+                "+test('title', async () => {});\n"
+            ),
+        )
+
+        self.assertIn("- [pass] typescript-compile:", output)
+        self.assertIn("- [pass] format-check:", output)
+        self.assertIn("- [pass] coverage-matrix:", output)
+        self.assertIn("summary: 4 pass / 0 fail / 0 unavailable / 1 N/A", output)
 
     def test_compact_static_output_proxy_ignores_static_prepass_prose(self):
         output = epic.compact_static_output_proxy(

@@ -20,16 +20,20 @@ from pathlib import Path
 from typing import Literal
 
 from deep_review_benchmark_support import (
-    SECURITY_CREDENTIAL_LINE_RE_V1,
     build_full_prompt_frame_v1,
     build_scoped_prompt_frames_v1,
     changed_paths,
+    collect_added_lines,
+    is_playwright_spec_path_v1,
+    is_playwright_typescript_dir_path_v1,
+    is_typescript_path_v1,
     is_workflow_path_v1,
     load_fixtures,
-    parse_diff,
     parse_deep_review_pro_roster,
-    selected_agents_for_diff_v1,
+    parse_diff,
+    SECURITY_CREDENTIAL_LINE_RE_V1,
     selected_agents_for_diff_static_v1,
+    selected_agents_for_diff_v1,
 )
 
 
@@ -553,22 +557,13 @@ def compact_output_proxy(
 def static_prepass_proxy_rows(diff_text: str) -> list[tuple[str, str, str]]:
     parsed = parse_diff(diff_text)
     paths = changed_paths(parsed)
-    added_lines = [
-        line
-        for block in parsed
-        for line in block["added_lines"]
-    ]
-    has_typescript = any(path.endswith((".ts", ".tsx")) for path in paths)
+    added_lines = collect_added_lines(parsed)
+    has_typescript = any(is_typescript_path_v1(path) for path in paths)
     has_playwright_typescript = any(
-        path.startswith("playwright/typescript/")
-        for path in paths
+        is_playwright_typescript_dir_path_v1(path) for path in paths
     )
     has_workflow = any(is_workflow_path_v1(path) for path in paths)
-    has_spec = any(
-        path.startswith("playwright/typescript/tests/")
-        and path.endswith(".spec.ts")
-        for path in paths
-    )
+    has_spec = any(is_playwright_spec_path_v1(path) for path in paths)
     has_secret_shape = any(
         SECURITY_CREDENTIAL_LINE_RE_V1.search(line)
         for line in added_lines
@@ -613,12 +608,21 @@ def static_prepass_proxy_rows(diff_text: str) -> list[tuple[str, str, str]]:
     ]
 
 
-def static_prepass_proxy_section(diff_text: str) -> tuple[str, str]:
+def static_unavailable_blocking_count(rows: list[tuple[str, str, str]]) -> int:
+    return sum(
+        1
+        for status, _check, detail in rows
+        if status == "unavailable" and "fallback=none" in detail
+    )
+
+
+def static_prepass_proxy_section(diff_text: str) -> tuple[str, str, dict[str, int]]:
     rows = static_prepass_proxy_rows(diff_text)
+    blocking_unavailable = static_unavailable_blocking_count(rows)
     counts = {
         status: sum(1 for row in rows if row[0] == status)
         for status in ("pass", "fail", "unavailable", "N/A")
-    }
+    } | {"unavailable_blocking": blocking_unavailable}
     body = "\n".join(
         f"- [{status}] {check}: {detail}"
         for status, check, detail in rows
@@ -629,9 +633,9 @@ def static_prepass_proxy_section(diff_text: str) -> tuple[str, str]:
     )
     total = (
         f"{counts['fail']} static-fail / "
-        f"{counts['unavailable']} static-unavailable"
+        f"{counts['unavailable_blocking']} static-unavailable-blocking"
     )
-    return f"### static-pre-pass\n{body}\n{summary}", total
+    return f"### static-pre-pass\n{body}\n{summary}", total, counts
 
 
 def compact_static_output_proxy(
@@ -642,7 +646,7 @@ def compact_static_output_proxy(
     skipped: list[str],
     diff_text: str,
 ) -> str:
-    static_section, static_total = static_prepass_proxy_section(diff_text)
+    static_section, static_total, static_counts = static_prepass_proxy_section(diff_text)
     context = AggregateRenderContext(
         fixture=fixture,
         roster=roster,
@@ -651,10 +655,14 @@ def compact_static_output_proxy(
         output_contract="compact-static-v1",
     )
     aggregate_agent_total = aggregate_total_line(context.agents, context.roster)
-    if aggregate_agent_total == "total: ":
+    if not context.agents:
         total_line = f"total: {static_total}"
     else:
         total_line = f"total: {static_total} / {aggregate_agent_total.removeprefix('total: ')}"
+    static_blocked = (
+        static_counts["fail"] > 0 or static_counts["unavailable_blocking"] > 0
+    )
+    status_line = "status: blocked" if static_blocked else "status: ready"
     lines = [
         f"fixture: {context.fixture['name']}",
         f"mode: {output_mode_for_contract(context.output_contract)} aggregate output",
@@ -669,7 +677,7 @@ def compact_static_output_proxy(
             "",
             "### aggregate",
             total_line,
-            "status: ready",
+            status_line,
             aggregate_reuse_line(context.agents, context.skipped),
             "tokens: total <value|unavailable> (use --usage or --verbose for the detailed table)",
         ]
@@ -685,7 +693,6 @@ def aggregate_output_text_detailed_v1(
     skipped: list[str],
     diff_text: str = "",
 ) -> str:
-    del diff_text
     return detailed_output_proxy(
         fixture=fixture,
         roster=roster,
@@ -703,7 +710,6 @@ def aggregate_output_text_detailed_reuse_v1(
     skipped: list[str],
     diff_text: str = "",
 ) -> str:
-    del diff_text
     return detailed_output_proxy(
         fixture=fixture,
         roster=roster,
@@ -721,7 +727,6 @@ def aggregate_output_text_compact_v1(
     skipped: list[str],
     diff_text: str = "",
 ) -> str:
-    del diff_text
     return compact_output_proxy(
         fixture=fixture,
         roster=roster,

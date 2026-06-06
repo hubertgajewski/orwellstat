@@ -868,6 +868,18 @@ copy to {target_path}
                 {"dispatch": "custom trigger", "prompt_scope": "full"},
                 parsed,
             )
+        with self.assertRaisesRegex(ValueError, "Cannot derive scope trigger"):
+            support.dispatch_matches_static_v1(
+                "deep-review-custom",
+                {"dispatch": "scope contains custom", "prompt_scope": "full"},
+                parsed,
+            )
+        with self.assertRaisesRegex(ValueError, "Unknown dispatch trigger"):
+            support.dispatch_matches_static_v1(
+                "deep-review-code",
+                {"dispatch": "custom trigger", "prompt_scope": "full"},
+                parsed,
+            )
         self.assertEqual(support.build_full_prompt_frame_v1(""), "")
 
     def test_credential_line_regex_ignores_static_prepass_prose(self):
@@ -876,16 +888,20 @@ copy to {target_path}
             "Authori" + "zation: Bearer example",
             "api" + "-key => example",
             "cook" + "ie: sess" + "ion=example",
+            "{secret: value}",
+            " token: x",
+            ",password: x",
         ]
         prose_lines = [
             "The pre-pass reports deny-pattern/secret-scan, then SKIPPED: example.",
             "self.assertIn(\"- [pass] secret-scan:\", output)",
             "| `secret-scan` | Always | Credential-shaped rows use blocking=yes |",
+            "no_secret_here",
         ]
 
         for line in positive_lines:
             with self.subTest(line=line):
-                self.assertRegex(line, support.SECURITY_CREDENTIAL_LINE_RE_V1)
+                self.assertIsNotNone(support.SECURITY_CREDENTIAL_LINE_RE_V1.search(line))
         for line in prose_lines:
             with self.subTest(line=line):
                 self.assertIsNone(support.SECURITY_CREDENTIAL_LINE_RE_V1.search(line))
