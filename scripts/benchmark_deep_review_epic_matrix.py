@@ -157,7 +157,7 @@ DEFAULT_CHECKPOINTS = (
     ),
     Checkpoint(
         name="post-585",
-        ref=WORKTREE_REF,
+        ref="825069c",
         issue=585,
         previous="post-584",
         dispatch_contract="dispatch-static-v1",

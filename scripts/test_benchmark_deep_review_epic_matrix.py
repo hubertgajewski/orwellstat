@@ -70,7 +70,7 @@ class EpicBenchmarkMatrixTests(unittest.TestCase):
         self.assertEqual(epic.DEFAULT_CHECKPOINTS[5].ref, "0d7add0")
         self.assertEqual(epic.DEFAULT_CHECKPOINTS[5].issue, 584)
         self.assertEqual(epic.DEFAULT_CHECKPOINTS[5].previous, "post-583")
-        self.assertEqual(epic.DEFAULT_CHECKPOINTS[6].ref, "WORKTREE")
+        self.assertEqual(epic.DEFAULT_CHECKPOINTS[6].ref, "825069c")
         self.assertEqual(epic.DEFAULT_CHECKPOINTS[6].issue, 585)
         self.assertEqual(epic.DEFAULT_CHECKPOINTS[6].previous, "post-584")
         self.assertEqual(
