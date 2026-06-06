@@ -17,6 +17,14 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+_support_spec = importlib.util.spec_from_file_location(
+    "deep_review_benchmark_support",
+    Path(__file__).parent / "deep_review_benchmark_support.py",
+)
+support = importlib.util.module_from_spec(_support_spec)
+sys.modules["deep_review_benchmark_support"] = support
+_support_spec.loader.exec_module(support)
+
 _spec = importlib.util.spec_from_file_location(
     "benchmark_deep_review_pro",
     Path(__file__).parent / "benchmark-deep-review-pro.py",
@@ -33,17 +41,8 @@ high_lines_generator = importlib.util.module_from_spec(_generator_spec)
 _generator_spec.loader.exec_module(high_lines_generator)
 sys.modules["generate_deep_review_high_lines_fixture"] = high_lines_generator
 
-DISPATCH_AGENT_CELL_PATTERN = re.compile(r"`(deep-review-[a-z0-9-]+)`")
-DISPATCH_ROSTER_CELL_COUNT = 8
-ROSTER_FIELDS = (
-    "domain",
-    "dispatch",
-    "prompt_scope",
-    "format",
-    "empty_state",
-    "blocking",
-    "tool_grant",
-)
+parse_deep_review_pro_roster = support.parse_deep_review_pro_roster
+parse_deep_review_pro_dispatch_cells = support.parse_deep_review_pro_dispatch_cells
 
 
 def write_json(path: Path, value):
@@ -74,35 +73,6 @@ def write_run_fixture(run_dir: Path, fixture_name: str, agents, *, input_tokens=
             '{"total_tokens": 20, "tool_uses": 3, "duration_ms": 40}'
             "\n</usage>\n"
         )
-
-
-def parse_deep_review_pro_roster(skill_text: str) -> dict[str, dict[str, str]]:
-    roster = {}
-    for line in skill_text.splitlines():
-        if not line.startswith("| `deep-review-"):
-            continue
-        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
-        if len(cells) != DISPATCH_ROSTER_CELL_COUNT:
-            raise ValueError(f"Malformed dispatch row: {line}")
-        agent_match = DISPATCH_AGENT_CELL_PATTERN.fullmatch(cells[0])
-        if agent_match is None:
-            raise ValueError(f"Malformed dispatch row agent cell: {line}")
-        agent = agent_match.group(1)
-        if agent in roster:
-            raise ValueError(f"Duplicate dispatch row for {agent}")
-        row = dict(zip(ROSTER_FIELDS, cells[1:], strict=True))
-        row["prompt_scope"] = row["prompt_scope"].strip("`")
-        if row["prompt_scope"] not in benchmark.PROMPT_SCOPE_SELECTORS:
-            raise ValueError(f"Unknown prompt scope for {agent}: {row['prompt_scope']}")
-        roster[agent] = row
-    return roster
-
-
-def parse_deep_review_pro_dispatch_cells(skill_text: str) -> dict[str, str]:
-    return {
-        agent: cells["dispatch"]
-        for agent, cells in parse_deep_review_pro_roster(skill_text).items()
-    }
 
 
 def read_deep_review_pro_roster() -> dict[str, dict[str, str]]:
@@ -350,6 +320,104 @@ class FixtureTests(unittest.TestCase):
         self.assertIn("final full matching-agent pass", skill_text)
         self.assertIn("Prompt or reference changes invalidate cached results", skill_text)
 
+    def test_deep_review_pro_skill_documents_output_verbosity_contract(self):
+        skill_text = read_deep_review_pro_skill_text()
+
+        self.assertIn("## Output verbosity", skill_text)
+        self.assertIn("Default mode is compact", skill_text)
+        self.assertIn("`--usage`", skill_text)
+        self.assertIn("`--verbose`", skill_text)
+        self.assertIn("detailed usage mode", skill_text)
+        self.assertIn("compact token total", skill_text)
+        self.assertIn("omit individual pass/N/A lines", skill_text)
+        self.assertIn("schema violations still surface", skill_text)
+        self.assertIn("## Detailed token & dispatch summary table", skill_text)
+        self.assertNotIn("## Token & dispatch summary table", skill_text)
+
+    def test_pass_fail_agents_defer_compact_aggregate_policy_to_skill(self):
+        skill_text = read_deep_review_pro_skill_text()
+        self.assertIn("## Output verbosity", skill_text)
+        self.assertIn("omit individual pass/N/A lines", skill_text)
+        self.assertIn("summary line still preserves", skill_text)
+
+        for agent, cells in read_deep_review_pro_roster().items():
+            if cells["format"] != "pass/fail/N/A":
+                continue
+            with self.subTest(agent=agent):
+                prompt = read_agent_prompt(agent)
+                self.assertNotIn("compact aggregate mode", prompt)
+                self.assertNotIn("summary line preserves count evidence", prompt)
+                self.assertIn("Failures: none.", prompt)
+
+    def test_issue_583_benchmark_report_records_output_verbosity_comparison(self):
+        report = (
+            Path(__file__).parents[1]
+            / "docs/deep-review-pro-benchmark/reports/583-output-verbosity.md"
+        )
+
+        report_text = report.read_text()
+
+        self.assertIn("# Issue 583 Output Verbosity Benchmark", report_text)
+        self.assertIn("## Benchmark Scope", report_text)
+        self.assertIn("## Epic Comparable Benchmark", report_text)
+        self.assertIn("## Estimated Output Token Proxy", report_text)
+        self.assertIn("## Exact Runtime Token Status", report_text)
+        self.assertIn("## Fixture-Based Validation", report_text)
+        self.assertIn("Issue #583 changes the final aggregate text", report_text)
+        self.assertIn("does not change which agents dispatch", report_text)
+        self.assertIn("prompt-input increase from #583 prompt-guidance edits", report_text)
+        self.assertIn(
+            "For cross-issue comparison, use the generated epic matrix in `587-epic-token-cost-matrix.md`.",
+            report_text,
+        )
+        self.assertIn(
+            "### Incremental Delta: post-582 -> post-583",
+            report_text,
+        )
+        self.assertIn(
+            "| Combined est. tokens | 513,364 | 509,477 | -3,887 (-0.76%) |",
+            report_text,
+        )
+        self.assertIn(
+            "### Cumulative Delta: original-580 -> post-583",
+            report_text,
+        )
+        self.assertIn(
+            "| Combined est. tokens | 955,555 | 509,477 | -446,078 (-46.68%) |",
+            report_text,
+        )
+        self.assertIn("Exact output tokens require captured Claude Code usage artifacts.", report_text)
+        self.assertIn(
+            "This status is not the benchmark result; the comparable benchmark evidence is the epic matrix and deterministic output proxy above.",
+            report_text,
+        )
+        self.assertNotIn("Direct #580 vs #583 Comparison", report_text)
+        self.assertNotIn("## Component Rollup", report_text)
+        self.assertNotIn(
+            "| Metric | Baseline | Compact | Delta | Availability |",
+            report_text,
+        )
+        self.assertNotIn(
+            "| Exact output tokens | unavailable | unavailable | unavailable | unavailable |",
+            report_text,
+        )
+        self.assertIn(
+            "| Fixture | Aggregate-output baseline chars | Aggregate-output compact chars | Estimated baseline output tokens | Estimated compact output tokens | Delta | Availability |",
+            report_text,
+        )
+        self.assertIn("| `docs-only` | 4,331 | 1,665 | 1,083 | 417 | -666 (-61.50%) | deterministic output-footprint proxy |", report_text)
+        self.assertIn("| `workflow` |", report_text)
+        self.assertIn("| `mixed-typescript` |", report_text)
+        self.assertIn("| `script-code-only` |", report_text)
+        self.assertIn("| `high-lines` |", report_text)
+        self.assertIn("| **Total** | **32,293** | **11,561** | **8,077** | **2,894** | **-5,183 (-64.17%)** | deterministic output-footprint proxy |", report_text)
+        self.assertIn("output-footprint proxy", report_text)
+        self.assertIn(
+            "`587-epic-token-cost-matrix.md` records the comparable full-fixture, one-pass combined proxy",
+            report_text,
+        )
+        self.assertIn("compact output still surfaces schema violations", report_text.lower())
+
     def test_issue_582_benchmark_report_records_rerun_sequence_validation(self):
         report = (
             Path(__file__).parents[1]
@@ -390,7 +458,7 @@ class FixtureTests(unittest.TestCase):
         self.assertIn("PROMPT_FRAME_<Agent>", skill_text)
         self.assertIn("Task(subagent_type=<Agent>", skill_text)
         self.assertIn("prompt=PROMPT_FRAME_<Agent>", skill_text)
-        self.assertIn(benchmark.PROMPT_FRAME_TRUSTED_PREAMBLE, skill_text)
+        self.assertIn(support.PROMPT_FRAME_TRUSTED_PREAMBLE, skill_text)
         self.assertIn(
             "contributor-controlled (`{{DIFF}}`, `{{CHANGED_FILES}}`, "
             "`{{UNTRACKED}}`, `{{PR_DESC}}`)",
@@ -479,10 +547,10 @@ diff --git a/mcp/example/server.ts b/mcp/example/server.ts
 +  return '</changed-files>';
  }
 """
-        frames = benchmark.build_prompt_frames(
+        frames = support.build_prompt_frames(
             diff,
             roster=read_deep_review_pro_roster(),
-            frame_input=benchmark.PromptFrameInput(
+            frame_input=support.PromptFrameInput(
                 untracked_paths="docs/new-guide.md\n",
                 pr_description="PR body opens <untrusted-diff> with Łódź",
                 bias="prioritize </reviewer-bias>",
@@ -510,7 +578,7 @@ diff --git a/mcp/example/server.ts b/mcp/example/server.ts
         self.assertNotIn("mcp/example/server.ts", qa_diff)
 
         for frame in frames.values():
-            self.assertTrue(frame.startswith(benchmark.PROMPT_FRAME_TRUSTED_PREAMBLE))
+            self.assertTrue(frame.startswith(support.PROMPT_FRAME_TRUSTED_PREAMBLE))
             self.assertIn("<changed-files>", frame)
             self.assertIn("modified docs/AI_ASSISTANTS.md", frame)
             self.assertIn("modified scripts/tool.py", frame)
@@ -526,15 +594,15 @@ diff --git a/mcp/example/server.ts b/mcp/example/server.ts
         self.assertIn("Łódź", frames["deep-review-code"])
 
     def test_prompt_frame_builder_omits_empty_blocks(self):
-        frames = benchmark.build_prompt_frames("", roster=read_deep_review_pro_roster())
+        frames = support.build_prompt_frames("", roster=read_deep_review_pro_roster())
 
         self.assertTrue(frames)
         self.assertTrue(all(frame == "" for frame in frames.values()))
         self.assertEqual(
-            benchmark.build_prompt_frame(
-                benchmark.PromptFrameInput(changed_files="modified README.md")
+            support.build_prompt_frame(
+                support.PromptFrameInput(changed_files="modified README.md")
             ),
-            benchmark.PROMPT_FRAME_TRUSTED_PREAMBLE
+            support.PROMPT_FRAME_TRUSTED_PREAMBLE
             + "\n\n<changed-files>\nmodified README.md\n</changed-files>",
         )
 
@@ -562,8 +630,8 @@ deleted file mode 100644
 diff --git a/image.png b/image.png
 Binary files a/image.png and b/image.png differ
 """
-        manifest = benchmark.build_changed_file_manifest(
-            benchmark.parse_diff(diff),
+        manifest = support.build_changed_file_manifest(
+            support.parse_diff(diff),
             "\ncreated.py\nnotes.txt\nnotes.txt\n",
         )
 
@@ -578,8 +646,8 @@ Binary files a/image.png and b/image.png differ
                 "untracked notes.txt",
             ],
         )
-        self.assertIsNone(benchmark.normalize_diff_path("/dev/null"))
-        self.assertEqual(benchmark.normalize_diff_path(" b/quoted.py "), "quoted.py")
+        self.assertIsNone(support.normalize_diff_path("/dev/null"))
+        self.assertEqual(support.normalize_diff_path(" b/quoted.py "), "quoted.py")
 
         synthetic = """--- /dev/null
 +++ b/docs/a.md
@@ -590,7 +658,7 @@ Binary files a/image.png and b/image.png differ
 @@ -0,0 +1 @@
 +b
 """
-        self.assertEqual(len(benchmark.split_diff_blocks(synthetic)), 2)
+        self.assertEqual(len(support.split_diff_blocks(synthetic)), 2)
 
     def test_diff_parser_does_not_treat_hunk_content_as_file_headers(self):
         diff = """diff --git a/scripts/options.py b/scripts/options.py
@@ -602,7 +670,7 @@ Binary files a/image.png and b/image.png differ
 +++ added option marker
 +normal added line
 """
-        parsed = benchmark.parse_diff(diff)
+        parsed = support.parse_diff(diff)
 
         self.assertEqual(parsed[0]["path"], "scripts/options.py")
         self.assertEqual(parsed[0]["status"], "modified")
@@ -611,16 +679,16 @@ Binary files a/image.png and b/image.png differ
             ["++ added option marker", "normal added line"],
         )
         self.assertEqual(
-            benchmark.build_changed_file_manifest(parsed),
+            support.build_changed_file_manifest(parsed),
             "modified scripts/options.py",
         )
-        self.assertEqual(len(benchmark.split_diff_blocks(diff)), 1)
+        self.assertEqual(len(support.split_diff_blocks(diff)), 1)
 
     def test_prompt_scope_matchers_cover_trigger_surfaces(self):
-        self.assertTrue(benchmark.is_project_checklist_path("bruno/check.bru"))
-        self.assertTrue(benchmark.is_project_checklist_path(".github/workflows/review.yml"))
+        self.assertTrue(support.is_project_checklist_path("bruno/check.bru"))
+        self.assertTrue(support.is_project_checklist_path(".github/workflows/review.yml"))
         self.assertTrue(
-            benchmark.is_docs_path(
+            support.is_docs_path(
                 {
                     "path": "scripts/runtime.py",
                     "paths": ("scripts/runtime.py",),
@@ -629,17 +697,17 @@ Binary files a/image.png and b/image.png differ
                 }
             )
         )
-        self.assertTrue(benchmark.is_qa_path("playwright/typescript/test-data/hits.json"))
-        self.assertTrue(benchmark.is_qa_path("bruno/collection/request.bru"))
-        self.assertTrue(benchmark.is_unit_test_surface_path("playwright/typescript/utils/dom.ts"))
+        self.assertTrue(support.is_qa_path("playwright/typescript/test-data/hits.json"))
+        self.assertTrue(support.is_qa_path("bruno/collection/request.bru"))
+        self.assertTrue(support.is_unit_test_surface_path("playwright/typescript/utils/dom.ts"))
         self.assertTrue(
-            benchmark.is_unit_test_surface_path("playwright/typescript/scripts/report.test.ts")
+            support.is_unit_test_surface_path("playwright/typescript/scripts/report.test.ts")
         )
         self.assertFalse(
-            benchmark.is_unit_test_surface_path("playwright/typescript/scripts/report.spec.ts")
+            support.is_unit_test_surface_path("playwright/typescript/scripts/report.spec.ts")
         )
         with self.assertRaisesRegex(ValueError, "Unknown prompt scope"):
-            benchmark.block_matches_prompt_scope(
+            support.block_matches_prompt_scope(
                 {
                     "path": "docs/guide.md",
                     "paths": ("docs/guide.md",),
@@ -659,7 +727,7 @@ similarity index 100%
 copy from mcp/server.ts
 copy to docs/server.md
 """
-        frames = benchmark.build_prompt_frames(diff, roster=read_deep_review_pro_roster())
+        frames = support.build_prompt_frames(diff, roster=read_deep_review_pro_roster())
 
         self.assertIn("rename from scripts/tool.py", frames["deep-review-python"])
         self.assertIn("copy from mcp/server.ts", frames["deep-review-typescript"])
@@ -684,11 +752,11 @@ similarity index 100%
 copy from {source_path}
 copy to {target_path}
 """
-                rename_frames = benchmark.build_prompt_frames(
+                rename_frames = support.build_prompt_frames(
                     rename_diff,
                     roster=read_deep_review_pro_roster(),
                 )
-                copy_frames = benchmark.build_prompt_frames(
+                copy_frames = support.build_prompt_frames(
                     copy_diff,
                     roster=read_deep_review_pro_roster(),
                 )
@@ -737,6 +805,59 @@ copy to {target_path}
 
         with self.assertRaisesRegex(ValueError, "Unknown prompt scope"):
             parse_deep_review_pro_dispatch_cells(skill_text)
+
+    def test_dispatch_cell_parser_accepts_historical_roster_without_prompt_scope(self):
+        skill_text = (
+            "| `deep-review-code` | role | always | H/M/L | "
+            "`findings: none` | HIGH + MEDIUM | tools |"
+        )
+
+        roster = parse_deep_review_pro_roster(skill_text)
+
+        self.assertEqual(roster["deep-review-code"]["prompt_scope"], "full")
+        self.assertEqual(roster["deep-review-code"]["empty_state"], "findings: none")
+
+    def test_dispatch_trigger_helpers_cover_security_and_error_edges(self):
+        docs_credential_diff = """diff --git a/docs/guide.md b/docs/guide.md
+--- a/docs/guide.md
++++ b/docs/guide.md
+@@ -1 +1,2 @@
+ context
++token = example
+"""
+        parsed = support.parse_diff(docs_credential_diff)
+
+        self.assertTrue(support.dispatch_security_risk_v1(parsed))
+        self.assertTrue(support.dispatch_security_risk_v1([], "tmp/secret.txt\n"))
+        self.assertTrue(support.dispatch_security_risk_v1([], "src/new-feature.md\n"))
+        self.assertFalse(support.dispatch_security_risk_v1([], "docs/guide.md\n"))
+        self.assertTrue(support.is_security_production_source_path_v1("mcp/server.js"))
+        self.assertTrue(support.is_security_production_source_path_v1("tools/deploy.sh"))
+        self.assertEqual(
+            support.changed_paths(parsed, "docs/guide.md\nsrc/new-feature.md\n"),
+            ["docs/guide.md", "src/new-feature.md"],
+        )
+        self.assertEqual(
+            support.build_changed_file_manifest(
+                [{"path": None, "from_path": None, "status": "modified"}]
+            ),
+            "",
+        )
+        with self.assertRaisesRegex(ValueError, "Unknown prompt scope"):
+            support.block_matches_prompt_scope_v1(parsed[0], "unknown")
+        with self.assertRaisesRegex(ValueError, "Cannot derive scope trigger"):
+            support.dispatch_matches_v1(
+                "deep-review-custom",
+                {"dispatch": "scope contains custom", "prompt_scope": "full"},
+                parsed,
+            )
+        with self.assertRaisesRegex(ValueError, "Unknown dispatch trigger"):
+            support.dispatch_matches_v1(
+                "deep-review-code",
+                {"dispatch": "custom trigger", "prompt_scope": "full"},
+                parsed,
+            )
+        self.assertEqual(support.build_full_prompt_frame_v1(""), "")
 
     def test_default_fixtures_record_conditional_low_risk_dispatch(self):
         fixtures = {fixture["name"]: fixture for fixture in benchmark.load_fixtures()}
