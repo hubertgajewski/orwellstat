@@ -34,6 +34,8 @@ This section governs **how `$ARGUMENTS` is read into shell-safe inputs**. Scope 
 
 Trim leading/trailing whitespace from `$ARGUMENTS` and assign the trimmed value to a local shell variable (e.g. `ARG=$ARGUMENTS`). Then reference the variable in double quotes (`git rev-parse --verify --quiet "$ARG" --`, `test -e "$ARG"`): bash double-quote substitution evaluates `$ARG` once and inserts its contents as a single argument _without_ re-evaluating `$VAR`, `$(cmd)`, or backticks inside the substituted text — so an input like `$(rm -rf /)` is passed verbatim to `git`/`test`, never executed. Do **not** splice the literal value into a single-quoted token (`'<arg>'`): a value containing `'` (e.g. `'; rm -rf / #`) closes the quotes and the rest runs as command. Single-quoting `$ARGUMENTS` is only safe if every embedded `'` is first escaped to `'\''`, and the variable-indirection form is simpler and equally safe — prefer it. Rule 2 below (PR number) is regex-gated to digits and is unaffected.
 
+Before applying scope resolution, scan the trimmed argument for output verbosity flags. `--usage` and `--verbose` both select detailed usage mode; remove those flag tokens from the value passed into scope resolution. Default mode is compact when neither flag is supplied. The remaining non-flag text keeps the same quoting rule described above: store it in a variable and pass it as one double-quoted argument when invoking `git`, `test`, or `gh`.
+
 ### Scope-variable glossary
 
 Each scope variable appears in three forms across the spec — these are the same variable, not three concepts. The shell-name column names the variable scope resolution sets; the placeholder and fence-tag columns name the surface forms the PROMPT_FRAME consumes:
@@ -146,6 +148,18 @@ Before dispatching, print exactly one line that names the resolved mode and the 
 - `Mode: US3c freeform — bias = "focus on concurrency".`
 
 If the bias is non-empty, append it verbatim to every agent's prompt under a `Reviewer bias:` header so each agent can prioritize but not be limited by it.
+
+## Output verbosity
+
+Default mode is compact. In compact mode, the aggregate is failure-focused and count-preserving:
+
+- Emit every blocking or non-blocking finding line produced by H/M/L agents.
+- For pass/fail/N/A agents, emit every `fail` line. If the agent has no failures, the aggregate may omit individual pass/N/A lines and replace the body with the row's empty-state sentinel, because the summary line preserves count evidence for auditability.
+- Emit every `SKIPPED:`, `UNAVAILABLE:`, and schema-violation row; schema violations still surface in compact mode and block readiness whenever the violated row's blocking metric cannot be trusted.
+- Emit the aggregate `total:`, `status:`, and `reuse:` lines.
+- Emit one compact token total line only: `tokens: total <value|unavailable> (use --usage or --verbose for the detailed table)`.
+
+`--usage` and `--verbose` select detailed usage mode. Detailed usage mode keeps the current full output: every per-agent section, all pass/fail/N/A detail lines, the aggregate block, and the full token/dispatch table described in **Detailed token & dispatch summary table**.
 
 ## Scope builder and per-agent prompt frames
 
@@ -309,13 +323,22 @@ If cached results or targeted reruns were used anywhere in the current convergen
 
 ## Aggregate output
 
-For each row in the master roster, in roster order, emit one section in the row's **Format**:
+For each row in the master roster, in roster order, emit one section in the row's **Format**. The detail level depends on the **Output verbosity** mode.
+
+In detailed usage mode, emit the full row body exactly as received from the agent, skipped/unavailable state, or reuse cache:
 
 ```text
 ### <Agent>
 <verbatim findings, OR the row's Empty-state sentinel, OR REUSED: ... plus cached findings, OR SKIPPED: <Dispatch cell> not satisfied, OR UNAVAILABLE: <reason>>
 <summary line>
 ```
+
+In compact mode, emit only the lines needed to decide readiness and audit the counts:
+
+- H/M/L rows: every HIGH / MEDIUM / LOW finding line, or the row's Empty-state sentinel when there are no findings.
+- pass/fail/N/A rows: every `fail` line. If there are no failures, omit individual pass/N/A lines and emit the row's Empty-state sentinel. The summary line still preserves pass/fail/N/A count evidence.
+- `REUSED:`, `SKIPPED:`, `UNAVAILABLE:`, and schema violations: emit them unchanged. Schema violations still surface and block readiness when their row's blocking metric cannot be trusted.
+- The summary line for each non-skipped row.
 
 The summary line shape is determined by the row's **Format** column: `H/M/L` rows emit `summary: <{name}-H> high / <{name}-M> medium / <{name}-L> low`; `pass/fail/N/A` rows emit `summary: <{name}-pass> pass / <{name}-fail> fail / <{name}-N/A> N/A`. The keyword `summary:` is lowercase in both families. New format families add one bullet here when the column gains a new value.
 
@@ -341,15 +364,23 @@ reuse: dispatched <N> / skipped <N> / reused <N> / final_full_matching_pass <yes
 
 A `SKIPPED:` agent contributes 0 to all counts and never blocks. The **Blocking** column of the master roster is the sole source of truth for which counts gate `status: ready`.
 
+In compact mode only, emit the compact token total immediately after the aggregate block:
+
+```text
+tokens: total <value|unavailable> (use --usage or --verbose for the detailed table)
+```
+
+The compact token total uses the same accounting rules as the totals row in **Detailed token & dispatch summary table**. If any contributing usage value is unavailable, render the total as `unavailable` rather than treating the missing value as zero.
+
 ## Re-review convergence loop (cap = 3)
 
 The orchestrator does **not** modify source files. The caller decides which findings to fix. After the caller (or a follow-up turn in the same session) makes any change in response to a finding, rebuild the scope and apply the **Agent result reuse cache** rules: rerun prior blockers, rerun newly matching or invalidated agents, reuse only unchanged non-blocking cache hits, and run the final full matching-agent pass before emitting `status: ready` whenever cached or targeted reruns were used. Repeat until status is `ready`.
 
 Stop after **3 iterations** — if still blocked, surface the remaining findings to the user and ask how to proceed. Do not loop indefinitely. Schema violations (an agent emitting prose that doesn't match its documented format) are themselves a finding to surface to the user — do not silently drop or rewrite the agent's output.
 
-## Token & dispatch summary table
+## Detailed token & dispatch summary table
 
-After the aggregate block, emit a markdown table with one row per layer (the orchestrator + each non-skipped sub-agent) and a totals row.
+In detailed usage mode only, after the aggregate block, emit a markdown table with one row per layer (the orchestrator + each non-skipped sub-agent) and a totals row.
 
 Columns: `Layer | Model | Input | Output | Total | Cache read | Cache creation | Tool uses | Wall-clock | Summary`.
 
