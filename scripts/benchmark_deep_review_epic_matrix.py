@@ -130,6 +130,16 @@ DEFAULT_CHECKPOINTS = (
         output_contract="compact-v1",
         label="After #583 compact aggregate output",
     ),
+    Checkpoint(
+        name="post-584",
+        ref="0d7add0",
+        issue=584,
+        previous="post-583",
+        dispatch_contract="dispatch-v1",
+        prompt_frame_contract="scoped-v1",
+        output_contract="compact-v1",
+        label="After #584 shared agent boilerplate compaction",
+    ),
 )
 
 

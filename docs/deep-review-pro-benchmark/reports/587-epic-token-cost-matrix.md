@@ -21,6 +21,7 @@ Exact runtime token usage is unavailable in this Codex run, so token fields belo
 | post-581 | 5e6947f | 2,021,135 | 505,287 | 31,323 | 7,834 | 2,052,458 | 513,121 |
 | post-582 | f1013ec | 2,021,135 | 505,287 | 32,293 | 8,077 | 2,053,428 | 513,364 |
 | post-583 | f3952ee | 2,026,319 | 506,583 | 11,561 | 2,894 | 2,037,880 | 509,477 |
+| post-584 | 0d7add0 | 1,964,147 | 491,040 | 11,561 | 2,894 | 1,975,708 | 493,934 |
 
 ## Checkpoint Contracts
 
@@ -31,6 +32,7 @@ Exact runtime token usage is unavailable in this Codex run, so token fields belo
 | post-581 | dispatch-v1 | scoped-v1 | detailed-v1 |
 | post-582 | dispatch-v1 | scoped-v1 | detailed-reuse-v1 |
 | post-583 | dispatch-v1 | scoped-v1 | compact-v1 |
+| post-584 | dispatch-v1 | scoped-v1 | compact-v1 |
 
 ## Incremental Deltas
 
@@ -40,6 +42,7 @@ Exact runtime token usage is unavailable in this Codex run, so token fields belo
 | #581 | post-580 | post-581 | 3,767,358 | 2,052,458 | -1,714,900 (-45.52%) | 941,845 | 513,121 | -428,724 (-45.52%) |
 | #582 | post-581 | post-582 | 2,052,458 | 2,053,428 | 970 (0.05%) | 513,121 | 513,364 | 243 (0.05%) |
 | #583 | post-582 | post-583 | 2,053,428 | 2,037,880 | -15,548 (-0.76%) | 513,364 | 509,477 | -3,887 (-0.76%) |
+| #584 | post-583 | post-584 | 2,037,880 | 1,975,708 | -62,172 (-3.05%) | 509,477 | 493,934 | -15,543 (-3.05%) |
 
 ## Cumulative Deltas vs Original #580 Baseline
 
@@ -49,6 +52,7 @@ Exact runtime token usage is unavailable in this Codex run, so token fields belo
 | #581 | original-580 | post-581 | 3,822,193 | 2,052,458 | -1,769,735 (-46.30%) | 955,555 | 513,121 | -442,434 (-46.30%) |
 | #582 | original-580 | post-582 | 3,822,193 | 2,053,428 | -1,768,765 (-46.28%) | 955,555 | 513,364 | -442,191 (-46.28%) |
 | #583 | original-580 | post-583 | 3,822,193 | 2,037,880 | -1,784,313 (-46.68%) | 955,555 | 509,477 | -446,078 (-46.68%) |
+| #584 | original-580 | post-584 | 3,822,193 | 1,975,708 | -1,846,485 (-48.31%) | 955,555 | 493,934 | -461,621 (-48.31%) |
 
 ## Fixture Set
 

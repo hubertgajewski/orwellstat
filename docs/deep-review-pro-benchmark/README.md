@@ -122,7 +122,7 @@ The #587 epic uses fixed checkpoints:
 | `post-581` | After #581 agent-specific subdiffs |
 | `post-582` | After #582 rerun cache contract |
 | `post-583` | After #583 compact aggregate output |
-| `post-584` | Reserved for #584 shared-boilerplate compaction |
+| `post-584` | After #584 shared-boilerplate compaction |
 | `post-585` | Reserved for #585 static pre-pass and ownership cleanup |
 | `post-586` | Reserved for #586 large-diff risk bucketing |
 
