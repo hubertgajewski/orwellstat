@@ -85,6 +85,67 @@ class EpicBenchmarkMatrixTests(unittest.TestCase):
             "refs/heads/does-not-exist-for-test",
         )
 
+    def test_missing_checkpoint_refs_fail_before_fixture_loading(self):
+        missing_checkpoint = epic.Checkpoint(
+            name="missing-checkpoint",
+            ref="refs/heads/does-not-exist-for-test",
+            issue=None,
+            previous=None,
+            dispatch_contract="dispatch-v1",
+            prompt_frame_contract="full-v1",
+            output_contract="detailed-v1",
+            label="Missing checkpoint",
+        )
+        original_load_fixtures = epic.load_fixtures
+
+        def fail_if_called():
+            self.fail("load_fixtures should not run when checkpoint refs are missing")
+
+        try:
+            epic.load_fixtures = fail_if_called
+            with self.assertRaises(ValueError) as error:
+                epic.build_epic_matrix(checkpoints=(missing_checkpoint,))
+        finally:
+            epic.load_fixtures = original_load_fixtures
+
+        message = str(error.exception)
+        self.assertIn(
+            "Missing historical refs: "
+            "missing-checkpoint=refs/heads/does-not-exist-for-test",
+            message,
+        )
+        self.assertIn("Fetch full git history", message)
+        self.assertIn("fetch-depth: 0", message)
+
+    def test_missing_checkpoint_ref_fails_before_checkpoint_loading(self):
+        missing_checkpoint = epic.Checkpoint(
+            name="missing-checkpoint",
+            ref="refs/heads/does-not-exist-for-test",
+            issue=None,
+            previous=None,
+            dispatch_contract="dispatch-v1",
+            prompt_frame_contract="full-v1",
+            output_contract="detailed-v1",
+            label="Missing checkpoint",
+        )
+        original_load_checkpoint_roster = epic.load_checkpoint_roster
+
+        def fail_if_called(_checkpoint):
+            self.fail("load_checkpoint_roster should not run when checkpoint refs are missing")
+
+        try:
+            epic.load_checkpoint_roster = fail_if_called
+            with self.assertRaises(ValueError) as error:
+                epic.build_checkpoint_metrics(missing_checkpoint, [], {})
+        finally:
+            epic.load_checkpoint_roster = original_load_checkpoint_roster
+
+        self.assertIn(
+            "Missing historical refs: "
+            "missing-checkpoint=refs/heads/does-not-exist-for-test",
+            str(error.exception),
+        )
+
     def test_head_checkpoint_must_be_final_checkpoint(self):
         checkpoints = (
             epic.Checkpoint(
@@ -454,6 +515,43 @@ class EpicBenchmarkMatrixTests(unittest.TestCase):
         self.assertIn("error: post-584 is not present in the epic matrix", stderr.getvalue())
         self.assertFalse(markdown_out.exists())
         self.assertFalse(json_out.exists())
+
+    def test_cli_build_error_is_clean_without_writes(self):
+        original_build_epic_matrix = epic.build_epic_matrix
+
+        def failing_build_epic_matrix():
+            raise ValueError("Missing historical refs: missing-checkpoint=bad-ref")
+
+        try:
+            epic.build_epic_matrix = failing_build_epic_matrix
+            with tempfile.TemporaryDirectory() as tmp:
+                markdown_out = Path(tmp) / "matrix.md"
+                json_out = Path(tmp) / "matrix.json"
+                stdout = StringIO()
+                stderr = StringIO()
+                result = None
+                with redirect_stdout(stdout), redirect_stderr(stderr):
+                    result = epic.main(
+                        [
+                            "--markdown-out",
+                            str(markdown_out),
+                            "--json-out",
+                            str(json_out),
+                        ]
+                    )
+                markdown_exists = markdown_out.exists()
+                json_exists = json_out.exists()
+        finally:
+            epic.build_epic_matrix = original_build_epic_matrix
+
+        self.assertEqual(result, 2)
+        self.assertEqual(stdout.getvalue(), "")
+        self.assertEqual(
+            stderr.getvalue(),
+            "error: Missing historical refs: missing-checkpoint=bad-ref\n",
+        )
+        self.assertFalse(markdown_exists)
+        self.assertFalse(json_exists)
 
     def test_existing_issue_reports_include_epic_comparable_sections(self):
         expected = {

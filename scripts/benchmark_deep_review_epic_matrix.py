@@ -208,6 +208,25 @@ def resolve_ref(ref: str) -> str:
         return ref
 
 
+def ensure_checkpoint_refs_available(checkpoints: tuple[Checkpoint, ...]) -> None:
+    missing = []
+    for checkpoint in checkpoints:
+        try:
+            run_git(["cat-file", "-e", f"{checkpoint.ref}^{{commit}}"])
+        except subprocess.CalledProcessError:
+            missing.append(f"{checkpoint.name}={checkpoint.ref}")
+
+    if missing:
+        raise ValueError(
+            "Missing historical refs: "
+            + ", ".join(missing)
+            + ". Fetch full git history "
+            "(for example, `git fetch --unshallow`, "
+            "`git fetch origin +refs/heads/*:refs/remotes/origin/*`, "
+            "or GitHub Actions `fetch-depth: 0`) and retry."
+        )
+
+
 def load_checkpoint_roster(checkpoint: Checkpoint) -> dict[str, dict[str, str]]:
     return parse_deep_review_pro_roster(git_show(checkpoint.ref, SKILL_PATH))
 
@@ -665,6 +684,7 @@ def build_checkpoint_metrics(
     fixtures: list[dict],
     fixture_texts: dict[str, str],
 ) -> dict:
+    ensure_checkpoint_refs_available((checkpoint,))
     roster = load_checkpoint_roster(checkpoint)
     prompt_lengths = load_agent_prompt_lengths(checkpoint.ref, roster)
     fixture_metrics = [
@@ -717,10 +737,12 @@ def build_delta_record(
 
 
 def build_epic_matrix(
-    checkpoints: tuple[Checkpoint, ...] = DEFAULT_CHECKPOINTS,
+    checkpoints: tuple[Checkpoint, ...] | None = None,
     fixtures: list[dict] | None = None,
 ) -> dict:
+    checkpoints = checkpoints if checkpoints is not None else DEFAULT_CHECKPOINTS
     validate_checkpoint_sequence(checkpoints)
+    ensure_checkpoint_refs_available(checkpoints)
     fixtures = fixtures if fixtures is not None else load_fixtures()
     fixture_texts = {
         fixture["name"]: fixture_diff_text(fixture)
@@ -935,14 +957,14 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    matrix = build_epic_matrix()
-    issue_section = None
-    if args.issue_section is not None:
-        try:
+    try:
+        matrix = build_epic_matrix()
+        issue_section = None
+        if args.issue_section is not None:
             issue_section = render_issue_comparable_section(matrix, args.issue_section)
-        except ValueError as error:
-            print(f"error: {error}", file=sys.stderr)
-            return 2
+    except ValueError as error:
+        print(f"error: {error}", file=sys.stderr)
+        return 2
 
     args.markdown_out.parent.mkdir(parents=True, exist_ok=True)
     args.json_out.parent.mkdir(parents=True, exist_ok=True)
