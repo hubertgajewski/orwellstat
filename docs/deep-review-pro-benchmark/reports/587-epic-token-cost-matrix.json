@@ -1,0 +1,1376 @@
+{
+  "fixtures": [
+    "docs-only",
+    "playwright-test",
+    "workflow",
+    "mixed-typescript",
+    "script-code-only",
+    "large-diff",
+    "high-lines"
+  ],
+  "original_checkpoint": "original-580",
+  "checkpoints": [
+    {
+      "name": "original-580",
+      "ref": "4398fc9",
+      "resolved_ref": "4398fc9",
+      "issue": null,
+      "previous": null,
+      "output_mode": "detailed",
+      "dispatch_contract": "dispatch-v1",
+      "prompt_frame_contract": "full-v1",
+      "output_contract": "detailed-v1",
+      "label": "Original #580 baseline, after #579 and before #580",
+      "fixtures": [
+        {
+          "fixture": "docs-only",
+          "prompt_input_chars": 59031,
+          "prompt_input_est_tokens": 14758,
+          "aggregate_output_chars": 4699,
+          "aggregate_output_est_tokens": 1175,
+          "combined_chars": 63730,
+          "combined_est_tokens": 15933,
+          "dispatched_agents": 6,
+          "skipped_agents": 5,
+          "agents": [
+            "deep-review-security",
+            "deep-review-project-checklist",
+            "deep-review-simplification",
+            "deep-review-code",
+            "deep-review-architecture",
+            "deep-review-docs"
+          ],
+          "skipped": [
+            "deep-review-typescript",
+            "deep-review-python",
+            "deep-review-ci",
+            "deep-review-qa",
+            "deep-review-unit-test"
+          ]
+        },
+        {
+          "fixture": "playwright-test",
+          "prompt_input_chars": 82705,
+          "prompt_input_est_tokens": 20677,
+          "aggregate_output_chars": 4726,
+          "aggregate_output_est_tokens": 1182,
+          "combined_chars": 87431,
+          "combined_est_tokens": 21859,
+          "dispatched_agents": 8,
+          "skipped_agents": 3,
+          "agents": [
+            "deep-review-security",
+            "deep-review-project-checklist",
+            "deep-review-simplification",
+            "deep-review-code",
+            "deep-review-architecture",
+            "deep-review-docs",
+            "deep-review-typescript",
+            "deep-review-qa"
+          ],
+          "skipped": [
+            "deep-review-python",
+            "deep-review-ci",
+            "deep-review-unit-test"
+          ]
+        },
+        {
+          "fixture": "workflow",
+          "prompt_input_chars": 73065,
+          "prompt_input_est_tokens": 18267,
+          "aggregate_output_chars": 4584,
+          "aggregate_output_est_tokens": 1146,
+          "combined_chars": 77649,
+          "combined_est_tokens": 19413,
+          "dispatched_agents": 7,
+          "skipped_agents": 4,
+          "agents": [
+            "deep-review-security",
+            "deep-review-project-checklist",
+            "deep-review-simplification",
+            "deep-review-code",
+            "deep-review-architecture",
+            "deep-review-docs",
+            "deep-review-ci"
+          ],
+          "skipped": [
+            "deep-review-typescript",
+            "deep-review-python",
+            "deep-review-qa",
+            "deep-review-unit-test"
+          ]
+        },
+        {
+          "fixture": "mixed-typescript",
+          "prompt_input_chars": 85130,
+          "prompt_input_est_tokens": 21283,
+          "aggregate_output_chars": 4798,
+          "aggregate_output_est_tokens": 1200,
+          "combined_chars": 89928,
+          "combined_est_tokens": 22483,
+          "dispatched_agents": 8,
+          "skipped_agents": 3,
+          "agents": [
+            "deep-review-security",
+            "deep-review-project-checklist",
+            "deep-review-simplification",
+            "deep-review-code",
+            "deep-review-architecture",
+            "deep-review-docs",
+            "deep-review-typescript",
+            "deep-review-unit-test"
+          ],
+          "skipped": [
+            "deep-review-python",
+            "deep-review-ci",
+            "deep-review-qa"
+          ]
+        },
+        {
+          "fixture": "script-code-only",
+          "prompt_input_chars": 84213,
+          "prompt_input_est_tokens": 21054,
+          "aggregate_output_chars": 4808,
+          "aggregate_output_est_tokens": 1202,
+          "combined_chars": 89021,
+          "combined_est_tokens": 22256,
+          "dispatched_agents": 8,
+          "skipped_agents": 3,
+          "agents": [
+            "deep-review-security",
+            "deep-review-project-checklist",
+            "deep-review-simplification",
+            "deep-review-code",
+            "deep-review-architecture",
+            "deep-review-docs",
+            "deep-review-python",
+            "deep-review-unit-test"
+          ],
+          "skipped": [
+            "deep-review-typescript",
+            "deep-review-ci",
+            "deep-review-qa"
+          ]
+        },
+        {
+          "fixture": "large-diff",
+          "prompt_input_chars": 128617,
+          "prompt_input_est_tokens": 32155,
+          "aggregate_output_chars": 4709,
+          "aggregate_output_est_tokens": 1178,
+          "combined_chars": 133326,
+          "combined_est_tokens": 33333,
+          "dispatched_agents": 11,
+          "skipped_agents": 0,
+          "agents": [
+            "deep-review-security",
+            "deep-review-project-checklist",
+            "deep-review-simplification",
+            "deep-review-code",
+            "deep-review-architecture",
+            "deep-review-docs",
+            "deep-review-typescript",
+            "deep-review-python",
+            "deep-review-ci",
+            "deep-review-qa",
+            "deep-review-unit-test"
+          ],
+          "skipped": []
+        },
+        {
+          "fixture": "high-lines",
+          "prompt_input_chars": 3276399,
+          "prompt_input_est_tokens": 819100,
+          "aggregate_output_chars": 4709,
+          "aggregate_output_est_tokens": 1178,
+          "combined_chars": 3281108,
+          "combined_est_tokens": 820278,
+          "dispatched_agents": 11,
+          "skipped_agents": 0,
+          "agents": [
+            "deep-review-security",
+            "deep-review-project-checklist",
+            "deep-review-simplification",
+            "deep-review-code",
+            "deep-review-architecture",
+            "deep-review-docs",
+            "deep-review-typescript",
+            "deep-review-python",
+            "deep-review-ci",
+            "deep-review-qa",
+            "deep-review-unit-test"
+          ],
+          "skipped": []
+        }
+      ],
+      "totals": {
+        "prompt_input_chars": 3789160,
+        "prompt_input_est_tokens": 947294,
+        "aggregate_output_chars": 33033,
+        "aggregate_output_est_tokens": 8261,
+        "combined_chars": 3822193,
+        "combined_est_tokens": 955555,
+        "dispatched_agents": 59,
+        "skipped_agents": 18
+      }
+    },
+    {
+      "name": "post-580",
+      "ref": "f57b577",
+      "resolved_ref": "f57b577",
+      "issue": 580,
+      "previous": "original-580",
+      "output_mode": "detailed",
+      "dispatch_contract": "dispatch-v1",
+      "prompt_frame_contract": "full-v1",
+      "output_contract": "detailed-v1",
+      "label": "After #580 conditional dispatch",
+      "fixtures": [
+        {
+          "fixture": "docs-only",
+          "prompt_input_chars": 37958,
+          "prompt_input_est_tokens": 9490,
+          "aggregate_output_chars": 4193,
+          "aggregate_output_est_tokens": 1049,
+          "combined_chars": 42151,
+          "combined_est_tokens": 10539,
+          "dispatched_agents": 4,
+          "skipped_agents": 7,
+          "agents": [
+            "deep-review-simplification",
+            "deep-review-code",
+            "deep-review-architecture",
+            "deep-review-docs"
+          ],
+          "skipped": [
+            "deep-review-security",
+            "deep-review-project-checklist",
+            "deep-review-typescript",
+            "deep-review-python",
+            "deep-review-ci",
+            "deep-review-qa",
+            "deep-review-unit-test"
+          ]
+        },
+        {
+          "fixture": "playwright-test",
+          "prompt_input_chars": 61346,
+          "prompt_input_est_tokens": 15337,
+          "aggregate_output_chars": 4311,
+          "aggregate_output_est_tokens": 1078,
+          "combined_chars": 65657,
+          "combined_est_tokens": 16415,
+          "dispatched_agents": 6,
+          "skipped_agents": 5,
+          "agents": [
+            "deep-review-project-checklist",
+            "deep-review-simplification",
+            "deep-review-code",
+            "deep-review-architecture",
+            "deep-review-typescript",
+            "deep-review-qa"
+          ],
+          "skipped": [
+            "deep-review-security",
+            "deep-review-docs",
+            "deep-review-python",
+            "deep-review-ci",
+            "deep-review-unit-test"
+          ]
+        },
+        {
+          "fixture": "workflow",
+          "prompt_input_chars": 74128,
+          "prompt_input_est_tokens": 18532,
+          "aggregate_output_chars": 4584,
+          "aggregate_output_est_tokens": 1146,
+          "combined_chars": 78712,
+          "combined_est_tokens": 19678,
+          "dispatched_agents": 7,
+          "skipped_agents": 4,
+          "agents": [
+            "deep-review-security",
+            "deep-review-project-checklist",
+            "deep-review-simplification",
+            "deep-review-code",
+            "deep-review-architecture",
+            "deep-review-docs",
+            "deep-review-ci"
+          ],
+          "skipped": [
+            "deep-review-typescript",
+            "deep-review-python",
+            "deep-review-qa",
+            "deep-review-unit-test"
+          ]
+        },
+        {
+          "fixture": "mixed-typescript",
+          "prompt_input_chars": 86193,
+          "prompt_input_est_tokens": 21549,
+          "aggregate_output_chars": 4798,
+          "aggregate_output_est_tokens": 1200,
+          "combined_chars": 90991,
+          "combined_est_tokens": 22749,
+          "dispatched_agents": 8,
+          "skipped_agents": 3,
+          "agents": [
+            "deep-review-security",
+            "deep-review-project-checklist",
+            "deep-review-simplification",
+            "deep-review-code",
+            "deep-review-architecture",
+            "deep-review-docs",
+            "deep-review-typescript",
+            "deep-review-unit-test"
+          ],
+          "skipped": [
+            "deep-review-python",
+            "deep-review-ci",
+            "deep-review-qa"
+          ]
+        },
+        {
+          "fixture": "script-code-only",
+          "prompt_input_chars": 69268,
+          "prompt_input_est_tokens": 17317,
+          "aggregate_output_chars": 4019,
+          "aggregate_output_est_tokens": 1005,
+          "combined_chars": 73287,
+          "combined_est_tokens": 18322,
+          "dispatched_agents": 6,
+          "skipped_agents": 5,
+          "agents": [
+            "deep-review-security",
+            "deep-review-simplification",
+            "deep-review-code",
+            "deep-review-architecture",
+            "deep-review-python",
+            "deep-review-unit-test"
+          ],
+          "skipped": [
+            "deep-review-project-checklist",
+            "deep-review-docs",
+            "deep-review-typescript",
+            "deep-review-ci",
+            "deep-review-qa"
+          ]
+        },
+        {
+          "fixture": "large-diff",
+          "prompt_input_chars": 129680,
+          "prompt_input_est_tokens": 32420,
+          "aggregate_output_chars": 4709,
+          "aggregate_output_est_tokens": 1178,
+          "combined_chars": 134389,
+          "combined_est_tokens": 33598,
+          "dispatched_agents": 11,
+          "skipped_agents": 0,
+          "agents": [
+            "deep-review-security",
+            "deep-review-project-checklist",
+            "deep-review-simplification",
+            "deep-review-code",
+            "deep-review-architecture",
+            "deep-review-docs",
+            "deep-review-typescript",
+            "deep-review-python",
+            "deep-review-ci",
+            "deep-review-qa",
+            "deep-review-unit-test"
+          ],
+          "skipped": []
+        },
+        {
+          "fixture": "high-lines",
+          "prompt_input_chars": 3277462,
+          "prompt_input_est_tokens": 819366,
+          "aggregate_output_chars": 4709,
+          "aggregate_output_est_tokens": 1178,
+          "combined_chars": 3282171,
+          "combined_est_tokens": 820544,
+          "dispatched_agents": 11,
+          "skipped_agents": 0,
+          "agents": [
+            "deep-review-security",
+            "deep-review-project-checklist",
+            "deep-review-simplification",
+            "deep-review-code",
+            "deep-review-architecture",
+            "deep-review-docs",
+            "deep-review-typescript",
+            "deep-review-python",
+            "deep-review-ci",
+            "deep-review-qa",
+            "deep-review-unit-test"
+          ],
+          "skipped": []
+        }
+      ],
+      "totals": {
+        "prompt_input_chars": 3736035,
+        "prompt_input_est_tokens": 934011,
+        "aggregate_output_chars": 31323,
+        "aggregate_output_est_tokens": 7834,
+        "combined_chars": 3767358,
+        "combined_est_tokens": 941845,
+        "dispatched_agents": 53,
+        "skipped_agents": 24
+      }
+    },
+    {
+      "name": "post-581",
+      "ref": "5e6947f",
+      "resolved_ref": "5e6947f",
+      "issue": 581,
+      "previous": "post-580",
+      "output_mode": "detailed",
+      "dispatch_contract": "dispatch-v1",
+      "prompt_frame_contract": "scoped-v1",
+      "output_contract": "detailed-v1",
+      "label": "After #581 agent-specific subdiffs",
+      "fixtures": [
+        {
+          "fixture": "docs-only",
+          "prompt_input_chars": 37914,
+          "prompt_input_est_tokens": 9479,
+          "aggregate_output_chars": 4193,
+          "aggregate_output_est_tokens": 1049,
+          "combined_chars": 42107,
+          "combined_est_tokens": 10528,
+          "dispatched_agents": 4,
+          "skipped_agents": 7,
+          "agents": [
+            "deep-review-simplification",
+            "deep-review-code",
+            "deep-review-architecture",
+            "deep-review-docs"
+          ],
+          "skipped": [
+            "deep-review-security",
+            "deep-review-project-checklist",
+            "deep-review-typescript",
+            "deep-review-python",
+            "deep-review-ci",
+            "deep-review-qa",
+            "deep-review-unit-test"
+          ]
+        },
+        {
+          "fixture": "playwright-test",
+          "prompt_input_chars": 61598,
+          "prompt_input_est_tokens": 15400,
+          "aggregate_output_chars": 4311,
+          "aggregate_output_est_tokens": 1078,
+          "combined_chars": 65909,
+          "combined_est_tokens": 16478,
+          "dispatched_agents": 6,
+          "skipped_agents": 5,
+          "agents": [
+            "deep-review-project-checklist",
+            "deep-review-simplification",
+            "deep-review-code",
+            "deep-review-architecture",
+            "deep-review-typescript",
+            "deep-review-qa"
+          ],
+          "skipped": [
+            "deep-review-security",
+            "deep-review-docs",
+            "deep-review-python",
+            "deep-review-ci",
+            "deep-review-unit-test"
+          ]
+        },
+        {
+          "fixture": "workflow",
+          "prompt_input_chars": 74477,
+          "prompt_input_est_tokens": 18620,
+          "aggregate_output_chars": 4584,
+          "aggregate_output_est_tokens": 1146,
+          "combined_chars": 79061,
+          "combined_est_tokens": 19766,
+          "dispatched_agents": 7,
+          "skipped_agents": 4,
+          "agents": [
+            "deep-review-security",
+            "deep-review-project-checklist",
+            "deep-review-simplification",
+            "deep-review-code",
+            "deep-review-architecture",
+            "deep-review-docs",
+            "deep-review-ci"
+          ],
+          "skipped": [
+            "deep-review-typescript",
+            "deep-review-python",
+            "deep-review-qa",
+            "deep-review-unit-test"
+          ]
+        },
+        {
+          "fixture": "mixed-typescript",
+          "prompt_input_chars": 86384,
+          "prompt_input_est_tokens": 21596,
+          "aggregate_output_chars": 4798,
+          "aggregate_output_est_tokens": 1200,
+          "combined_chars": 91182,
+          "combined_est_tokens": 22796,
+          "dispatched_agents": 8,
+          "skipped_agents": 3,
+          "agents": [
+            "deep-review-security",
+            "deep-review-project-checklist",
+            "deep-review-simplification",
+            "deep-review-code",
+            "deep-review-architecture",
+            "deep-review-docs",
+            "deep-review-typescript",
+            "deep-review-unit-test"
+          ],
+          "skipped": [
+            "deep-review-python",
+            "deep-review-ci",
+            "deep-review-qa"
+          ]
+        },
+        {
+          "fixture": "script-code-only",
+          "prompt_input_chars": 69503,
+          "prompt_input_est_tokens": 17376,
+          "aggregate_output_chars": 4019,
+          "aggregate_output_est_tokens": 1005,
+          "combined_chars": 73522,
+          "combined_est_tokens": 18381,
+          "dispatched_agents": 6,
+          "skipped_agents": 5,
+          "agents": [
+            "deep-review-security",
+            "deep-review-simplification",
+            "deep-review-code",
+            "deep-review-architecture",
+            "deep-review-python",
+            "deep-review-unit-test"
+          ],
+          "skipped": [
+            "deep-review-project-checklist",
+            "deep-review-docs",
+            "deep-review-typescript",
+            "deep-review-ci",
+            "deep-review-qa"
+          ]
+        },
+        {
+          "fixture": "large-diff",
+          "prompt_input_chars": 127369,
+          "prompt_input_est_tokens": 31843,
+          "aggregate_output_chars": 4709,
+          "aggregate_output_est_tokens": 1178,
+          "combined_chars": 132078,
+          "combined_est_tokens": 33021,
+          "dispatched_agents": 11,
+          "skipped_agents": 0,
+          "agents": [
+            "deep-review-security",
+            "deep-review-project-checklist",
+            "deep-review-simplification",
+            "deep-review-code",
+            "deep-review-architecture",
+            "deep-review-docs",
+            "deep-review-typescript",
+            "deep-review-python",
+            "deep-review-ci",
+            "deep-review-qa",
+            "deep-review-unit-test"
+          ],
+          "skipped": []
+        },
+        {
+          "fixture": "high-lines",
+          "prompt_input_chars": 1563890,
+          "prompt_input_est_tokens": 390973,
+          "aggregate_output_chars": 4709,
+          "aggregate_output_est_tokens": 1178,
+          "combined_chars": 1568599,
+          "combined_est_tokens": 392151,
+          "dispatched_agents": 11,
+          "skipped_agents": 0,
+          "agents": [
+            "deep-review-security",
+            "deep-review-project-checklist",
+            "deep-review-simplification",
+            "deep-review-code",
+            "deep-review-architecture",
+            "deep-review-docs",
+            "deep-review-typescript",
+            "deep-review-python",
+            "deep-review-ci",
+            "deep-review-qa",
+            "deep-review-unit-test"
+          ],
+          "skipped": []
+        }
+      ],
+      "totals": {
+        "prompt_input_chars": 2021135,
+        "prompt_input_est_tokens": 505287,
+        "aggregate_output_chars": 31323,
+        "aggregate_output_est_tokens": 7834,
+        "combined_chars": 2052458,
+        "combined_est_tokens": 513121,
+        "dispatched_agents": 53,
+        "skipped_agents": 24
+      }
+    },
+    {
+      "name": "post-582",
+      "ref": "f1013ec",
+      "resolved_ref": "f1013ec",
+      "issue": 582,
+      "previous": "post-581",
+      "output_mode": "detailed",
+      "dispatch_contract": "dispatch-v1",
+      "prompt_frame_contract": "scoped-v1",
+      "output_contract": "detailed-reuse-v1",
+      "label": "After #582 rerun cache contract",
+      "fixtures": [
+        {
+          "fixture": "docs-only",
+          "prompt_input_chars": 37914,
+          "prompt_input_est_tokens": 9479,
+          "aggregate_output_chars": 4331,
+          "aggregate_output_est_tokens": 1083,
+          "combined_chars": 42245,
+          "combined_est_tokens": 10562,
+          "dispatched_agents": 4,
+          "skipped_agents": 7,
+          "agents": [
+            "deep-review-simplification",
+            "deep-review-code",
+            "deep-review-architecture",
+            "deep-review-docs"
+          ],
+          "skipped": [
+            "deep-review-security",
+            "deep-review-project-checklist",
+            "deep-review-typescript",
+            "deep-review-python",
+            "deep-review-ci",
+            "deep-review-qa",
+            "deep-review-unit-test"
+          ]
+        },
+        {
+          "fixture": "playwright-test",
+          "prompt_input_chars": 61598,
+          "prompt_input_est_tokens": 15400,
+          "aggregate_output_chars": 4449,
+          "aggregate_output_est_tokens": 1113,
+          "combined_chars": 66047,
+          "combined_est_tokens": 16513,
+          "dispatched_agents": 6,
+          "skipped_agents": 5,
+          "agents": [
+            "deep-review-project-checklist",
+            "deep-review-simplification",
+            "deep-review-code",
+            "deep-review-architecture",
+            "deep-review-typescript",
+            "deep-review-qa"
+          ],
+          "skipped": [
+            "deep-review-security",
+            "deep-review-docs",
+            "deep-review-python",
+            "deep-review-ci",
+            "deep-review-unit-test"
+          ]
+        },
+        {
+          "fixture": "workflow",
+          "prompt_input_chars": 74477,
+          "prompt_input_est_tokens": 18620,
+          "aggregate_output_chars": 4722,
+          "aggregate_output_est_tokens": 1181,
+          "combined_chars": 79199,
+          "combined_est_tokens": 19801,
+          "dispatched_agents": 7,
+          "skipped_agents": 4,
+          "agents": [
+            "deep-review-security",
+            "deep-review-project-checklist",
+            "deep-review-simplification",
+            "deep-review-code",
+            "deep-review-architecture",
+            "deep-review-docs",
+            "deep-review-ci"
+          ],
+          "skipped": [
+            "deep-review-typescript",
+            "deep-review-python",
+            "deep-review-qa",
+            "deep-review-unit-test"
+          ]
+        },
+        {
+          "fixture": "mixed-typescript",
+          "prompt_input_chars": 86384,
+          "prompt_input_est_tokens": 21596,
+          "aggregate_output_chars": 4936,
+          "aggregate_output_est_tokens": 1234,
+          "combined_chars": 91320,
+          "combined_est_tokens": 22830,
+          "dispatched_agents": 8,
+          "skipped_agents": 3,
+          "agents": [
+            "deep-review-security",
+            "deep-review-project-checklist",
+            "deep-review-simplification",
+            "deep-review-code",
+            "deep-review-architecture",
+            "deep-review-docs",
+            "deep-review-typescript",
+            "deep-review-unit-test"
+          ],
+          "skipped": [
+            "deep-review-python",
+            "deep-review-ci",
+            "deep-review-qa"
+          ]
+        },
+        {
+          "fixture": "script-code-only",
+          "prompt_input_chars": 69503,
+          "prompt_input_est_tokens": 17376,
+          "aggregate_output_chars": 4157,
+          "aggregate_output_est_tokens": 1040,
+          "combined_chars": 73660,
+          "combined_est_tokens": 18416,
+          "dispatched_agents": 6,
+          "skipped_agents": 5,
+          "agents": [
+            "deep-review-security",
+            "deep-review-simplification",
+            "deep-review-code",
+            "deep-review-architecture",
+            "deep-review-python",
+            "deep-review-unit-test"
+          ],
+          "skipped": [
+            "deep-review-project-checklist",
+            "deep-review-docs",
+            "deep-review-typescript",
+            "deep-review-ci",
+            "deep-review-qa"
+          ]
+        },
+        {
+          "fixture": "large-diff",
+          "prompt_input_chars": 127369,
+          "prompt_input_est_tokens": 31843,
+          "aggregate_output_chars": 4849,
+          "aggregate_output_est_tokens": 1213,
+          "combined_chars": 132218,
+          "combined_est_tokens": 33056,
+          "dispatched_agents": 11,
+          "skipped_agents": 0,
+          "agents": [
+            "deep-review-security",
+            "deep-review-project-checklist",
+            "deep-review-simplification",
+            "deep-review-code",
+            "deep-review-architecture",
+            "deep-review-docs",
+            "deep-review-typescript",
+            "deep-review-python",
+            "deep-review-ci",
+            "deep-review-qa",
+            "deep-review-unit-test"
+          ],
+          "skipped": []
+        },
+        {
+          "fixture": "high-lines",
+          "prompt_input_chars": 1563890,
+          "prompt_input_est_tokens": 390973,
+          "aggregate_output_chars": 4849,
+          "aggregate_output_est_tokens": 1213,
+          "combined_chars": 1568739,
+          "combined_est_tokens": 392186,
+          "dispatched_agents": 11,
+          "skipped_agents": 0,
+          "agents": [
+            "deep-review-security",
+            "deep-review-project-checklist",
+            "deep-review-simplification",
+            "deep-review-code",
+            "deep-review-architecture",
+            "deep-review-docs",
+            "deep-review-typescript",
+            "deep-review-python",
+            "deep-review-ci",
+            "deep-review-qa",
+            "deep-review-unit-test"
+          ],
+          "skipped": []
+        }
+      ],
+      "totals": {
+        "prompt_input_chars": 2021135,
+        "prompt_input_est_tokens": 505287,
+        "aggregate_output_chars": 32293,
+        "aggregate_output_est_tokens": 8077,
+        "combined_chars": 2053428,
+        "combined_est_tokens": 513364,
+        "dispatched_agents": 53,
+        "skipped_agents": 24
+      }
+    },
+    {
+      "name": "post-583",
+      "ref": "f3952ee",
+      "resolved_ref": "f3952ee",
+      "issue": 583,
+      "previous": "post-582",
+      "output_mode": "compact",
+      "dispatch_contract": "dispatch-v1",
+      "prompt_frame_contract": "scoped-v1",
+      "output_contract": "compact-v1",
+      "label": "After #583 compact aggregate output",
+      "fixtures": [
+        {
+          "fixture": "docs-only",
+          "prompt_input_chars": 38346,
+          "prompt_input_est_tokens": 9587,
+          "aggregate_output_chars": 1665,
+          "aggregate_output_est_tokens": 417,
+          "combined_chars": 40011,
+          "combined_est_tokens": 10004,
+          "dispatched_agents": 4,
+          "skipped_agents": 7,
+          "agents": [
+            "deep-review-simplification",
+            "deep-review-code",
+            "deep-review-architecture",
+            "deep-review-docs"
+          ],
+          "skipped": [
+            "deep-review-security",
+            "deep-review-project-checklist",
+            "deep-review-typescript",
+            "deep-review-python",
+            "deep-review-ci",
+            "deep-review-qa",
+            "deep-review-unit-test"
+          ]
+        },
+        {
+          "fixture": "playwright-test",
+          "prompt_input_chars": 62246,
+          "prompt_input_est_tokens": 15562,
+          "aggregate_output_chars": 1610,
+          "aggregate_output_est_tokens": 403,
+          "combined_chars": 63856,
+          "combined_est_tokens": 15965,
+          "dispatched_agents": 6,
+          "skipped_agents": 5,
+          "agents": [
+            "deep-review-project-checklist",
+            "deep-review-simplification",
+            "deep-review-code",
+            "deep-review-architecture",
+            "deep-review-typescript",
+            "deep-review-qa"
+          ],
+          "skipped": [
+            "deep-review-security",
+            "deep-review-docs",
+            "deep-review-python",
+            "deep-review-ci",
+            "deep-review-unit-test"
+          ]
+        },
+        {
+          "fixture": "workflow",
+          "prompt_input_chars": 75125,
+          "prompt_input_est_tokens": 18782,
+          "aggregate_output_chars": 1745,
+          "aggregate_output_est_tokens": 437,
+          "combined_chars": 76870,
+          "combined_est_tokens": 19219,
+          "dispatched_agents": 7,
+          "skipped_agents": 4,
+          "agents": [
+            "deep-review-security",
+            "deep-review-project-checklist",
+            "deep-review-simplification",
+            "deep-review-code",
+            "deep-review-architecture",
+            "deep-review-docs",
+            "deep-review-ci"
+          ],
+          "skipped": [
+            "deep-review-typescript",
+            "deep-review-python",
+            "deep-review-qa",
+            "deep-review-unit-test"
+          ]
+        },
+        {
+          "fixture": "mixed-typescript",
+          "prompt_input_chars": 87248,
+          "prompt_input_est_tokens": 21812,
+          "aggregate_output_chars": 1740,
+          "aggregate_output_est_tokens": 435,
+          "combined_chars": 88988,
+          "combined_est_tokens": 22247,
+          "dispatched_agents": 8,
+          "skipped_agents": 3,
+          "agents": [
+            "deep-review-security",
+            "deep-review-project-checklist",
+            "deep-review-simplification",
+            "deep-review-code",
+            "deep-review-architecture",
+            "deep-review-docs",
+            "deep-review-typescript",
+            "deep-review-unit-test"
+          ],
+          "skipped": [
+            "deep-review-python",
+            "deep-review-ci",
+            "deep-review-qa"
+          ]
+        },
+        {
+          "fixture": "script-code-only",
+          "prompt_input_chars": 69935,
+          "prompt_input_est_tokens": 17484,
+          "aggregate_output_chars": 1605,
+          "aggregate_output_est_tokens": 402,
+          "combined_chars": 71540,
+          "combined_est_tokens": 17886,
+          "dispatched_agents": 6,
+          "skipped_agents": 5,
+          "agents": [
+            "deep-review-security",
+            "deep-review-simplification",
+            "deep-review-code",
+            "deep-review-architecture",
+            "deep-review-python",
+            "deep-review-unit-test"
+          ],
+          "skipped": [
+            "deep-review-project-checklist",
+            "deep-review-docs",
+            "deep-review-typescript",
+            "deep-review-ci",
+            "deep-review-qa"
+          ]
+        },
+        {
+          "fixture": "large-diff",
+          "prompt_input_chars": 128449,
+          "prompt_input_est_tokens": 32113,
+          "aggregate_output_chars": 1598,
+          "aggregate_output_est_tokens": 400,
+          "combined_chars": 130047,
+          "combined_est_tokens": 32513,
+          "dispatched_agents": 11,
+          "skipped_agents": 0,
+          "agents": [
+            "deep-review-security",
+            "deep-review-project-checklist",
+            "deep-review-simplification",
+            "deep-review-code",
+            "deep-review-architecture",
+            "deep-review-docs",
+            "deep-review-typescript",
+            "deep-review-python",
+            "deep-review-ci",
+            "deep-review-qa",
+            "deep-review-unit-test"
+          ],
+          "skipped": []
+        },
+        {
+          "fixture": "high-lines",
+          "prompt_input_chars": 1564970,
+          "prompt_input_est_tokens": 391243,
+          "aggregate_output_chars": 1598,
+          "aggregate_output_est_tokens": 400,
+          "combined_chars": 1566568,
+          "combined_est_tokens": 391643,
+          "dispatched_agents": 11,
+          "skipped_agents": 0,
+          "agents": [
+            "deep-review-security",
+            "deep-review-project-checklist",
+            "deep-review-simplification",
+            "deep-review-code",
+            "deep-review-architecture",
+            "deep-review-docs",
+            "deep-review-typescript",
+            "deep-review-python",
+            "deep-review-ci",
+            "deep-review-qa",
+            "deep-review-unit-test"
+          ],
+          "skipped": []
+        }
+      ],
+      "totals": {
+        "prompt_input_chars": 2026319,
+        "prompt_input_est_tokens": 506583,
+        "aggregate_output_chars": 11561,
+        "aggregate_output_est_tokens": 2894,
+        "combined_chars": 2037880,
+        "combined_est_tokens": 509477,
+        "dispatched_agents": 53,
+        "skipped_agents": 24
+      }
+    },
+    {
+      "name": "post-584",
+      "ref": "0d7add0",
+      "resolved_ref": "0d7add0",
+      "issue": 584,
+      "previous": "post-583",
+      "output_mode": "compact",
+      "dispatch_contract": "dispatch-v1",
+      "prompt_frame_contract": "scoped-v1",
+      "output_contract": "compact-v1",
+      "label": "After #584 shared agent boilerplate compaction",
+      "fixtures": [
+        {
+          "fixture": "docs-only",
+          "prompt_input_chars": 34659,
+          "prompt_input_est_tokens": 8665,
+          "aggregate_output_chars": 1665,
+          "aggregate_output_est_tokens": 417,
+          "combined_chars": 36324,
+          "combined_est_tokens": 9082,
+          "dispatched_agents": 4,
+          "skipped_agents": 7,
+          "agents": [
+            "deep-review-simplification",
+            "deep-review-code",
+            "deep-review-architecture",
+            "deep-review-docs"
+          ],
+          "skipped": [
+            "deep-review-security",
+            "deep-review-project-checklist",
+            "deep-review-typescript",
+            "deep-review-python",
+            "deep-review-ci",
+            "deep-review-qa",
+            "deep-review-unit-test"
+          ]
+        },
+        {
+          "fixture": "playwright-test",
+          "prompt_input_chars": 54885,
+          "prompt_input_est_tokens": 13722,
+          "aggregate_output_chars": 1610,
+          "aggregate_output_est_tokens": 403,
+          "combined_chars": 56495,
+          "combined_est_tokens": 14125,
+          "dispatched_agents": 6,
+          "skipped_agents": 5,
+          "agents": [
+            "deep-review-project-checklist",
+            "deep-review-simplification",
+            "deep-review-code",
+            "deep-review-architecture",
+            "deep-review-typescript",
+            "deep-review-qa"
+          ],
+          "skipped": [
+            "deep-review-security",
+            "deep-review-docs",
+            "deep-review-python",
+            "deep-review-ci",
+            "deep-review-unit-test"
+          ]
+        },
+        {
+          "fixture": "workflow",
+          "prompt_input_chars": 68720,
+          "prompt_input_est_tokens": 17180,
+          "aggregate_output_chars": 1745,
+          "aggregate_output_est_tokens": 437,
+          "combined_chars": 70465,
+          "combined_est_tokens": 17617,
+          "dispatched_agents": 7,
+          "skipped_agents": 4,
+          "agents": [
+            "deep-review-security",
+            "deep-review-project-checklist",
+            "deep-review-simplification",
+            "deep-review-code",
+            "deep-review-architecture",
+            "deep-review-docs",
+            "deep-review-ci"
+          ],
+          "skipped": [
+            "deep-review-typescript",
+            "deep-review-python",
+            "deep-review-qa",
+            "deep-review-unit-test"
+          ]
+        },
+        {
+          "fixture": "mixed-typescript",
+          "prompt_input_chars": 78535,
+          "prompt_input_est_tokens": 19634,
+          "aggregate_output_chars": 1740,
+          "aggregate_output_est_tokens": 435,
+          "combined_chars": 80275,
+          "combined_est_tokens": 20069,
+          "dispatched_agents": 8,
+          "skipped_agents": 3,
+          "agents": [
+            "deep-review-security",
+            "deep-review-project-checklist",
+            "deep-review-simplification",
+            "deep-review-code",
+            "deep-review-architecture",
+            "deep-review-docs",
+            "deep-review-typescript",
+            "deep-review-unit-test"
+          ],
+          "skipped": [
+            "deep-review-python",
+            "deep-review-ci",
+            "deep-review-qa"
+          ]
+        },
+        {
+          "fixture": "script-code-only",
+          "prompt_input_chars": 61321,
+          "prompt_input_est_tokens": 15331,
+          "aggregate_output_chars": 1605,
+          "aggregate_output_est_tokens": 402,
+          "combined_chars": 62926,
+          "combined_est_tokens": 15733,
+          "dispatched_agents": 6,
+          "skipped_agents": 5,
+          "agents": [
+            "deep-review-security",
+            "deep-review-simplification",
+            "deep-review-code",
+            "deep-review-architecture",
+            "deep-review-python",
+            "deep-review-unit-test"
+          ],
+          "skipped": [
+            "deep-review-project-checklist",
+            "deep-review-docs",
+            "deep-review-typescript",
+            "deep-review-ci",
+            "deep-review-qa"
+          ]
+        },
+        {
+          "fixture": "large-diff",
+          "prompt_input_chars": 114753,
+          "prompt_input_est_tokens": 28689,
+          "aggregate_output_chars": 1598,
+          "aggregate_output_est_tokens": 400,
+          "combined_chars": 116351,
+          "combined_est_tokens": 29089,
+          "dispatched_agents": 11,
+          "skipped_agents": 0,
+          "agents": [
+            "deep-review-security",
+            "deep-review-project-checklist",
+            "deep-review-simplification",
+            "deep-review-code",
+            "deep-review-architecture",
+            "deep-review-docs",
+            "deep-review-typescript",
+            "deep-review-python",
+            "deep-review-ci",
+            "deep-review-qa",
+            "deep-review-unit-test"
+          ],
+          "skipped": []
+        },
+        {
+          "fixture": "high-lines",
+          "prompt_input_chars": 1551274,
+          "prompt_input_est_tokens": 387819,
+          "aggregate_output_chars": 1598,
+          "aggregate_output_est_tokens": 400,
+          "combined_chars": 1552872,
+          "combined_est_tokens": 388219,
+          "dispatched_agents": 11,
+          "skipped_agents": 0,
+          "agents": [
+            "deep-review-security",
+            "deep-review-project-checklist",
+            "deep-review-simplification",
+            "deep-review-code",
+            "deep-review-architecture",
+            "deep-review-docs",
+            "deep-review-typescript",
+            "deep-review-python",
+            "deep-review-ci",
+            "deep-review-qa",
+            "deep-review-unit-test"
+          ],
+          "skipped": []
+        }
+      ],
+      "totals": {
+        "prompt_input_chars": 1964147,
+        "prompt_input_est_tokens": 491040,
+        "aggregate_output_chars": 11561,
+        "aggregate_output_est_tokens": 2894,
+        "combined_chars": 1975708,
+        "combined_est_tokens": 493934,
+        "dispatched_agents": 53,
+        "skipped_agents": 24
+      }
+    }
+  ],
+  "deltas": {
+    "post-580": {
+      "issue": 580,
+      "from_checkpoint": "original-580",
+      "to_checkpoint": "post-580",
+      "cumulative_from": "original-580",
+      "incremental": {
+        "prompt_input_chars": -53125,
+        "prompt_input_est_tokens": -13283,
+        "aggregate_output_chars": -1710,
+        "aggregate_output_est_tokens": -427,
+        "combined_chars": -54835,
+        "combined_est_tokens": -13710,
+        "dispatched_agents": -6,
+        "skipped_agents": 6
+      },
+      "cumulative": {
+        "prompt_input_chars": -53125,
+        "prompt_input_est_tokens": -13283,
+        "aggregate_output_chars": -1710,
+        "aggregate_output_est_tokens": -427,
+        "combined_chars": -54835,
+        "combined_est_tokens": -13710,
+        "dispatched_agents": -6,
+        "skipped_agents": 6
+      }
+    },
+    "post-581": {
+      "issue": 581,
+      "from_checkpoint": "post-580",
+      "to_checkpoint": "post-581",
+      "cumulative_from": "original-580",
+      "incremental": {
+        "prompt_input_chars": -1714900,
+        "prompt_input_est_tokens": -428724,
+        "aggregate_output_chars": 0,
+        "aggregate_output_est_tokens": 0,
+        "combined_chars": -1714900,
+        "combined_est_tokens": -428724,
+        "dispatched_agents": 0,
+        "skipped_agents": 0
+      },
+      "cumulative": {
+        "prompt_input_chars": -1768025,
+        "prompt_input_est_tokens": -442007,
+        "aggregate_output_chars": -1710,
+        "aggregate_output_est_tokens": -427,
+        "combined_chars": -1769735,
+        "combined_est_tokens": -442434,
+        "dispatched_agents": -6,
+        "skipped_agents": 6
+      }
+    },
+    "post-582": {
+      "issue": 582,
+      "from_checkpoint": "post-581",
+      "to_checkpoint": "post-582",
+      "cumulative_from": "original-580",
+      "incremental": {
+        "prompt_input_chars": 0,
+        "prompt_input_est_tokens": 0,
+        "aggregate_output_chars": 970,
+        "aggregate_output_est_tokens": 243,
+        "combined_chars": 970,
+        "combined_est_tokens": 243,
+        "dispatched_agents": 0,
+        "skipped_agents": 0
+      },
+      "cumulative": {
+        "prompt_input_chars": -1768025,
+        "prompt_input_est_tokens": -442007,
+        "aggregate_output_chars": -740,
+        "aggregate_output_est_tokens": -184,
+        "combined_chars": -1768765,
+        "combined_est_tokens": -442191,
+        "dispatched_agents": -6,
+        "skipped_agents": 6
+      }
+    },
+    "post-583": {
+      "issue": 583,
+      "from_checkpoint": "post-582",
+      "to_checkpoint": "post-583",
+      "cumulative_from": "original-580",
+      "incremental": {
+        "prompt_input_chars": 5184,
+        "prompt_input_est_tokens": 1296,
+        "aggregate_output_chars": -20732,
+        "aggregate_output_est_tokens": -5183,
+        "combined_chars": -15548,
+        "combined_est_tokens": -3887,
+        "dispatched_agents": 0,
+        "skipped_agents": 0
+      },
+      "cumulative": {
+        "prompt_input_chars": -1762841,
+        "prompt_input_est_tokens": -440711,
+        "aggregate_output_chars": -21472,
+        "aggregate_output_est_tokens": -5367,
+        "combined_chars": -1784313,
+        "combined_est_tokens": -446078,
+        "dispatched_agents": -6,
+        "skipped_agents": 6
+      }
+    },
+    "post-584": {
+      "issue": 584,
+      "from_checkpoint": "post-583",
+      "to_checkpoint": "post-584",
+      "cumulative_from": "original-580",
+      "incremental": {
+        "prompt_input_chars": -62172,
+        "prompt_input_est_tokens": -15543,
+        "aggregate_output_chars": 0,
+        "aggregate_output_est_tokens": 0,
+        "combined_chars": -62172,
+        "combined_est_tokens": -15543,
+        "dispatched_agents": 0,
+        "skipped_agents": 0
+      },
+      "cumulative": {
+        "prompt_input_chars": -1825013,
+        "prompt_input_est_tokens": -456254,
+        "aggregate_output_chars": -21472,
+        "aggregate_output_est_tokens": -5367,
+        "combined_chars": -1846485,
+        "combined_est_tokens": -461621,
+        "dispatched_agents": -6,
+        "skipped_agents": 6
+      }
+    }
+  },
+  "notes": [
+    "Exact runtime tokens are unavailable in this Codex run.",
+    "Proxy tokens are estimated as ceil(characters / 4) per fixture and summed.",
+    "Historical prompt data is read from checkpoint commits with git show.",
+    "The same current fixture set is used for every checkpoint."
+  ]
+}

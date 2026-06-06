@@ -2,6 +2,26 @@
 
 This report records the `/deep-review-pro` benchmark evidence for issue #581, which changes dispatched specialist agents from a shared full-diff prompt frame to per-agent prompt frames. Broad reviewers keep the full diff; file specialists receive matching hunks plus a complete `<changed-files>` manifest.
 
+## Epic Comparable Benchmark
+
+These rows are generated from `587-epic-token-cost-matrix.md` so this issue can be compared with every other #587 child story using the same units.
+
+Use this section for cross-ticket comparison. Story-specific tables below are retained as local evidence and may use a narrower prompt-only, output-only, dispatch-only, or rerun/cache proxy surface.
+
+### Incremental Delta: post-580 -> post-581
+
+| Metric | Before | After | Delta |
+| --- | ---: | ---: | ---: |
+| Combined chars | 3,767,358 | 2,052,458 | -1,714,900 (-45.52%) |
+| Combined est. tokens | 941,845 | 513,121 | -428,724 (-45.52%) |
+
+### Cumulative Delta: original-580 -> post-581
+
+| Metric | Original #580 baseline | Current checkpoint | Delta |
+| --- | ---: | ---: | ---: |
+| Combined chars | 3,822,193 | 2,052,458 | -1,769,735 (-46.30%) |
+| Combined est. tokens | 955,555 | 513,121 | -442,434 (-46.30%) |
+
 ## Harness
 
 - Fixture source: `docs/deep-review-pro-benchmark/fixtures.json`
