@@ -22,8 +22,17 @@ from typing import Literal
 from deep_review_benchmark_support import (
     build_full_prompt_frame_v1,
     build_scoped_prompt_frames_v1,
+    changed_paths,
+    collect_added_lines,
+    is_playwright_spec_path_v1,
+    is_playwright_typescript_dir_path_v1,
+    is_typescript_path_v1,
+    is_workflow_path_v1,
     load_fixtures,
     parse_deep_review_pro_roster,
+    parse_diff,
+    SECURITY_CREDENTIAL_LINE_RE_V1,
+    selected_agents_for_diff_static_v1,
     selected_agents_for_diff_v1,
 )
 
@@ -35,11 +44,17 @@ MATRIX_JSON = REPORTS_DIR / "587-epic-token-cost-matrix.json"
 SKILL_PATH = ".claude/skills/deep-review-pro/SKILL.md"
 AGENT_DIR = ".claude/agents"
 ORIGINAL_580_REF = "4398fc9"
+WORKTREE_REF = "WORKTREE"
 OutputMode = Literal["detailed", "compact"]
 DeltaKey = Literal["incremental", "cumulative"]
 PromptFrameContract = Literal["full-v1", "scoped-v1"]
-OutputContract = Literal["detailed-v1", "detailed-reuse-v1", "compact-v1"]
-DispatchContract = Literal["dispatch-v1"]
+OutputContract = Literal[
+    "detailed-v1",
+    "detailed-reuse-v1",
+    "compact-v1",
+    "compact-static-v1",
+]
+DispatchContract = Literal["dispatch-v1", "dispatch-static-v1"]
 
 
 def load_module(name: str, path: Path):
@@ -140,6 +155,16 @@ DEFAULT_CHECKPOINTS = (
         output_contract="compact-v1",
         label="After #584 shared agent boilerplate compaction",
     ),
+    Checkpoint(
+        name="post-585",
+        ref="825069c",
+        issue=585,
+        previous="post-584",
+        dispatch_contract="dispatch-static-v1",
+        prompt_frame_contract="scoped-v1",
+        output_contract="compact-static-v1",
+        label="After #585 static pre-pass and ownership cleanup",
+    ),
 )
 
 
@@ -181,6 +206,7 @@ OUTPUT_CONTRACT_MODES = {
     "detailed-v1": "detailed",
     "detailed-reuse-v1": "detailed",
     "compact-v1": "compact",
+    "compact-static-v1": "compact",
 }
 
 
@@ -208,10 +234,14 @@ def run_git(args: list[str]) -> str:
 
 
 def git_show(ref: str, path: str) -> str:
+    if ref == WORKTREE_REF:
+        return (REPO_ROOT / path).read_text()
     return run_git(["show", f"{ref}:{path}"])
 
 
 def resolve_ref(ref: str) -> str:
+    if ref == WORKTREE_REF:
+        return WORKTREE_REF
     try:
         return run_git(["rev-parse", "--short", ref]).strip()
     except subprocess.CalledProcessError:
@@ -221,6 +251,8 @@ def resolve_ref(ref: str) -> str:
 def ensure_checkpoint_refs_available(checkpoints: tuple[Checkpoint, ...]) -> None:
     missing = []
     for checkpoint in checkpoints:
+        if checkpoint.ref == WORKTREE_REF:
+            continue
         try:
             run_git(["cat-file", "-e", f"{checkpoint.ref}^{{commit}}"])
         except subprocess.CalledProcessError:
@@ -522,12 +554,144 @@ def compact_output_proxy(
     )
 
 
+def static_prepass_proxy_rows(diff_text: str) -> list[tuple[str, str, str]]:
+    parsed = parse_diff(diff_text)
+    paths = changed_paths(parsed)
+    added_lines = collect_added_lines(parsed)
+    has_typescript = any(is_typescript_path_v1(path) for path in paths)
+    has_playwright_typescript = any(
+        is_playwright_typescript_dir_path_v1(path) for path in paths
+    )
+    has_workflow = any(is_workflow_path_v1(path) for path in paths)
+    has_spec = any(is_playwright_spec_path_v1(path) for path in paths)
+    has_secret_shape = any(
+        SECURITY_CREDENTIAL_LINE_RE_V1.search(line)
+        for line in added_lines
+    )
+
+    return [
+        (
+            "pass" if has_typescript else "N/A",
+            "typescript-compile",
+            "owner=deep-review-typescript; `npx tsc --noEmit` proxy clean"
+            if has_typescript
+            else "no TypeScript file in scope",
+        ),
+        (
+            "pass" if has_playwright_typescript else "N/A",
+            "format-check",
+            "owner=aggregate; `npm run format:check` proxy clean"
+            if has_playwright_typescript
+            else "no Playwright TypeScript file in scope",
+        ),
+        (
+            "pass" if has_workflow else "N/A",
+            "actionlint-shellcheck",
+            "owner=deep-review-ci; actionlint/shellcheck proxy clean"
+            if has_workflow
+            else "no workflow file in scope",
+        ),
+        (
+            "fail" if has_secret_shape else "pass",
+            "secret-scan",
+            "owner=deep-review-security; credential-shaped added line detected"
+            if has_secret_shape
+            else "owner=deep-review-security; changed added lines scanned clean",
+        ),
+        (
+            "pass" if has_spec else "N/A",
+            "coverage-matrix",
+            "owner=deep-review-qa; coverage-matrix MCP proxy clean"
+            if has_spec
+            else "no modified Playwright spec in scope",
+        ),
+    ]
+
+
+def static_unavailable_blocking_count(rows: list[tuple[str, str, str]]) -> int:
+    return sum(
+        1
+        for status, _check, detail in rows
+        if status == "unavailable" and "fallback=none" in detail
+    )
+
+
+def static_prepass_proxy_section(diff_text: str) -> tuple[str, str, dict[str, int]]:
+    rows = static_prepass_proxy_rows(diff_text)
+    blocking_unavailable = static_unavailable_blocking_count(rows)
+    counts = {
+        status: sum(1 for row in rows if row[0] == status)
+        for status in ("pass", "fail", "unavailable", "N/A")
+    } | {"unavailable_blocking": blocking_unavailable}
+    body = "\n".join(
+        f"- [{status}] {check}: {detail}"
+        for status, check, detail in rows
+    )
+    summary = (
+        f"summary: {counts['pass']} pass / {counts['fail']} fail / "
+        f"{counts['unavailable']} unavailable / {counts['N/A']} N/A"
+    )
+    total = (
+        f"{counts['fail']} static-fail / "
+        f"{counts['unavailable_blocking']} static-unavailable-blocking"
+    )
+    return f"### static-pre-pass\n{body}\n{summary}", total, counts
+
+
+def compact_static_output_proxy(
+    *,
+    fixture: dict,
+    roster: dict[str, dict[str, str]],
+    agents: list[str],
+    skipped: list[str],
+    diff_text: str,
+) -> str:
+    static_section, static_total, static_counts = static_prepass_proxy_section(diff_text)
+    context = AggregateRenderContext(
+        fixture=fixture,
+        roster=roster,
+        agents=agents,
+        skipped=skipped,
+        output_contract="compact-static-v1",
+    )
+    aggregate_agent_total = aggregate_total_line(context.agents, context.roster)
+    if not context.agents:
+        total_line = f"total: {static_total}"
+    else:
+        total_line = f"total: {static_total} / {aggregate_agent_total.removeprefix('total: ')}"
+    static_blocked = (
+        static_counts["fail"] > 0 or static_counts["unavailable_blocking"] > 0
+    )
+    status_line = "status: blocked" if static_blocked else "status: ready"
+    lines = [
+        f"fixture: {context.fixture['name']}",
+        f"mode: {output_mode_for_contract(context.output_contract)} aggregate output",
+        "",
+        static_section,
+        "",
+    ]
+    lines.extend(compact_agent_section(agent, context.roster[agent]) for agent in context.agents)
+    lines.extend(skipped_agent_section(agent, context.roster[agent]) for agent in context.skipped)
+    lines.extend(
+        [
+            "",
+            "### aggregate",
+            total_line,
+            status_line,
+            aggregate_reuse_line(context.agents, context.skipped),
+            "tokens: total <value|unavailable> (use --usage or --verbose for the detailed table)",
+        ]
+    )
+    return "\n".join(lines)
+
+
 def aggregate_output_text_detailed_v1(
     *,
     fixture: dict,
     roster: dict[str, dict[str, str]],
     agents: list[str],
     skipped: list[str],
+    diff_text: str = "",
 ) -> str:
     return detailed_output_proxy(
         fixture=fixture,
@@ -544,6 +708,7 @@ def aggregate_output_text_detailed_reuse_v1(
     roster: dict[str, dict[str, str]],
     agents: list[str],
     skipped: list[str],
+    diff_text: str = "",
 ) -> str:
     return detailed_output_proxy(
         fixture=fixture,
@@ -560,6 +725,7 @@ def aggregate_output_text_compact_v1(
     roster: dict[str, dict[str, str]],
     agents: list[str],
     skipped: list[str],
+    diff_text: str = "",
 ) -> str:
     return compact_output_proxy(
         fixture=fixture,
@@ -569,10 +735,28 @@ def aggregate_output_text_compact_v1(
     )
 
 
+def aggregate_output_text_compact_static_v1(
+    *,
+    fixture: dict,
+    roster: dict[str, dict[str, str]],
+    agents: list[str],
+    skipped: list[str],
+    diff_text: str = "",
+) -> str:
+    return compact_static_output_proxy(
+        fixture=fixture,
+        roster=roster,
+        agents=agents,
+        skipped=skipped,
+        diff_text=diff_text,
+    )
+
+
 OUTPUT_CONTRACT_BUILDERS = {
     "detailed-v1": aggregate_output_text_detailed_v1,
     "detailed-reuse-v1": aggregate_output_text_detailed_reuse_v1,
     "compact-v1": aggregate_output_text_compact_v1,
+    "compact-static-v1": aggregate_output_text_compact_static_v1,
 }
 
 
@@ -584,8 +768,17 @@ def selected_agents_dispatch_v1(
     return selected_agents_for_diff_v1(roster, diff_text)
 
 
+def selected_agents_dispatch_static_v1(
+    *,
+    roster: dict[str, dict[str, str]],
+    diff_text: str,
+) -> list[str]:
+    return selected_agents_for_diff_static_v1(roster, diff_text)
+
+
 DISPATCH_CONTRACT_BUILDERS = {
     "dispatch-v1": selected_agents_dispatch_v1,
+    "dispatch-static-v1": selected_agents_dispatch_static_v1,
 }
 
 
@@ -611,6 +804,7 @@ def aggregate_output_chars(
     roster: dict[str, dict[str, str]],
     agents: list[str],
     skipped: list[str],
+    diff_text: str = "",
 ) -> int:
     try:
         builder = OUTPUT_CONTRACT_BUILDERS[checkpoint.output_contract]
@@ -624,6 +818,7 @@ def aggregate_output_chars(
             roster=roster,
             agents=agents,
             skipped=skipped,
+            diff_text=diff_text,
         )
     )
 
@@ -655,6 +850,7 @@ def checkpoint_fixture_metrics(
         roster=roster,
         agents=agents,
         skipped=skipped,
+        diff_text=diff_text,
     )
     prompt_tokens = estimate_tokens(prompt_chars)
     output_tokens = estimate_tokens(output_chars)
@@ -682,9 +878,9 @@ def sum_fixture_metrics(fixtures: list[dict]) -> dict[str, int]:
 
 def validate_checkpoint_sequence(checkpoints: tuple[Checkpoint, ...]) -> None:
     for index, checkpoint in enumerate(checkpoints):
-        if checkpoint.ref == "HEAD" and index != len(checkpoints) - 1:
+        if checkpoint.ref in {"HEAD", WORKTREE_REF} and index != len(checkpoints) - 1:
             raise ValueError(
-                f"{checkpoint.name} uses HEAD but is not the final checkpoint; "
+                f"{checkpoint.name} uses {checkpoint.ref} but is not the final checkpoint; "
                 "pin it to a stable ref before adding later checkpoints"
             )
 
@@ -783,6 +979,7 @@ def build_epic_matrix(
             "Exact runtime tokens are unavailable in this Codex run.",
             "Proxy tokens are estimated as ceil(characters / 4) per fixture and summed.",
             "Historical prompt data is read from checkpoint commits with git show.",
+            "The active WORKTREE checkpoint reads current files directly.",
             "The same current fixture set is used for every checkpoint.",
         ],
     }
@@ -862,6 +1059,7 @@ def render_epic_report(matrix: dict) -> str:
         "- `original-580` is the baseline after #579 and before #580.",
         "- Every checkpoint uses the same current fixture set.",
         "- Historical prompt text, roster dispatch cells, prompt scopes, and agent prompt files are read from the checkpoint commit with `git show`.",
+        "- The active `WORKTREE` checkpoint reads current prompt files directly before the branch is committed.",
         "- Prompt tokens and aggregate-output tokens are estimated as `ceil(characters / 4)` per fixture and summed for totals.",
         "- Every child story is reported with an incremental delta and a cumulative delta against `original-580`.",
         "",

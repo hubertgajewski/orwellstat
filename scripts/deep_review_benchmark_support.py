@@ -155,8 +155,9 @@ SECURITY_SENSITIVE_COMPONENT_MARKERS_V1 = (
     "password",
 )
 SECURITY_CREDENTIAL_LINE_RE_V1 = re.compile(
-    r"\b(secret|token|password|passwd|api_key|api-key|private_key|private-key|"
-    r"credential|authorization|cookie|session)\b.*(=|:|=>|\${{)",
+    r"(?:^|[\s'\"`{,\[])"
+    r"(?:secret|token|password|passwd|api[_-]key|private[_-]key|"
+    r"credential|authorization|cookie|session)\s*(?:=|:|=>|\${{)",
     re.IGNORECASE,
 )
 PROMPT_SCOPE_FULL = "full"
@@ -397,6 +398,10 @@ def is_project_checklist_path_v1(path):
     )
 
 
+def is_project_checklist_path_static_v1(path):
+    return is_playwright_typescript_dir_path_v1(path) or path.startswith("bruno/")
+
+
 def is_docs_path_v1(block):
     return (
         block["status"] == "added"
@@ -409,6 +414,18 @@ def is_docs_path_v1(block):
 
 def is_typescript_path_v1(path):
     return path.endswith((".ts", ".tsx"))
+
+
+def is_playwright_typescript_dir_path_v1(path):
+    return path.startswith("playwright/typescript/")
+
+
+def is_playwright_spec_path_v1(path):
+    return path.startswith("playwright/typescript/tests/") and path.endswith(".spec.ts")
+
+
+def collect_added_lines(parsed_blocks):
+    return [line for block in parsed_blocks for line in block["added_lines"]]
 
 
 def is_python_path_v1(path):
@@ -499,6 +516,11 @@ def dispatch_project_checklist_v1(parsed_blocks, untracked_paths=""):
     return any(is_project_checklist_path_v1(path) for path in paths)
 
 
+def dispatch_project_checklist_static_v1(parsed_blocks, untracked_paths=""):
+    paths = changed_paths(parsed_blocks, untracked_paths)
+    return any(is_project_checklist_path_static_v1(path) for path in paths)
+
+
 def dispatch_docs_v1(parsed_blocks, untracked_paths=""):
     if any(is_docs_path_v1(block) for block in parsed_blocks):
         return True
@@ -507,11 +529,7 @@ def dispatch_docs_v1(parsed_blocks, untracked_paths=""):
 
 def dispatch_security_risk_v1(parsed_blocks, untracked_paths=""):
     paths = changed_paths(parsed_blocks, untracked_paths)
-    added_lines = [
-        line
-        for block in parsed_blocks
-        for line in block["added_lines"]
-    ]
+    added_lines = collect_added_lines(parsed_blocks)
     if any(is_security_trigger_path_v1(path) for path in paths):
         return True
     if any(SECURITY_CREDENTIAL_LINE_RE_V1.search(line) for line in added_lines):
@@ -547,7 +565,7 @@ def changed_paths(parsed_blocks, untracked_paths=""):
 
 
 is_workflow_path = is_workflow_path_v1
-is_project_checklist_path = is_project_checklist_path_v1
+is_project_checklist_path = is_project_checklist_path_static_v1
 is_docs_path = is_docs_path_v1
 is_typescript_path = is_typescript_path_v1
 is_python_path = is_python_path_v1
@@ -565,7 +583,14 @@ PROMPT_SCOPE_SELECTORS_V1 = MappingProxyType({
     "qa": lambda block: any_block_path(block, is_qa_path_v1),
     "unit-test": lambda block: any_block_path(block, is_unit_test_surface_path_v1),
 })
-PROMPT_SCOPE_SELECTORS = PROMPT_SCOPE_SELECTORS_V1
+PROMPT_SCOPE_SELECTORS_STATIC_V1 = MappingProxyType({
+    **PROMPT_SCOPE_SELECTORS_V1,
+    "project-checklist": lambda block: any_block_path(
+        block,
+        is_project_checklist_path_static_v1,
+    ),
+})
+PROMPT_SCOPE_SELECTORS = PROMPT_SCOPE_SELECTORS_STATIC_V1
 AGENT_DISPATCH_PROMPT_SCOPES_V1 = MappingProxyType({
     "deep-review-typescript": "typescript",
     "deep-review-python": "python",
@@ -591,12 +616,18 @@ def block_matches_prompt_scope_v1(block, prompt_scope):
     return selector(block)
 
 
-def dispatch_matches_v1(agent, cells, parsed_blocks, untracked_paths=""):
+def _dispatch_matches(
+    agent,
+    cells,
+    parsed_blocks,
+    untracked_paths,
+    project_checklist_fn,
+):
     dispatch = cells["dispatch"]
     if dispatch == "always":
         return True
     if dispatch == "project-checklist trigger":
-        return dispatch_project_checklist_v1(parsed_blocks, untracked_paths)
+        return project_checklist_fn(parsed_blocks, untracked_paths)
     if dispatch == "docs trigger":
         return dispatch_docs_v1(parsed_blocks, untracked_paths)
     if dispatch == "security-risk trigger":
@@ -609,13 +640,51 @@ def dispatch_matches_v1(agent, cells, parsed_blocks, untracked_paths=""):
     raise ValueError(f"Unknown dispatch trigger for {agent}: {dispatch}")
 
 
-def selected_agents_for_diff_v1(roster, diff_text, untracked_paths=""):
+def dispatch_matches_v1(agent, cells, parsed_blocks, untracked_paths=""):
+    return _dispatch_matches(
+        agent,
+        cells,
+        parsed_blocks,
+        untracked_paths,
+        dispatch_project_checklist_v1,
+    )
+
+
+def dispatch_matches_static_v1(agent, cells, parsed_blocks, untracked_paths=""):
+    return _dispatch_matches(
+        agent,
+        cells,
+        parsed_blocks,
+        untracked_paths,
+        dispatch_project_checklist_static_v1,
+    )
+
+
+def _selected_agents_for_diff(roster, diff_text, untracked_paths, dispatch_fn):
     parsed_blocks = parse_diff(diff_text)
     return [
         agent
         for agent, cells in roster.items()
-        if dispatch_matches_v1(agent, cells, parsed_blocks, untracked_paths)
+        if dispatch_fn(agent, cells, parsed_blocks, untracked_paths)
     ]
+
+
+def selected_agents_for_diff_v1(roster, diff_text, untracked_paths=""):
+    return _selected_agents_for_diff(
+        roster,
+        diff_text,
+        untracked_paths,
+        dispatch_matches_v1,
+    )
+
+
+def selected_agents_for_diff_static_v1(roster, diff_text, untracked_paths=""):
+    return _selected_agents_for_diff(
+        roster,
+        diff_text,
+        untracked_paths,
+        dispatch_matches_static_v1,
+    )
 
 
 def build_prompt_frames_with_contract(
@@ -692,7 +761,7 @@ def build_scoped_prompt_frames_v1(diff_text, *, roster):
     )
 
 
-selected_agents_for_diff = selected_agents_for_diff_v1
+selected_agents_for_diff = selected_agents_for_diff_static_v1
 
 
 def load_fixtures(path=DEFAULT_FIXTURES):

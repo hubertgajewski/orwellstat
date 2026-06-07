@@ -418,6 +418,76 @@ class FixtureTests(unittest.TestCase):
         )
         self.assertIn("compact output still surfaces schema violations", report_text.lower())
 
+    def test_issue_584_benchmark_report_records_shared_boilerplate_comparison(self):
+        report = (
+            Path(__file__).parents[1]
+            / "docs/deep-review-pro-benchmark/reports/584-shared-boilerplate.md"
+        )
+
+        report_text = report.read_text()
+
+        self.assertIn("# Issue 584 Shared Boilerplate Benchmark", report_text)
+        self.assertIn("Checkpoint: `0d7add0` (`post-584`)", report_text)
+        self.assertIn("## Epic Comparable Benchmark", report_text)
+        self.assertIn("## Prompt-Footprint Estimate", report_text)
+        self.assertIn("### Incremental Delta: post-583 -> post-584", report_text)
+        self.assertIn(
+            "| Combined est. tokens | 509,477 | 493,934 | -15,543 (-3.05%) |",
+            report_text,
+        )
+        self.assertIn(
+            "### Cumulative Delta: original-580 -> post-584",
+            report_text,
+        )
+        self.assertIn(
+            "| Combined est. tokens | 955,555 | 493,934 | -461,621 (-48.31%) |",
+            report_text,
+        )
+        self.assertIn(
+            "| **Total** | **2,026,319** | **1,964,147** | **506,583** | **491,040** | **-15,543 (-3.07%)** |",
+            report_text,
+        )
+        self.assertIn("## Shared specialist-agent contract", report_text)
+        self.assertIn("does not change dispatch triggers", report_text)
+
+    def test_issue_585_benchmark_report_records_static_prepass_comparison(self):
+        report = (
+            Path(__file__).parents[1]
+            / "docs/deep-review-pro-benchmark/reports/585-static-prepass.md"
+        )
+
+        report_text = report.read_text()
+
+        self.assertIn("# Issue 585 Static Pre-Pass Benchmark", report_text)
+        self.assertIn("Checkpoint: `825069c` (`post-585`)", report_text)
+        self.assertIn("## Epic Comparable Benchmark", report_text)
+        self.assertIn("## Prompt-Input Proxy Comparison", report_text)
+        self.assertIn("## Static Pre-Pass Aggregate-Output Proxy", report_text)
+        self.assertIn("## Dispatch Comparison", report_text)
+        self.assertIn("### Incremental Delta: post-584 -> post-585", report_text)
+        self.assertIn(
+            "| Combined est. tokens | 493,934 | 490,433 | -3,501 (-0.71%) |",
+            report_text,
+        )
+        self.assertIn(
+            "### Cumulative Delta: original-580 -> post-585",
+            report_text,
+        )
+        self.assertIn(
+            "| Combined est. tokens | 955,555 | 490,433 | -465,122 (-48.68%) |",
+            report_text,
+        )
+        self.assertIn(
+            "| **Total** | **1,964,147** | **1,946,824** | **491,040** | **486,708** | **-4,332 (-0.88%)** |",
+            report_text,
+        )
+        self.assertIn(
+            "| **Total** | **11,561** | **14,886** | **2,894** | **3,725** | **831 (28.71%)** |",
+            report_text,
+        )
+        self.assertIn("`workflow` | 7 | 6 |", report_text)
+        self.assertIn("dispatch-static-v1", report_text)
+
     def test_issue_582_benchmark_report_records_rerun_sequence_validation(self):
         report = (
             Path(__file__).parents[1]
@@ -453,6 +523,10 @@ class FixtureTests(unittest.TestCase):
         self.assertIn("`CHANGED_FILES`", skill_text)
         self.assertIn("`{{CHANGED_FILES}}`", skill_text)
         self.assertIn("`<changed-files>`", skill_text)
+        self.assertIn("## Static pre-pass", skill_text)
+        self.assertIn("### static-pre-pass", skill_text)
+        self.assertIn("actionlint-shellcheck", skill_text)
+        self.assertIn("coverage-matrix", skill_text)
         self.assertIn("<changed-files>\n{{CHANGED_FILES}}\n</changed-files>", skill_text)
         self.assertIn("## Scope builder and per-agent prompt frames", skill_text)
         self.assertIn("PROMPT_FRAME_<Agent>", skill_text)
@@ -693,7 +767,7 @@ Binary files a/image.png and b/image.png differ
 
     def test_prompt_scope_matchers_cover_trigger_surfaces(self):
         self.assertTrue(support.is_project_checklist_path("bruno/check.bru"))
-        self.assertTrue(support.is_project_checklist_path(".github/workflows/review.yml"))
+        self.assertFalse(support.is_project_checklist_path(".github/workflows/review.yml"))
         self.assertTrue(
             support.is_docs_path(
                 {
@@ -864,7 +938,43 @@ copy to {target_path}
                 {"dispatch": "custom trigger", "prompt_scope": "full"},
                 parsed,
             )
+        with self.assertRaisesRegex(ValueError, "Cannot derive scope trigger"):
+            support.dispatch_matches_static_v1(
+                "deep-review-custom",
+                {"dispatch": "scope contains custom", "prompt_scope": "full"},
+                parsed,
+            )
+        with self.assertRaisesRegex(ValueError, "Unknown dispatch trigger"):
+            support.dispatch_matches_static_v1(
+                "deep-review-code",
+                {"dispatch": "custom trigger", "prompt_scope": "full"},
+                parsed,
+            )
         self.assertEqual(support.build_full_prompt_frame_v1(""), "")
+
+    def test_credential_line_regex_ignores_static_prepass_prose(self):
+        positive_lines = [
+            "tok" + "en = example",
+            "Authori" + "zation: Bearer example",
+            "api" + "-key => example",
+            "cook" + "ie: sess" + "ion=example",
+            "{secret: value}",
+            " token: x",
+            ",password: x",
+        ]
+        prose_lines = [
+            "The pre-pass reports deny-pattern/secret-scan, then SKIPPED: example.",
+            "self.assertIn(\"- [pass] secret-scan:\", output)",
+            "| `secret-scan` | Always | Credential-shaped rows use blocking=yes |",
+            "no_secret_here",
+        ]
+
+        for line in positive_lines:
+            with self.subTest(line=line):
+                self.assertIsNotNone(support.SECURITY_CREDENTIAL_LINE_RE_V1.search(line))
+        for line in prose_lines:
+            with self.subTest(line=line):
+                self.assertIsNone(support.SECURITY_CREDENTIAL_LINE_RE_V1.search(line))
 
     def test_default_fixtures_record_conditional_low_risk_dispatch(self):
         fixtures = {fixture["name"]: fixture for fixture in benchmark.load_fixtures()}
@@ -901,6 +1011,23 @@ copy to {target_path}
                     "deep-review-docs",
                     "deep-review-python",
                     "deep-review-ci",
+                    "deep-review-unit-test",
+                },
+            },
+            "workflow": {
+                "dispatched": {
+                    "deep-review-security",
+                    "deep-review-simplification",
+                    "deep-review-code",
+                    "deep-review-architecture",
+                    "deep-review-docs",
+                    "deep-review-ci",
+                },
+                "skipped": {
+                    "deep-review-project-checklist",
+                    "deep-review-typescript",
+                    "deep-review-python",
+                    "deep-review-qa",
                     "deep-review-unit-test",
                 },
             },

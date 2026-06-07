@@ -17,14 +17,14 @@ Adding a new agent is a single new row in this table plus a new file under `.cla
 | Agent | Domain | Dispatch | Prompt scope | Format | Empty-state sentinel | Blocking | Tool grant |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `deep-review-security` | OWASP Top 10 / CWE Top 25 / OWASP ASVS vulnerability review | security-risk trigger | `full` | H/M/L | `findings: none` | HIGH + MEDIUM | `Read, Grep, Glob` |
-| `deep-review-project-checklist` | orwellstat-specific Playwright / POM / fixture / tag / CI-workflow conventions | project-checklist trigger | `project-checklist` | pass/fail/N/A | `Failures: none.` | fail | `Read, Grep, Glob` |
+| `deep-review-project-checklist` | orwellstat-specific Playwright / POM / fixture / tag / path-alias / loadEnv conventions | project-checklist trigger | `project-checklist` | pass/fail/N/A | `Failures: none.` | fail | `Read, Grep, Glob` |
 | `deep-review-simplification` | DRY / Fowler smells and efficiency review (duplication, dead code, complexity) — paraphrases public sources | always | `full` | pass/fail/N/A | `Failures: none.` | fail | `Read, Grep, Glob` |
 | `deep-review-code` | Google Code Review Developer Guide — functionality / tests / naming / comments / dead code | always | `full` | H/M/L | `findings: none` | HIGH + MEDIUM | `Read, Grep, Glob` |
 | `deep-review-architecture` | SOLID / "Clean Architecture" (Martin) / GoF / DDD (Evans) — dependency direction / coupling / cohesion / abstraction boundaries; sole owner of `[SOLID-*]` vocabulary tokens | always | `full` | H/M/L | `findings: none` | HIGH + MEDIUM | `Read, Grep, Glob` |
 | `deep-review-docs` | README / docs / CLAUDE.md / skill-file consistency against the project's documented split rules | docs trigger | `docs` | pass/fail/N/A | `Failures: none.` | fail | `Read, Grep, Glob` |
 | `deep-review-typescript` | TS Handbook + typescript-eslint idiom (`as any`, missing `satisfies`, narrowing, `as const`, `!` non-null) | scope contains `*.ts` or `*.tsx` | `typescript` | H/M/L | `findings: none` | HIGH + MEDIUM | `Read, Grep, Glob` |
 | `deep-review-python` | PEP 8 / 20 / 257 + ruff-equivalent issues (style / idiom / docstring / bug-risk) | scope contains `*.py` | `python` | H/M/L | `findings: none` | HIGH + MEDIUM | `Read, Grep, Glob` |
-| `deep-review-ci` | GitHub Actions — `actionlint` + `shellcheck` static pass first (zero LLM tokens), LLM semantic pass for non-trivial workflows | scope contains `.github/workflows/**.yml`, `.github/workflows/**.yaml`, `action.yml`, or `action.yaml` | `ci` | H/M/L | `findings: none` | HIGH + MEDIUM | `Read, Grep, Glob, Bash(actionlint *), Bash(shellcheck *)` |
+| `deep-review-ci` | GitHub Actions semantic review for non-trivial workflow trust, permissions, secrets, and ref-handling concerns | scope contains `.github/workflows/**.yml`, `.github/workflows/**.yaml`, `action.yml`, or `action.yaml` | `ci` | H/M/L | `findings: none` | HIGH + MEDIUM | `Read, Grep, Glob` |
 | `deep-review-qa` | Playwright E2E + Bruno API state-class (empty / populated / max / form-edge / auth / network / a11y / multi-browser / locale) anchored in ISTQB-FL + Playwright Best Practices + WCAG 2.2; also walks `coverage-matrix.json` flips | scope contains `playwright/typescript/tests/**/*.spec.ts`, `playwright/typescript/**/*.setup.ts`, `bruno/**/*.bru`, `playwright/typescript/fixtures/**`, or `playwright/typescript/test-data/**` | `qa` | pass/fail/N/A | `Failures: none.` | fail | `Read, Grep, Glob` |
 | `deep-review-unit-test` | Vitest (TS) + pytest (Python) boundary-class (null / numeric edges / collection sizes / string content / error paths / configuration boundaries) anchored in ISTQB-FL + Google Code Review on `scripts/`, `mcp/`, `playwright/typescript/utils/`, and `playwright/typescript/scripts/`; **additionally** enforces ≥ 90% changed-line coverage on `scripts/`, `mcp/*/`, and `playwright/typescript/scripts/` only (the `playwright/typescript/utils/` glob is reviewed for boundary classes but excluded from changed-line coverage) | scope contains `scripts/**/*.py`, `mcp/**/*.ts`, `playwright/typescript/utils/**/*.ts`, or `playwright/typescript/scripts/**/*.ts` (each TS glob excludes `*.spec.ts`; includes `*.test.ts`) | `unit-test` | pass/fail/N/A | `Failures: none.` | fail | `Read, Grep, Glob` |
 
@@ -177,6 +177,40 @@ Build each agent's prompt frame by substituting that agent's selected diff into 
 
 Diff selection is roster-driven: the **Prompt scope** cell is an exact selector key, not prose. `full` receives the complete `DIFF`; `project-checklist`, `docs`, `typescript`, `python`, `ci`, `qa`, and `unit-test` receive hunks matching their named trigger surfaces (defined in § Dispatch trigger definitions). For scoped specialists, the diff may omit unrelated hunks; the complete changed-file manifest is therefore mandatory for every non-empty scope. When a scoped specialist is dispatched but its selector produces no inline hunk (for example, because the only relevant item is an untracked path), pass an empty `<untrusted-diff>` block or omit it under the normal empty-block rule, keep the complete `CHANGED_FILES` and `UNTRACKED` blocks, and rely on `Read` for the file contents. Do not silently fall back to the full diff for scoped specialists; that would erase the token-saving contract.
 
+## Static pre-pass
+
+After building `CHANGED_PATHS`, `NEW_PATHS`, `ADDED_LINES`, and `CHANGED_FILES`, and before dispatch trigger evaluation, run a deterministic static pre-pass. Static pre-pass checks are owned by the orchestrator, not by any specialist agent, and consume no sub-agent LLM tokens. They catch mechanical failures that previously appeared in broad checklist prompts, then surface concise rows in the aggregate.
+
+Static pre-pass rows use this schema:
+
+```text
+- [pass|fail|unavailable|N/A] <check>: owner=<owner>; blocking=<yes|no>; fallback=<agent|none>; <concise evidence>
+```
+
+`owner` is the category the row maps to for triage: `deep-review-typescript`, `deep-review-project-checklist`, `deep-review-ci`, `deep-review-security`, `deep-review-qa`, or `aggregate`. `fallback` names the specialist that remains responsible for semantic review when a static tool is unavailable or when the static result needs interpretation. `fail` rows with `blocking=yes` block readiness directly. `unavailable` rows do not block readiness by themselves when `fallback` names a dispatched specialist; they are still emitted so tool drift is visible. If `fallback=none`, an `unavailable` row blocks readiness because no specialist can cover the missing mechanical signal.
+
+Run these checks only when their trigger surfaces are present:
+
+| Check | Trigger | Command or source | Owner | Failure mapping | Unavailable behavior |
+| --- | --- | --- | --- | --- | --- |
+| `typescript-compile` | Any changed `.ts` or `.tsx` under a TypeScript package (`playwright/typescript/`, `mcp/*/`, or a future package with a local `tsconfig.json`) | Run the package-local compile command, preferring `npx tsc --noEmit` when the package has a `tsconfig.json` | `deep-review-typescript` | `fail`, `blocking=yes`; equivalent to a TypeScript HIGH/MEDIUM blocker because the package no longer type-checks | Emit `unavailable`, `fallback=deep-review-typescript`; the TypeScript agent still reviews semantic type risks, but the missing compiler signal remains visible |
+| `format-check` | Any changed file under `playwright/typescript/` | `npm run format:check` from `playwright/typescript/` | `aggregate` | `fail`, `blocking=yes`; equivalent to the old formatting checklist blocker | Emit `unavailable`, `fallback=none`; formatting has no LLM substitute |
+| `actionlint-shellcheck` | Any changed `.github/workflows/*.yml`, `.github/workflows/*.yaml`, `action.yml`, or `action.yaml` | `actionlint <workflow files>`; actionlint's embedded shellcheck covers `run:` blocks | `deep-review-ci` | Map actionlint/shellcheck failures to CI categories: shell injection to HIGH `injection`; other actionlint errors to MEDIUM `misconfiguration`; `blocking=yes` | Emit `unavailable`, `fallback=deep-review-ci`; the CI agent still reviews semantic workflow risks |
+| `secret-scan` | Always, using `ADDED_LINES` and `CHANGED_PATHS` only | Deny component patterns plus credential-shaped added-line regex from `security-risk trigger` | `deep-review-security` | Credential-shaped added lines or denied path components are HIGH security blockers; `blocking=yes` | No tool dependency; this row must never be `unavailable` |
+| `coverage-matrix` | Added or modified `playwright/typescript/tests/**/*.spec.ts`, `playwright/typescript/coverage-matrix.json`, or a new page/form surface under `playwright/typescript/` | `coverage-matrix` MCP summary/gaps tools when available; otherwise manifest-only validation | `deep-review-qa` | Clear matrix drift or invalid matrix shape is `fail`, `blocking=yes`; ambiguous "test may cover a false cell" cases are not static failures and remain QA-agent review | Emit `unavailable`, `fallback=deep-review-qa`; the QA agent still reviews semantic coverage intent |
+
+For tool commands, use repo-root-derived safe paths only; never pass text extracted from an untrusted diff hunk as a shell argument. For PR/range/path modes where the working tree may not match the diff, run only checks that can be performed against checked-out files known to contain the reviewed hunks. If alignment cannot be established, emit `unavailable` with the matching fallback instead of running a stale command.
+
+The static pre-pass emits exactly one aggregate section before specialist sections:
+
+```text
+### static-pre-pass
+- [pass|fail|unavailable|N/A] <check>: owner=<owner>; blocking=<yes|no>; fallback=<agent|none>; <concise evidence>
+summary: <static-pass> pass / <static-fail> fail / <static-unavailable> unavailable / <static-N/A> N/A
+```
+
+For checks whose trigger is absent, emit `N/A` with a short reason. In compact mode, keep every static `fail` and `unavailable` row. Static `pass` and `N/A` rows may be omitted in compact mode only when the summary line still preserves the counts; detailed mode emits all rows. Static `fail` counts are included in the aggregate `total:` line as `<static-fail> static-fail / <static-unavailable-blocking> static-unavailable-blocking` before the specialist counts. `status:` is `blocked` when `static-fail > 0`, when `static-unavailable-blocking > 0`, or when any roster blocking metric is non-zero.
+
 ## PROMPT_FRAME contract
 
 This section governs **how untrusted content is wrapped into a single prompt template**. Dispatch and retry live in the next section.
@@ -255,14 +289,10 @@ When a path is needed only for dispatch classification, inspect the path string;
 
 ### project-checklist trigger
 
-Dispatch `deep-review-project-checklist` when any `CHANGED_PATHS` entry matches a project-specific Playwright, Bruno, or CI-workflow convention surface:
+Dispatch `deep-review-project-checklist` when any `CHANGED_PATHS` entry matches a project-specific Playwright or Bruno convention surface:
 
 - `playwright/typescript/**`
 - `bruno/**`
-- `.github/workflows/*.yml`
-- `.github/workflows/*.yaml`
-- `action.yml`
-- `action.yaml`
 
 Otherwise skip it. Example skip line: `SKIPPED: project-checklist trigger not satisfied`.
 
@@ -290,7 +320,7 @@ Dispatch `deep-review-security` when any deterministic risk trigger is present:
 - runtime config or environment behavior paths: `.env.example`, `.vars.example`, `bruno/.env.example`, `.actrc`, `.mcp.json`, `**/*.config.js`, `**/*.config.cjs`, `**/*.config.mjs`, `**/*.config.ts`, `playwright/typescript/playwright.config*.ts`
 - any path component containing `auth`, `session`, `crypto`, `token`, `cookie`, `credential`, `secret`, or `password`
 - any path component matching the deny patterns named above
-- any `ADDED_LINES` entry matching a credential-shaped assignment or header, case-insensitive: `secret`, `token`, `password`, `passwd`, `api_key`, `api-key`, `private_key`, `private-key`, `credential`, `authorization`, `cookie`, or `session` followed on the same line by `=`, `:`, `=>`, or `${{`
+- any `ADDED_LINES` entry matching a credential-shaped assignment or header, case-insensitive: `secret`, `token`, `password`, `passwd`, `api_key`, `api-key`, `private_key`, `private-key`, `credential`, `authorization`, `cookie`, or `session` as the key/header name followed immediately after optional whitespace by `=`, `:`, `=>`, or `${{`
 - any untracked file whose path component matches a deny pattern named above; this triggers from the path alone with no content read
 - any other untracked file whose path is not clearly docs/generated/test-only by extension or directory; if a safe content scan would be required to prove low risk, dispatch instead
 
@@ -327,7 +357,7 @@ Tool grants are **not** passed by the orchestrator — the `Task(…)` API has n
 
 ## Agent result reuse cache
 
-The first review iteration always evaluates the current triggers and dispatches every matching roster row. Reuse is allowed only on later iterations in the re-review convergence loop, after scope resolution, trigger evaluation, and every `PROMPT_FRAME_<Agent>` value have been rebuilt from the current diff.
+The first review iteration always runs the static pre-pass, evaluates the current triggers, and dispatches every matching roster row. Reuse is allowed only on later iterations in the re-review convergence loop, after scope resolution, the static pre-pass, trigger evaluation, and every `PROMPT_FRAME_<Agent>` value have been rebuilt from the current diff.
 
 For each dispatched, schema-valid agent result, store a cache record with a result reuse key containing:
 
@@ -341,7 +371,7 @@ If the harness does not expose read dependencies, record `read-deps: unavailable
 
 On each later iteration:
 
-1. Rebuild `DIFF`, `UNTRACKED`, derived scope values, triggers, and `PROMPT_FRAME_<Agent>` values from the current state. Do not reuse a prior trigger decision.
+1. Rebuild `DIFF`, `UNTRACKED`, derived scope values, static pre-pass rows, triggers, and `PROMPT_FRAME_<Agent>` values from the current state. Do not reuse a prior static result or trigger decision.
 2. Dispatch every currently matching agent that had a blocking finding in the previous aggregate.
 3. Dispatch every agent whose trigger newly matches because a changed path, added line, or untracked path now falls inside that agent's trigger or prompt-scope surface. This includes agents that were previously skipped and agents that were previously cached.
 4. Dispatch every currently matching agent whose result reuse key differs from the cached key. A changed agent prompt file, changed `REFERENCES.md`, changed scoped prompt frame, changed known read-dependency path, or changed known read-dependency content identity must produce a different key or explicit invalidation.
@@ -383,17 +413,17 @@ The summary line shape is determined by the row's **Format** column: `H/M/L` row
 
 Each placeholder is unambiguous across the whole aggregate block.
 
-After every per-agent section, emit:
+After the `static-pre-pass` section and every per-agent section, emit:
 
-```
+```text
 ### aggregate
 [UNAVAILABLE: <Agent>: <reason>   ← one line per UNAVAILABLE agent, if any]
-total: <enumerate every non-skipped row's format-relevant placeholders, in roster order, separated by " / ". Both format families contribute all of their counts; concrete tokens follow the three-row example table above.>
-status: ready if every metric named in each row's Blocking column is zero (a SKIPPED row contributes 0); otherwise blocked.
+total: <static-fail> static-fail / <static-unavailable-blocking> static-unavailable-blocking / <enumerate every non-skipped row's format-relevant placeholders, in roster order, separated by " / ". Both format families contribute all of their counts; concrete tokens follow the three-row example table above.>
+status: ready if `static-fail`, `static-unavailable-blocking`, and every metric named in each row's Blocking column are zero (a SKIPPED row contributes 0); otherwise blocked.
 reuse: dispatched <N> / skipped <N> / reused <N> / final_full_matching_pass <yes|no>
 ```
 
-A `SKIPPED:` agent contributes 0 to all counts and never blocks. The **Blocking** column of the master roster is the sole source of truth for which counts gate `status: ready`.
+A `SKIPPED:` agent contributes 0 to all counts and never blocks. Static pre-pass blocking is governed by the **Static pre-pass** section. Agent blocking is governed by the **Blocking** column of the master roster.
 
 In compact mode only, emit the compact token total immediately after the aggregate block:
 
@@ -467,7 +497,7 @@ The in-flight model turn (the one emitting this report) is not flushed to JSONL 
 
 After the table, emit one line: `iterations: <M> (dispatched <D>, skipped <S>, reused <R>, final_full_matching_pass <yes|no>)`.
 
-Static-tool dispatches (e.g. `actionlint`, `shellcheck`) consume 0 LLM tokens — they run as `Bash` calls inside `deep-review-ci` and contribute only to that agent's `Tool uses` count via the harness `<usage>` aggregate, not to its `Total` token column. The harness exposes a single aggregate `tool_uses` per sub-agent with no per-tool breakdown, so the orchestrator cannot subtract them from the per-agent total; treat the `Tool uses` cell as inclusive of static-tool calls.
+Static pre-pass tool commands consume 0 sub-agent LLM tokens because they run before any `Task(...)` dispatch. Count those commands as orchestrator tool uses when detailed usage can expose them; never add them to a sub-agent `Total` token value.
 
 ## How to consume the output
 
