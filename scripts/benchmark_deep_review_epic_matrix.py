@@ -593,10 +593,11 @@ def compact_output_proxy(
     )
 
 
-def static_prepass_proxy_rows(diff_text: str) -> list[tuple[str, str, str]]:
-    parsed = parse_diff(diff_text)
-    paths = changed_paths(parsed)
-    added_lines = collect_added_lines(parsed)
+def static_prepass_proxy_rows_from_blocks(
+    parsed_blocks,
+) -> list[tuple[str, str, str]]:
+    paths = changed_paths(parsed_blocks)
+    added_lines = collect_added_lines(parsed_blocks)
     has_typescript = any(is_typescript_path_v1(path) for path in paths)
     has_playwright_typescript = any(
         is_playwright_typescript_dir_path_v1(path) for path in paths
@@ -647,6 +648,10 @@ def static_prepass_proxy_rows(diff_text: str) -> list[tuple[str, str, str]]:
     ]
 
 
+def static_prepass_proxy_rows(diff_text: str) -> list[tuple[str, str, str]]:
+    return static_prepass_proxy_rows_from_blocks(parse_diff(diff_text))
+
+
 def static_unavailable_blocking_count(rows: list[tuple[str, str, str]]) -> int:
     return sum(
         1
@@ -655,8 +660,10 @@ def static_unavailable_blocking_count(rows: list[tuple[str, str, str]]) -> int:
     )
 
 
-def static_prepass_proxy_section(diff_text: str) -> tuple[str, str, dict[str, int]]:
-    rows = static_prepass_proxy_rows(diff_text)
+def static_prepass_proxy_section_from_blocks(
+    parsed_blocks,
+) -> tuple[str, str, dict[str, int]]:
+    rows = static_prepass_proxy_rows_from_blocks(parsed_blocks)
     blocking_unavailable = static_unavailable_blocking_count(rows)
     counts = {
         status: sum(1 for row in rows if row[0] == status)
@@ -675,6 +682,10 @@ def static_prepass_proxy_section(diff_text: str) -> tuple[str, str, dict[str, in
         f"{counts['unavailable_blocking']} static-unavailable-blocking"
     )
     return f"### static-pre-pass\n{body}\n{summary}", total, counts
+
+
+def static_prepass_proxy_section(diff_text: str) -> tuple[str, str, dict[str, int]]:
+    return static_prepass_proxy_section_from_blocks(parse_diff(diff_text))
 
 
 def _render_compact_static_aggregate_proxy(
@@ -788,7 +799,9 @@ def compact_static_bucketed_output_proxy(
     diff_text: str,
 ) -> str:
     parsed_blocks = parse_diff(diff_text)
-    static_section, static_total, static_counts = static_prepass_proxy_section(diff_text)
+    static_section, static_total, static_counts = static_prepass_proxy_section_from_blocks(
+        parsed_blocks
+    )
     bucketing_section, bucketing_total, partial_flag = (
         large_diff_bucketing_proxy_section_from_blocks(parsed_blocks)
     )

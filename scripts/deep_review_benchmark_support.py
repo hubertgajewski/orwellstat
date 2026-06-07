@@ -434,17 +434,27 @@ def collect_added_lines(parsed_blocks):
 
 LARGE_DIFF_CHANGED_LINE_THRESHOLD_V1 = 3000
 LARGE_DIFF_BUCKET_ORDER_V1 = ("high-risk", "normal", "low-risk", "generated")
-LOCKFILE_BUCKET_PATHS_V1 = {
-    "package-lock.json",
-    "npm-shrinkwrap.json",
-    "pnpm-lock.yaml",
-    "yarn.lock",
-    "poetry.lock",
-    "Pipfile.lock",
-    "Gemfile.lock",
-    "composer.lock",
+LARGE_DIFF_BUCKET_RANK_V1 = {
+    bucket: index for index, bucket in enumerate(LARGE_DIFF_BUCKET_ORDER_V1)
 }
-GENERATED_BUCKET_PATTERNS_V1 = tuple(sorted(LOCKFILE_BUCKET_PATHS_V1))
+METADATA_ONLY_BUCKETS_V1 = frozenset(
+    {LARGE_DIFF_BUCKET_ORDER_V1[2], LARGE_DIFF_BUCKET_ORDER_V1[3]}
+)
+DEPENDENCY_MANIFEST_PATHS_V1 = frozenset(
+    {
+        "package.json",
+        "requirements.txt",
+        "pyproject.toml",
+        "Pipfile",
+        "Gemfile",
+        "composer.json",
+    }
+)
+LOCKFILE_BUCKET_PATHS_V1 = frozenset(
+    path
+    for path in SECURITY_DEPENDENCY_PATHS_V1
+    if path not in DEPENDENCY_MANIFEST_PATHS_V1
+)
 LARGE_DIFF_LOW_RISK_PATTERNS_V1 = SECURITY_LOW_RISK_PATTERNS_V1 + (
     ".claude/skills/**",
     ".claude/agents/**",
@@ -465,7 +475,8 @@ def count_changed_lines(parsed_blocks):
 
 
 def is_generated_bucket_path_v1(path):
-    return matches_any(path, GENERATED_BUCKET_PATTERNS_V1)
+    basename = path.rsplit("/", 1)[-1]
+    return basename in LOCKFILE_BUCKET_PATHS_V1
 
 
 def is_large_diff_low_risk_path_v1(path):
@@ -541,26 +552,17 @@ def blocks_with_buckets_v1(blocks):
     ]
 
 
-def order_blocks_for_large_diff_v1(blocks):
-    return [
-        block
-        for block, _ in sorted(
-            blocks_with_buckets_v1(blocks),
-            key=lambda item: LARGE_DIFF_BUCKET_ORDER_V1.index(item[1]),
-        )
-    ]
-
-
-def build_bucketed_diff_text_v1(blocks, *, plan):
+def build_bucketed_diff_text_v1(blocks, *, plan, classified=None):
+    classified = classified or blocks_with_buckets_v1(blocks)
     if not plan.threshold_exceeded:
-        return "\n".join(block["text"] for block in blocks if block["text"].strip())
+        return "\n".join(block["text"] for block, _ in classified if block["text"].strip())
 
     parts = []
     for block, bucket in sorted(
-        blocks_with_buckets_v1(blocks),
-        key=lambda item: LARGE_DIFF_BUCKET_ORDER_V1.index(item[1]),
+        classified,
+        key=lambda item: LARGE_DIFF_BUCKET_RANK_V1[item[1]],
     ):
-        if bucket in {"generated", "low-risk"}:
+        if bucket in METADATA_ONLY_BUCKETS_V1:
             parts.append(metadata_only_diff_block(block))
         else:
             parts.append(block["text"])
@@ -573,16 +575,24 @@ def select_prompt_diff_v1(
     prompt_scope,
     scope_matcher,
     plan,
+    classified=None,
 ):
+    classified = classified or blocks_with_buckets_v1(parsed_blocks)
     if prompt_scope == PROMPT_SCOPE_FULL:
-        selected_blocks = parsed_blocks
+        selected = classified
     else:
-        selected_blocks = [
-            block for block in parsed_blocks if scope_matcher(block, prompt_scope)
+        selected = [
+            (block, bucket)
+            for block, bucket in classified
+            if scope_matcher(block, prompt_scope)
         ]
-    if not selected_blocks:
+    if not selected:
         return ""
-    return build_bucketed_diff_text_v1(selected_blocks, plan=plan)
+    return build_bucketed_diff_text_v1(
+        [block for block, _ in selected],
+        plan=plan,
+        classified=selected,
+    )
 
 
 def is_python_path_v1(path):
@@ -930,6 +940,7 @@ def build_scoped_prompt_frames_v1(diff_text, *, roster):
 def build_scoped_prompt_frames_bucketed_v1(diff_text, *, roster):
     parsed_blocks = parse_diff(diff_text)
     plan = plan_large_diff_bucketing_v1(parsed_blocks)
+    classified = blocks_with_buckets_v1(parsed_blocks)
 
     def scoped_diff_selector(parsed_blocks, prompt_scope, scope_matcher):
         return select_prompt_diff_v1(
@@ -937,6 +948,7 @@ def build_scoped_prompt_frames_bucketed_v1(diff_text, *, roster):
             prompt_scope=prompt_scope,
             scope_matcher=scope_matcher,
             plan=plan,
+            classified=classified,
         )
 
     return build_prompt_frames_with_contract(

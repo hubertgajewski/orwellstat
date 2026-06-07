@@ -220,8 +220,8 @@ After the static pre-pass and before dispatch trigger evaluation, count changed 
 | --- | --- | --- |
 | `high-risk` | workflows, auth/session/crypto/config/env paths, dependency manifests, production source, deny/sensitive path components | full hunks, emitted first |
 | `normal` | remaining non-generated source or config not in the low-risk list | full hunks, after high-risk |
-| `low-risk` | docs, generated snapshots, test-only files, Bruno collections | metadata-only placeholder hunk |
-| `generated` | lockfiles, visual baselines, binary diffs | metadata-only placeholder hunk |
+| `low-risk` | docs, `.claude/skills/**`, `.claude/agents/**`, `.codex/agents/**`, generated snapshots, test-only files, Bruno collections | metadata-only placeholder hunk |
+| `generated` | lockfiles (any path basename), binary diffs | metadata-only placeholder hunk |
 
 Metadata-only hunks name the path, status, and omitted line count; they tell the agent to use the complete `<changed-files>` manifest and granted `Read` tools for governing manifests or source instead of repeating thousands of low-value lines.
 

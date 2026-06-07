@@ -467,7 +467,7 @@ class FixtureTests(unittest.TestCase):
             report_text,
         )
         self.assertIn(
-            "| **Total** | **1,946,824** | **522,624** | **486,708** | **130,656** | **-356,052 (-73.16%)** |",
+            "| **Total** | **1,946,824** | **522,614** | **486,708** | **130,656** | **-356,052 (-73.16%)** |",
             report_text,
         )
         self.assertIn("scoped-bucketed-v1", report_text)
@@ -1088,6 +1088,24 @@ copy to {target_path}
         self.assertIn("large-diff-partial", skill_text)
         self.assertIn("metadata-only placeholder hunk", skill_text)
 
+    def test_parse_diff_block_counts_deletion_hunk_lines(self):
+        diff_text = "\n".join(
+            [
+                "diff --git a/scripts/example.py b/scripts/example.py",
+                "index 1111111..2222222 100644",
+                "--- a/scripts/example.py",
+                "+++ b/scripts/example.py",
+                "@@ -1,3 +1,1 @@",
+                "-line one",
+                "-line two",
+                "+line three",
+            ]
+        ) + "\n"
+        block = support.parse_diff(diff_text)[0]
+
+        self.assertEqual(block["changed_line_count"], 3)
+        self.assertEqual(support.count_changed_lines(support.parse_diff(diff_text)), 3)
+
     def test_plan_large_diff_bucketing_threshold_boundary(self):
         def synthetic_diff(line_count: int) -> str:
             body = [f"line {index}" for index in range(1, line_count + 1)]
@@ -1128,6 +1146,10 @@ copy to {target_path}
     def test_classify_path_bucket_v1_covers_all_buckets(self):
         self.assertEqual(
             support.classify_path_bucket_v1("package-lock.json"),
+            "generated",
+        )
+        self.assertEqual(
+            support.classify_path_bucket_v1("playwright/typescript/package-lock.json"),
             "generated",
         )
         self.assertEqual(

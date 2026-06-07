@@ -402,7 +402,7 @@ class EpicBenchmarkMatrixTests(unittest.TestCase):
                 ("pass", "secret-scan", "owner=deep-review-security; scanned clean"),
             ]
 
-        with patch.object(epic, "static_prepass_proxy_rows", unavailable_blocking_rows):
+        with patch.object(epic, "static_prepass_proxy_rows_from_blocks", unavailable_blocking_rows):
             output = epic.compact_static_output_proxy(
                 fixture={"name": "docs"},
                 roster={},
@@ -823,6 +823,33 @@ class EpicBenchmarkMatrixTests(unittest.TestCase):
         self.assertEqual(section, "")
         self.assertEqual(partial_flag, 0)
         self.assertIn("0 large-diff-partial", total)
+
+    def test_large_diff_bucketing_proxy_reports_partial_review_no_for_high_risk_only_large_diff(
+        self,
+    ):
+        body = [f"x = {index}" for index in range(1, 3002)]
+        diff_text = "\n".join(
+            [
+                "diff --git a/scripts/large_bucket_fixture.py b/scripts/large_bucket_fixture.py",
+                "new file mode 100644",
+                "--- /dev/null",
+                "+++ b/scripts/large_bucket_fixture.py",
+                "@@ -0,0 +1,3001 @@",
+                *[f"+{line}" for line in body],
+            ]
+        ) + "\n"
+        output = epic.compact_static_bucketed_output_proxy(
+            fixture={"name": "script-code-only"},
+            roster={},
+            agents=[],
+            skipped=[],
+            diff_text=diff_text,
+        )
+
+        self.assertIn("### large-diff-bucketing", output)
+        self.assertIn("partial-review: no", output)
+        self.assertIn("0 large-diff-partial", output)
+        self.assertIn("status: ready", output)
 
     def test_compact_static_bucketed_output_proxy_reports_blocked_status_for_large_diff_partial(
         self,
