@@ -67,6 +67,7 @@
       "mcp__playwright__browser_evaluate",
       "mcp__playwright__browser_navigate",
       "mcp__playwright-report-mcp__get_failed_tests",
+      "mcp__playwright-report-mcp__get_run_status",
       "mcp__playwright-report-mcp__get_test_attachment",
       "mcp__playwright-report-mcp__list_tests",
       "mcp__playwright-report-mcp__run_tests",

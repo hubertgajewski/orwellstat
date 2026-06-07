@@ -18,7 +18,7 @@ verify_pinned_file() {
 }
 
 verify_pinned_file "$ROOT/scripts/shell_c_option_utils.py" \
-  '9d4cd6eae23fae35f356630ed757e3313172edf79ca04256fb37c3607dd5606b' \
+  '807db8ee26f7b9da4e661235b6736160bac3dd19468ab22b9ed9fa4479669cb6' \
   scripts/shell_c_option_utils.py
 
 SCRIPT_REL="$1"

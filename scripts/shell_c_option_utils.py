@@ -3,6 +3,7 @@
 
 
 def short_option_includes_c(token: str) -> bool:
+    """Return True when a short option token includes a -c command flag."""
     return token.startswith("-") and not token.startswith("--") and "c" in token[1:]
 
 
