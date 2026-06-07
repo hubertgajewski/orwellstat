@@ -430,18 +430,16 @@ def collect_added_lines(parsed_blocks):
 
 LARGE_DIFF_CHANGED_LINE_THRESHOLD_V1 = 3000
 LARGE_DIFF_BUCKET_ORDER_V1 = ("high-risk", "normal", "low-risk", "generated")
-GENERATED_BINARY_BUCKET_PATTERNS_V1 = (
+GENERATED_BUCKET_PATTERNS_V1 = (
     "**/*.snap",
     "**/*-snapshots/**",
     "**/__screenshots__/**",
-    "package-lock.json",
-    "npm-shrinkwrap.json",
-    "pnpm-lock.yaml",
-    "yarn.lock",
-    "poetry.lock",
-    "Pipfile.lock",
-    "Gemfile.lock",
-    "composer.lock",
+    *sorted(SECURITY_DEPENDENCY_PATHS_V1),
+)
+LARGE_DIFF_LOW_RISK_PATTERNS_V1 = SECURITY_LOW_RISK_PATTERNS_V1 + (
+    ".claude/skills/**",
+    ".claude/agents/**",
+    ".codex/agents/**",
 )
 
 
@@ -468,21 +466,27 @@ def count_changed_lines(parsed_blocks):
     return total
 
 
-def is_generated_binary_bucket_path_v1(path):
-    return matches_any(path, GENERATED_BINARY_BUCKET_PATTERNS_V1)
+def is_generated_bucket_path_v1(path):
+    return matches_any(path, GENERATED_BUCKET_PATTERNS_V1)
+
+
+def is_large_diff_low_risk_path_v1(path):
+    return matches_any(path, LARGE_DIFF_LOW_RISK_PATTERNS_V1)
 
 
 def is_high_risk_bucket_path_v1(path):
+    if is_large_diff_low_risk_path_v1(path):
+        return False
     return is_security_trigger_path_v1(path)
 
 
 def classify_path_bucket_v1(path, *, block_status="modified"):
-    if block_status == "binary" or is_generated_binary_bucket_path_v1(path):
+    if block_status == "binary" or is_generated_bucket_path_v1(path):
         return "generated"
+    if is_large_diff_low_risk_path_v1(path):
+        return "low-risk"
     if is_high_risk_bucket_path_v1(path):
         return "high-risk"
-    if is_security_low_risk_path_v1(path):
-        return "low-risk"
     return "normal"
 
 
@@ -514,13 +518,13 @@ def plan_large_diff_bucketing_v1(parsed_blocks):
 
 def metadata_only_diff_block(block):
     path = block["path"] or "unknown"
-    added = len(block["added_lines"])
+    omitted = count_changed_lines([block])
     return (
         f"diff --git a/{path} b/{path}\n"
         f"--- a/{path}\n"
         f"+++ b/{path}\n"
         f"@@ large-diff-bucket: metadata-only @@\n"
-        f"+[{block['status']} {path}; {added} changed lines omitted — use manifest or Read]"
+        f"+[{block['status']} {path}; {omitted} changed lines omitted — use manifest or Read]"
     )
 
 
@@ -554,9 +558,8 @@ def select_prompt_diff_v1(
     *,
     prompt_scope,
     scope_matcher,
-    full_diff_text,
+    plan,
 ):
-    plan = plan_large_diff_bucketing_v1(parsed_blocks)
     if prompt_scope == PROMPT_SCOPE_FULL:
         selected_blocks = parsed_blocks
     else:
@@ -564,8 +567,8 @@ def select_prompt_diff_v1(
             block for block in parsed_blocks if scope_matcher(block, prompt_scope)
         ]
     if not selected_blocks:
-        return "", plan
-    return build_bucketed_diff_text_v1(selected_blocks, plan=plan), plan
+        return ""
+    return build_bucketed_diff_text_v1(selected_blocks, plan=plan)
 
 
 def is_python_path_v1(path):
@@ -904,14 +907,15 @@ def build_scoped_prompt_frames_v1(diff_text, *, roster):
 def build_scoped_prompt_frames_bucketed_v1(diff_text, *, roster):
     parsed_blocks = parse_diff(diff_text)
     changed_files = build_changed_file_manifest(parsed_blocks)
+    plan = plan_large_diff_bucketing_v1(parsed_blocks)
     frames = {}
     for agent, cells in roster.items():
         prompt_scope = cells["prompt_scope"]
-        selected_diff, _plan = select_prompt_diff_v1(
+        selected_diff = select_prompt_diff_v1(
             parsed_blocks,
             prompt_scope=prompt_scope,
             scope_matcher=block_matches_prompt_scope_v1,
-            full_diff_text=diff_text,
+            plan=plan,
         )
         frames[agent] = build_prompt_frame_v1(
             replace(

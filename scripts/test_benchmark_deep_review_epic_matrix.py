@@ -807,6 +807,23 @@ class EpicBenchmarkMatrixTests(unittest.TestCase):
                 self.assertIn("Cumulative Delta: original-580 -> post-", report)
                 self.assertIn("Combined est. tokens", report)
 
+    def test_large_diff_bucketing_proxy_noops_below_threshold(self):
+        diff_text = "\n".join(
+            [
+                "diff --git a/docs/small.md b/docs/small.md",
+                "new file mode 100644",
+                "--- /dev/null",
+                "+++ b/docs/small.md",
+                "@@ -0,0 +1,1 @@",
+                "+hello",
+            ]
+        ) + "\n"
+        section, total, partial_flag = epic.large_diff_bucketing_proxy_section(diff_text)
+
+        self.assertEqual(section, "")
+        self.assertEqual(partial_flag, 0)
+        self.assertIn("0 large-diff-partial", total)
+
     def test_large_diff_bucketing_proxy_marks_high_lines_partial(self):
         fixture = next(
             fixture for fixture in epic.load_fixtures() if fixture["name"] == "high-lines"

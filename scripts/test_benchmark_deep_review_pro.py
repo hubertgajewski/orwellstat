@@ -1088,6 +1088,77 @@ copy to {target_path}
         self.assertIn("large-diff-partial", skill_text)
         self.assertIn("metadata-only placeholder hunk", skill_text)
 
+    def test_plan_large_diff_bucketing_threshold_boundary(self):
+        def synthetic_diff(line_count: int) -> str:
+            body = [f"line {index}" for index in range(1, line_count + 1)]
+            lines = [
+                "diff --git a/docs/synthetic.md b/docs/synthetic.md",
+                "new file mode 100644",
+                "--- /dev/null",
+                "+++ b/docs/synthetic.md",
+                f"@@ -0,0 +1,{line_count} @@",
+            ]
+            lines.extend(f"+{line}" for line in body)
+            return "\n".join(lines) + "\n"
+
+        below = support.plan_large_diff_bucketing_v1(support.parse_diff(synthetic_diff(3000)))
+        above = support.plan_large_diff_bucketing_v1(support.parse_diff(synthetic_diff(3001)))
+
+        self.assertFalse(below.threshold_exceeded)
+        self.assertTrue(above.threshold_exceeded)
+
+    def test_partial_review_false_when_only_high_risk_paths_exceed_threshold(self):
+        body = [f"x = {index}" for index in range(1, 3002)]
+        diff_text = "\n".join(
+            [
+                "diff --git a/scripts/large_bucket_fixture.py b/scripts/large_bucket_fixture.py",
+                "new file mode 100644",
+                "--- /dev/null",
+                "+++ b/scripts/large_bucket_fixture.py",
+                "@@ -0,0 +1,3001 @@",
+                *[f"+{line}" for line in body],
+            ]
+        ) + "\n"
+        plan = support.plan_large_diff_bucketing_v1(support.parse_diff(diff_text))
+
+        self.assertTrue(plan.threshold_exceeded)
+        self.assertFalse(plan.partial_review)
+        self.assertEqual(plan.bucket_counts["low-risk"], 0)
+
+    def test_classify_path_bucket_v1_covers_all_buckets(self):
+        self.assertEqual(
+            support.classify_path_bucket_v1("package-lock.json"),
+            "generated",
+        )
+        self.assertEqual(
+            support.classify_path_bucket_v1("scripts/auth_helper.py"),
+            "high-risk",
+        )
+        self.assertEqual(
+            support.classify_path_bucket_v1("docs/guide.md"),
+            "low-risk",
+        )
+        self.assertEqual(
+            support.classify_path_bucket_v1("playwright/typescript/tests/auth.spec.ts"),
+            "low-risk",
+        )
+        self.assertEqual(
+            support.classify_path_bucket_v1(".claude/skills/deep-review-pro/SKILL.md"),
+            "low-risk",
+        )
+
+    def test_bucketed_diff_uses_metadata_only_for_low_risk_paths(self):
+        diff_text = high_lines_generator.build_high_lines_fixture()
+        plan = support.plan_large_diff_bucketing_v1(support.parse_diff(diff_text))
+        bucketed = support.build_bucketed_diff_text_v1(
+            support.parse_diff(diff_text),
+            plan=plan,
+        )
+
+        self.assertIn("@@ large-diff-bucket: metadata-only @@", bucketed)
+        self.assertNotIn("Synthetic benchmark line 0001", bucketed)
+        self.assertIn("+++ b/scripts/deep_review_high_lines_fixture.py", bucketed)
+
     def test_large_diff_bucketing_reduces_high_lines_prompt_frames(self):
         diff_text = high_lines_generator.build_high_lines_fixture()
         roster = read_deep_review_pro_roster()
