@@ -415,7 +415,7 @@ Each placeholder is unambiguous across the whole aggregate block.
 
 After the `static-pre-pass` section and every per-agent section, emit:
 
-```
+```text
 ### aggregate
 [UNAVAILABLE: <Agent>: <reason>   ← one line per UNAVAILABLE agent, if any]
 total: <static-fail> static-fail / <static-unavailable-blocking> static-unavailable-blocking / <enumerate every non-skipped row's format-relevant placeholders, in roster order, separated by " / ". Both format families contribute all of their counts; concrete tokens follow the three-row example table above.>
