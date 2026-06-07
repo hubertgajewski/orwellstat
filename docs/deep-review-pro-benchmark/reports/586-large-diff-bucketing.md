@@ -2,7 +2,7 @@
 
 This report records the `/deep-review-pro` benchmark evidence for issue #586, which adds orchestrator-level large-diff risk bucketing when changed lines exceed 3000, metadata-only hunks for low-risk and generated paths, and a `### large-diff-bucketing` aggregate section that blocks `status: ready` while `partial-review: yes`.
 
-Checkpoint: `21373dc` (`post-586`).
+Checkpoint: `773d889` (`post-586`).
 
 ## Benchmark Scope
 
@@ -65,7 +65,7 @@ The `high-lines` fixture emits `partial-review: yes` and `status: blocked` becau
 
 | Fixture | Aggregate chars before | Aggregate chars after | Est. tokens before | Est. tokens after | Delta |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| `high-lines` | 2,133 | 2,333 | 534 | 584 | 50 (9.36%) |
+| `high-lines` | 2,133 | 2,379 | 534 | 595 | 61 (11.42%) |
 | all other fixtures | unchanged | unchanged | unchanged | unchanged | 0 |
 
 The added aggregate text is the `### large-diff-bucketing` section plus `large-diff-partial` in the aggregate `total:` line.

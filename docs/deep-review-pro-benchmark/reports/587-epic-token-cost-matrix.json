@@ -1440,8 +1440,8 @@
     },
     {
       "name": "post-586",
-      "ref": "21373dc",
-      "resolved_ref": "21373dc",
+      "ref": "773d889",
+      "resolved_ref": "773d889",
       "issue": 586,
       "previous": "post-585",
       "output_mode": "compact",
