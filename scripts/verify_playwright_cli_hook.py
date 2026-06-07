@@ -21,6 +21,7 @@ PLAYWRIGHT_TEST_PATTERN = re.compile(
 )
 
 COMMAND_SEGMENT_SPLIT = re.compile(r"\s*&&\s*|\s*;\s*|\s*\|\|\s*")
+WRAPPER_INNER_TOKENS = frozenset({"-c", "eval"})
 
 
 def collapse_shell_obfuscation(command: str) -> str:
@@ -28,16 +29,15 @@ def collapse_shell_obfuscation(command: str) -> str:
     return command.replace("'", "").replace('"', "").replace("\\", "")
 
 
-def normalize_token(token: str) -> str:
-    return collapse_shell_obfuscation(token)
-
-
 def tokens_match_playwright_test(tokens: list[str]) -> bool:
     for index, token in enumerate(tokens):
-        executable = token.rsplit("/", 1)[-1]
-        if executable == "playwright" and index + 1 < len(tokens) and tokens[index + 1] == "test":
+        normalized = collapse_shell_obfuscation(token)
+        executable = normalized.rsplit("/", 1)[-1]
+        if executable == "playwright" and index + 1 < len(tokens) and collapse_shell_obfuscation(tokens[index + 1]) == "test":
             return True
-        if token.endswith("@playwright/test/cli.js") and index + 1 < len(tokens) and tokens[index + 1] == "test":
+        if normalized.endswith("@playwright/test/cli.js") and index + 1 < len(tokens) and collapse_shell_obfuscation(tokens[index + 1]) == "test":
+            return True
+        if token in WRAPPER_INNER_TOKENS and index + 1 < len(tokens) and is_playwright_test_invocation(tokens[index + 1]):
             return True
     return False
 
@@ -51,7 +51,7 @@ def is_playwright_test_invocation(command: str) -> bool:
         if not stripped:
             continue
         try:
-            tokens = [normalize_token(token) for token in shlex.split(stripped, posix=True)]
+            tokens = shlex.split(stripped, posix=True)
         except ValueError:
             if PLAYWRIGHT_TEST_PATTERN.search(collapse_shell_obfuscation(stripped)):
                 return True

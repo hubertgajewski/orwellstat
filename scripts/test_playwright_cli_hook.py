@@ -56,6 +56,8 @@ class PlaywrightCliHookTests(unittest.TestCase):
             'node "@playwright/test/cli.js" test',
             "playwright\ttest",
             "npm install\nplaywright test",
+            "bash -c 'npx playwright test'",
+            "eval 'npx playwright test'",
         ):
             with self.subTest(command=command):
                 status, stderr = run_hook(command)
