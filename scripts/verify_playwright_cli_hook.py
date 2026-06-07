@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import re
-import shlex
 import sys
 
 BLOCK_MESSAGE = (
@@ -13,7 +12,7 @@ BLOCK_MESSAGE = (
     "tool repeatedly."
 )
 
-# One combined pattern: playwright test, @playwright/test/cli.js test, .bin/playwright test
+# Combined: playwright test, @playwright/test/cli.js test, .bin/playwright test
 PLAYWRIGHT_TEST_PATTERN = re.compile(
     r"(^|[^a-zA-Z0-9_-])playwright\s+test([^a-zA-Z0-9_-]|$)"
     r"|@playwright/test/cli\.js\s+test([^a-zA-Z0-9_-]|$)"
@@ -23,27 +22,13 @@ PLAYWRIGHT_TEST_PATTERN = re.compile(
 
 def collapse_shell_obfuscation(command: str) -> str:
     """Remove quote/backslash obfuscation so play'wright' test scans as playwright test."""
-    return command.replace("'", "").replace("\\", "")
+    return command.replace("'", "").replace('"', "").replace("\\", "")
 
 
 def is_playwright_test_invocation(command: str) -> bool:
-    collapsed = collapse_shell_obfuscation(command)
-    if PLAYWRIGHT_TEST_PATTERN.search(collapsed):
-        return True
-
-    try:
-        tokens = shlex.split(collapsed, posix=True)
-    except ValueError:
+    if not command:
         return False
-
-    for index, token in enumerate(tokens):
-        executable = token.rsplit("/", 1)[-1]
-        if executable == "playwright" and index + 1 < len(tokens) and tokens[index + 1] == "test":
-            return True
-        if token.endswith("@playwright/test/cli.js") and index + 1 < len(tokens) and tokens[index + 1] == "test":
-            return True
-
-    return False
+    return PLAYWRIGHT_TEST_PATTERN.search(collapse_shell_obfuscation(command)) is not None
 
 
 def main() -> int:

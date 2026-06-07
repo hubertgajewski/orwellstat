@@ -7,8 +7,8 @@ import importlib.util
 import subprocess
 import sys
 import unittest
-from unittest import mock
 from pathlib import Path
+from unittest import mock
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 HOOK_SCRIPT = REPO_ROOT / "scripts" / "verify_playwright_cli_hook.py"
@@ -51,6 +51,8 @@ class PlaywrightCliHookTests(unittest.TestCase):
             "node node_modules/@playwright/test/cli.js test --grep-invert visual",
             "node_modules/.bin/playwright test",
             "npx play'wright' test",
+            "npx play\\wright test",
+            'node "@playwright/test/cli.js" test',
             "playwright\ttest",
             "npm install\nplaywright test",
         ):
@@ -64,6 +66,11 @@ class PlaywrightCliHookTests(unittest.TestCase):
 class PlaywrightCliHookUnitTests(unittest.TestCase):
     def test_collapse_shell_obfuscation(self) -> None:
         self.assertEqual(hook.collapse_shell_obfuscation("npx play'wright' test"), "npx playwright test")
+        self.assertEqual(hook.collapse_shell_obfuscation("npx play\\wright test"), "npx playwright test")
+        self.assertEqual(
+            hook.collapse_shell_obfuscation('node "@playwright/test/cli.js" test'),
+            "node @playwright/test/cli.js test",
+        )
 
     def test_is_playwright_test_invocation_empty(self) -> None:
         self.assertFalse(hook.is_playwright_test_invocation(""))
@@ -75,10 +82,6 @@ class PlaywrightCliHookUnitTests(unittest.TestCase):
     def test_main_blocks_playwright_test(self) -> None:
         with mock.patch.object(sys, "argv", ["verify_playwright_cli_hook.py", "npx playwright test"]):
             self.assertEqual(hook.main(), 2)
-
-    def test_shlex_value_error_does_not_block_benign_command(self) -> None:
-        self.assertFalse(hook.is_playwright_test_invocation('echo "unclosed'))
-
 
 if __name__ == "__main__":
     unittest.main()
