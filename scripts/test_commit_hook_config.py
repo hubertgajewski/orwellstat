@@ -151,6 +151,7 @@ class CommandDecisionTests(unittest.TestCase):
             "node -pe'require(\"child_process\").execSync(\"git push origin HEAD\")'",
             "bash -c 'git push origin HEAD'",
             "bash -lc 'git push origin HEAD'",
+            "bash -lc'git push origin HEAD'",
             "bash --rcfile /tmp/x -c 'git push origin HEAD'",
             "bash <<EOF\ngit push origin HEAD\nEOF",
             "true\nbash <<EOF\ngit push origin HEAD\nEOF",
@@ -295,7 +296,13 @@ class CommandDecisionTests(unittest.TestCase):
 
 
 class PublishCommandHookTests(unittest.TestCase):
-    def run_hook_command(self, hook_command: str, command: str) -> tuple[int, list[str], str]:
+    def run_hook_command(
+        self,
+        hook_command: str,
+        command: str,
+        *,
+        cwd: str | Path | None = None,
+    ) -> tuple[int, list[str], str]:
         with tempfile.TemporaryDirectory() as tmpdir:
             calls_path = Path(tmpdir) / "calls.log"
             for executable in ("npx", "npm"):
@@ -316,7 +323,7 @@ class PublishCommandHookTests(unittest.TestCase):
             env["PATH"] = f"{tmpdir}{os.pathsep}{env['PATH']}"
             result = subprocess.run(
                 ["/bin/sh", "-c", hook_command],
-                cwd=REPO_ROOT,
+                cwd=Path(cwd) if cwd is not None else REPO_ROOT,
                 env=env,
                 input=json.dumps({"tool_input": {"command": command}}),
                 capture_output=True,
@@ -330,15 +337,21 @@ class PublishCommandHookTests(unittest.TestCase):
         return self.run_hook_command(self.publish_hook_command(hook_file), command)
 
     def publish_hook_command(self, hook_file: str) -> str:
+        return self._bash_hook_command(hook_file, "verify_commit_command_hook.py")
+
+    def playwright_hook_command(self, hook_file: str) -> str:
+        return self._bash_hook_command(hook_file, "verify_playwright_cli_hook.py")
+
+    def _bash_hook_command(self, hook_file: str, marker: str) -> str:
         hook_config = json.loads((REPO_ROOT / hook_file).read_text(encoding="utf-8"))
         for group in hook_config["hooks"]["PreToolUse"]:
             if group.get("matcher") != "Bash":
                 continue
             for hook_config_entry in group["hooks"]:
                 command = hook_config_entry.get("command", "")
-                if "verify_commit_command_hook.py" in command:
+                if marker in command:
                     return command
-        raise AssertionError(f"publish verifier hook not found in {hook_file}")
+        raise AssertionError(f"{marker} hook not found in {hook_file}")
 
     def assert_hook_case(
         self,
@@ -379,7 +392,10 @@ class PublishCommandHookTests(unittest.TestCase):
         ):
             for hook_file in HOOK_FILES:
                 with self.subTest(hook_file=hook_file, command=command):
-                    hook_command = self.publish_hook_command(hook_file).replace("EXPECTED='", "EXPECTED='000")
+                    hook_command = self.publish_hook_command(hook_file).replace(
+                        "a0a57b05707532855e41e8da8c542ba13bd3565b04d29f7517a1162815a0dd63",
+                        "0" * 64,
+                    )
                     status, calls, stderr = self.run_hook_command(hook_command, command)
                     self.assertEqual(status, 2)
                     self.assertEqual(calls, [])
@@ -434,12 +450,54 @@ class PublishCommandHookTests(unittest.TestCase):
 
     def test_hook_configs_keep_publish_gate_in_sync(self):
         commands = [self.publish_hook_command(hook_file) for hook_file in HOOK_FILES]
-        normalized = [command.replace(" python3 \"$SCRIPT\" claude", " python3 \"$SCRIPT\"") for command in commands]
+        normalized = [command.replace(" -- claude", " --") for command in commands]
         self.assertEqual(normalized[0], normalized[1])
         for command in commands:
             self.assertIn("*git*", command)
             self.assertIn("*send-pack*", command)
             self.assertIn("verify_commit_command_hook.py", command)
+
+    def test_hook_configs_keep_playwright_cli_gate_in_sync(self):
+        commands = [self.playwright_hook_command(hook_file) for hook_file in HOOK_FILES]
+        self.assertEqual(commands[0], commands[1])
+        for command in commands:
+            self.assertIn("verify_playwright_cli_hook.py", command)
+
+    def test_playwright_hook_graceful_outside_repo(self):
+        for hook_file in HOOK_FILES:
+            with self.subTest(hook_file=hook_file):
+                with tempfile.TemporaryDirectory() as tmpdir:
+                    status, calls, stderr = self.run_hook_command(
+                        self.playwright_hook_command(hook_file),
+                        "npx playwright test",
+                        cwd=tmpdir,
+                    )
+                self.assertEqual(status, 0)
+                self.assertEqual(calls, [])
+                self.assertEqual(stderr, "")
+
+    def test_playwright_hook_blocks_in_repo(self):
+        for hook_file in HOOK_FILES:
+            with self.subTest(hook_file=hook_file):
+                status, calls, stderr = self.run_hook_command(
+                    self.playwright_hook_command(hook_file),
+                    "npx playwright test",
+                )
+                self.assertEqual(status, 2)
+                self.assertEqual(calls, [])
+                self.assertIn("playwright-report-mcp", stderr)
+
+    def test_playwright_hook_hash_mismatch_blocks(self):
+        for hook_file in HOOK_FILES:
+            with self.subTest(hook_file=hook_file):
+                hook_command = self.playwright_hook_command(hook_file).replace(
+                    "eef0f69a26d2655db48a292e449abd09fc79095544d77b1c36126e544eb903dc",
+                    "0" * 64,
+                )
+                status, calls, stderr = self.run_hook_command(hook_command, "npx playwright test")
+                self.assertEqual(status, 2)
+                self.assertEqual(calls, [])
+                self.assertIn("hash mismatch", stderr)
 
 
 if __name__ == "__main__":

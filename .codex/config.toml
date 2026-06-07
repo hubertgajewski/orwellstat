@@ -44,6 +44,9 @@ approval_mode = "approve"
 [mcp_servers.playwright-report-mcp.tools.get_failed_tests]
 approval_mode = "approve"
 
+[mcp_servers.playwright-report-mcp.tools.get_run_status]
+approval_mode = "approve"
+
 [mcp_servers.playwright-report-mcp.tools.get_test_attachment]
 approval_mode = "approve"
 

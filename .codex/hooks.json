@@ -41,13 +41,13 @@
         "hooks": [
           {
             "type": "command",
-            "command": "INPUT=$(cat); CMD=$(printf '%s' \"$INPUT\" | jq -r '.tool_input.command // empty'); case \"$CMD\" in *git*|*send-pack*|*\\'*|*\\\"*|*\\\\*|*';'*|*'&'*|*'|'*|*'<'*|*'>'*|*'$'*|*'('*|*')'*|*'{'*|*'}'*|*'='*|*'`'*) ;; *) exit 0;; esac; ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0; SCRIPT=\"$ROOT/scripts/verify_commit_command_hook.py\"; EXPECTED='f5c8549116a0de826c12cfeb8e39b7a593fa333577ceb6e987e8c5ea3eeac161'; ACTUAL=$(shasum -a 256 \"$SCRIPT\" 2>/dev/null | awk '{print $1}') || exit 2; if [ \"$ACTUAL\" != \"$EXPECTED\" ]; then echo 'BLOCKED: publish hook helper hash mismatch; review scripts/verify_commit_command_hook.py and update the pinned hook hash deliberately.' >&2; exit 2; fi; printf '%s' \"$INPUT\" | python3 \"$SCRIPT\"",
+            "command": "INPUT=$(cat); CMD=$(printf '%s' \"$INPUT\" | jq -r '.tool_input.command // empty'); case \"$CMD\" in *git*|*send-pack*|*\\'*|*\\\"*|*\\\\*|*';'*|*'&'*|*'|'*|*'<'*|*'>'*|*'$'*|*'('*|*')'*|*'{'*|*'}'*|*'='*|*'`'*) ;; *) exit 0;; esac; ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0; printf '%s' \"$INPUT\" | \"$ROOT/scripts/run_pinned_hook.sh\" scripts/verify_commit_command_hook.py a0a57b05707532855e41e8da8c542ba13bd3565b04d29f7517a1162815a0dd63 --",
             "timeout": 60,
             "statusMessage": "Verifying types and format before push..."
           },
           {
             "type": "command",
-            "command": "INPUT=$(cat); CMD=$(echo \"$INPUT\" | jq -r '.tool_input.command // empty'); if echo \"$CMD\" | grep -qE '(^|[^a-zA-Z0-9_-])playwright[[:space:]]+test([^a-zA-Z0-9_-]|$)'; then echo 'BLOCKED: direct Playwright CLI is forbidden. Use mcp__playwright-report-mcp__run_tests instead (see CLAUDE.md MCP servers section). For multiple iterations, call the MCP tool repeatedly.' >&2; exit 2; fi",
+            "command": "INPUT=$(cat); CMD=$(printf '%s' \"$INPUT\" | jq -r '.tool_input.command // empty'); ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0; \"$ROOT/scripts/run_pinned_hook.sh\" scripts/verify_playwright_cli_hook.py eef0f69a26d2655db48a292e449abd09fc79095544d77b1c36126e544eb903dc -- \"$CMD\"",
             "timeout": 10,
             "statusMessage": "Checking for direct Playwright CLI..."
           }

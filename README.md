@@ -22,7 +22,7 @@ npx playwright install --with-deps
 npx playwright test --grep @smoke
 ```
 
-Open AI assistants from the repository root so `.mcp.json` and the project guidance files are discovered.
+Open AI assistants from the repository root so MCP config (`.mcp.json` for Claude Code/Codex/Gemini, `.cursor/mcp.json` for Cursor) and the project guidance files are discovered.
 
 ## Contents
 
@@ -102,7 +102,8 @@ Detailed commands, tags, fixtures, Page Object Model conventions, path aliases, 
 ```text
 .env.example                  # template for local Playwright and AI-provider secrets
 .vars.example                 # template for local workflow gates and CI variables
-.mcp.json                     # MCP server definitions
+.mcp.json                     # MCP server definitions (Claude Code, Codex, Gemini)
+.cursor/mcp.json              # Cursor MCP config (symlink to .mcp.json)
 .github/actions/              # local composite actions used by workflows
 .github/workflows/            # CI workflows
 .claude/                      # Claude Code project skills and specialist agents
