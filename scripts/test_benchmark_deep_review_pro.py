@@ -102,6 +102,14 @@ def prompt_block(frame: str, tag_name: str) -> str:
     return match.group(1) if match else ""
 
 
+def classified_plan_and_bucketed(diff_text: str):
+    parsed = support.parse_diff(diff_text)
+    classified = support.blocks_with_buckets_v1(parsed)
+    plan = support.plan_large_diff_bucketing_v1(parsed, classified=classified)
+    bucketed = support.build_bucketed_diff_text_v1(plan=plan, classified=classified)
+    return plan, bucketed
+
+
 class OrchestratorUsageTests(unittest.TestCase):
     def test_sums_exact_jsonl_usage_fields(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -1190,9 +1198,7 @@ copy to {target_path}
                 *[f"+{line}" for line in body],
             ]
         ) + "\n"
-        parsed = support.parse_diff(diff_text)
-        plan = support.plan_large_diff_bucketing_v1(parsed)
-        bucketed = support.build_bucketed_diff_text_v1(parsed, plan=plan)
+        plan, bucketed = classified_plan_and_bucketed(diff_text)
 
         self.assertTrue(plan.threshold_exceeded)
         self.assertIn("@@ large-diff-bucket: metadata-only @@", bucketed)
@@ -1200,11 +1206,7 @@ copy to {target_path}
 
     def test_bucketed_diff_uses_metadata_only_for_low_risk_paths(self):
         diff_text = high_lines_generator.build_high_lines_fixture()
-        plan = support.plan_large_diff_bucketing_v1(support.parse_diff(diff_text))
-        bucketed = support.build_bucketed_diff_text_v1(
-            support.parse_diff(diff_text),
-            plan=plan,
-        )
+        _plan, bucketed = classified_plan_and_bucketed(diff_text)
 
         self.assertIn("@@ large-diff-bucket: metadata-only @@", bucketed)
         self.assertNotIn("Synthetic benchmark line 0001", bucketed)

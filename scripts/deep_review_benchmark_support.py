@@ -501,20 +501,17 @@ def classify_path_bucket_v1(path, *, block_status="modified"):
     return "normal"
 
 
-def bucket_counts_for_blocks(parsed_blocks):
+def bucket_counts_for_classified_v1(classified):
     counts = {bucket: 0 for bucket in LARGE_DIFF_BUCKET_ORDER_V1}
-    for block in parsed_blocks:
-        path = block["path"]
-        if not path:
-            continue
-        bucket = classify_path_bucket_v1(path, block_status=block["status"])
+    for _block, bucket in classified:
         counts[bucket] += 1
     return counts
 
 
-def plan_large_diff_bucketing_v1(parsed_blocks):
-    changed_line_count = count_changed_lines(parsed_blocks)
-    bucket_counts = bucket_counts_for_blocks(parsed_blocks)
+def plan_large_diff_bucketing_v1(parsed_blocks, *, classified=None):
+    classified = classified or blocks_with_buckets_v1(parsed_blocks)
+    changed_line_count = count_changed_lines(block for block, _ in classified)
+    bucket_counts = bucket_counts_for_classified_v1(classified)
     threshold_exceeded = changed_line_count > LARGE_DIFF_CHANGED_LINE_THRESHOLD_V1
     partial_review = threshold_exceeded and (
         bucket_counts["generated"] > 0 or bucket_counts["low-risk"] > 0
@@ -552,8 +549,7 @@ def blocks_with_buckets_v1(blocks):
     ]
 
 
-def build_bucketed_diff_text_v1(blocks, *, plan, classified=None):
-    classified = classified or blocks_with_buckets_v1(blocks)
+def build_bucketed_diff_text_v1(*, plan, classified):
     if not plan.threshold_exceeded:
         return "\n".join(block["text"] for block, _ in classified if block["text"].strip())
 
@@ -588,11 +584,7 @@ def select_prompt_diff_v1(
         ]
     if not selected:
         return ""
-    return build_bucketed_diff_text_v1(
-        [block for block, _ in selected],
-        plan=plan,
-        classified=selected,
-    )
+    return build_bucketed_diff_text_v1(plan=plan, classified=selected)
 
 
 def is_python_path_v1(path):
@@ -939,17 +931,23 @@ def build_scoped_prompt_frames_v1(diff_text, *, roster):
 
 def build_scoped_prompt_frames_bucketed_v1(diff_text, *, roster):
     parsed_blocks = parse_diff(diff_text)
-    plan = plan_large_diff_bucketing_v1(parsed_blocks)
     classified = blocks_with_buckets_v1(parsed_blocks)
+    plan = plan_large_diff_bucketing_v1(parsed_blocks, classified=classified)
+    scope_diff_cache: dict[str, str] = {}
 
     def scoped_diff_selector(parsed_blocks, prompt_scope, scope_matcher):
-        return select_prompt_diff_v1(
+        cached = scope_diff_cache.get(prompt_scope)
+        if cached is not None:
+            return cached
+        selected_diff = select_prompt_diff_v1(
             parsed_blocks,
             prompt_scope=prompt_scope,
             scope_matcher=scope_matcher,
             plan=plan,
             classified=classified,
         )
+        scope_diff_cache[prompt_scope] = selected_diff
+        return selected_diff
 
     return build_prompt_frames_with_contract(
         diff_text,
