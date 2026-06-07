@@ -68,7 +68,7 @@ Never use `--body "..."` or a heredoc directly in the `gh pr create` call when t
 
 ## MCP servers
 
-This repository defines MCP (Model Context Protocol) servers in `.mcp.json` at the repo root. Detailed setup and tool reference lives in [docs/AI_ASSISTANTS.md](docs/AI_ASSISTANTS.md). Any MCP-compatible AI assistant should load `.mcp.json` and use the declared servers when they are the most appropriate tool for a task:
+This repository defines MCP (Model Context Protocol) servers in `.mcp.json` at the repo root (Cursor uses [`.cursor/mcp.json`](.cursor/mcp.json), symlinked to the same definitions). Detailed setup, per-assistant config paths, and the full `playwright-report-mcp` tool reference live in [docs/AI_ASSISTANTS.md](docs/AI_ASSISTANTS.md). Load the MCP config appropriate to your assistant and use the declared servers when they are the most appropriate tool for a task:
 
 | Server                  | Purpose                                                                                        |
 | ----------------------- | ---------------------------------------------------------------------------------------------- |

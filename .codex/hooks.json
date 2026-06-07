@@ -47,7 +47,7 @@
           },
           {
             "type": "command",
-            "command": "INPUT=$(cat); CMD=$(echo \"$INPUT\" | jq -r '.tool_input.command // empty'); if echo \"$CMD\" | grep -qE '(^|[^a-zA-Z0-9_-])playwright[[:space:]]+test([^a-zA-Z0-9_-]|$)'; then echo 'BLOCKED: direct Playwright CLI is forbidden. Use mcp__playwright-report-mcp__run_tests instead (see CLAUDE.md MCP servers section). For multiple iterations, call the MCP tool repeatedly.' >&2; exit 2; fi",
+            "command": "INPUT=$(cat); CMD=$(echo \"$INPUT\" | jq -r '.tool_input.command // empty'); ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0; \"$ROOT/scripts/verify_playwright_cli_hook.sh\" \"$CMD\"",
             "timeout": 10,
             "statusMessage": "Checking for direct Playwright CLI..."
           }

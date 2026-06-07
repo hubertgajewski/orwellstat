@@ -330,15 +330,21 @@ class PublishCommandHookTests(unittest.TestCase):
         return self.run_hook_command(self.publish_hook_command(hook_file), command)
 
     def publish_hook_command(self, hook_file: str) -> str:
+        return self._bash_hook_command(hook_file, "verify_commit_command_hook.py")
+
+    def playwright_hook_command(self, hook_file: str) -> str:
+        return self._bash_hook_command(hook_file, "verify_playwright_cli_hook.sh")
+
+    def _bash_hook_command(self, hook_file: str, marker: str) -> str:
         hook_config = json.loads((REPO_ROOT / hook_file).read_text(encoding="utf-8"))
         for group in hook_config["hooks"]["PreToolUse"]:
             if group.get("matcher") != "Bash":
                 continue
             for hook_config_entry in group["hooks"]:
                 command = hook_config_entry.get("command", "")
-                if "verify_commit_command_hook.py" in command:
+                if marker in command:
                     return command
-        raise AssertionError(f"publish verifier hook not found in {hook_file}")
+        raise AssertionError(f"{marker} hook not found in {hook_file}")
 
     def assert_hook_case(
         self,
@@ -440,6 +446,22 @@ class PublishCommandHookTests(unittest.TestCase):
             self.assertIn("*git*", command)
             self.assertIn("*send-pack*", command)
             self.assertIn("verify_commit_command_hook.py", command)
+
+    def test_hook_configs_keep_playwright_cli_gate_in_sync(self):
+        commands = [self.playwright_hook_command(hook_file) for hook_file in HOOK_FILES]
+        self.assertEqual(commands[0], commands[1])
+        for command in commands:
+            self.assertIn("verify_playwright_cli_hook.sh", command)
+
+    def test_playwright_hook_blocks_cli_bypasses(self):
+        for hook_file in HOOK_FILES:
+            with self.subTest(hook_file=hook_file):
+                status, _, stderr = self.run_hook_command(
+                    self.playwright_hook_command(hook_file),
+                    "node node_modules/@playwright/test/cli.js test",
+                )
+                self.assertEqual(status, 2)
+                self.assertIn("playwright-report-mcp", stderr)
 
 
 if __name__ == "__main__":

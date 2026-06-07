@@ -81,7 +81,25 @@ Windows is best-effort and unverified. Use Git Bash or WSL so `jq`, `awk`, and `
 
 ## MCP Servers
 
-Five MCP servers are declared in [`.mcp.json`](../.mcp.json) and loaded automatically by MCP-compatible assistants opened from the repository root.
+Five MCP servers are declared in [`.mcp.json`](../.mcp.json). Open the repository at the repo root so relative paths and `PW_ALLOWED_DIRS` resolve correctly.
+
+### Assistant MCP config paths
+
+| Assistant   | Project MCP config   | Notes                                                                 |
+| ----------- | -------------------- | --------------------------------------------------------------------- |
+| Claude Code | `.mcp.json`          | `enableAllProjectMcpServers: true` in `.claude/settings.json`         |
+| Cursor      | `.cursor/mcp.json`   | Symlinked to `.mcp.json`; Cursor does not read the root file directly |
+| Codex       | `.mcp.json`          | Per [AGENTS.md](../AGENTS.md); shares `.codex/hooks.json` Playwright CLI block |
+| Gemini      | `.mcp.json`          | Per [GEMINI.md](../GEMINI.md); runtime loading may differ             |
+
+Assistant pre-shell hooks in `.claude/settings.json` and `.codex/hooks.json` block direct `playwright test` shell commands (including `@playwright/test/cli.js` bypasses) and direct agents to `playwright-report-mcp` instead. Cursor has the same block when using Claude/Codex hook wiring; with `.cursor/mcp.json` present, use MCP tools rather than shell.
+
+### Cursor setup
+
+1. Confirm [`.cursor/mcp.json`](../.cursor/mcp.json) exists (symlink to `.mcp.json`).
+2. Restart Cursor after cloning or changing MCP config.
+3. Open **Settings → Tools & MCP** and verify each server shows as connected.
+4. On failure, check **Output → MCP Logs** (`Cmd+Shift+U`) for `npx`, Node, or missing `mcp/*/dist` build errors.
 
 | Server                        | Key                     | Purpose                                                      |
 | ----------------------------- | ----------------------- | ------------------------------------------------------------ |
@@ -99,14 +117,47 @@ Runs through `npx playwright-report-mcp@3.2.2`. The version is pinned in `.mcp.j
 
 Every tool call should pass `workingDirectory: "playwright/typescript"` in the main checkout, or a sibling worktree path such as `"../orwellstat-330/playwright/typescript"`. The default `.` points at the repo root, which has no Playwright config and will fail.
 
-`PW_ALLOWED_DIRS` is set to `..`, allowing the repo root's parent and sibling worktrees.
+#### Environment variables
 
-| Tool                  | Description                                                               |
-| --------------------- | ------------------------------------------------------------------------- |
-| `run_tests`           | Run the suite with optional spec, browser, tag, retry, and worker filters |
-| `get_failed_tests`    | Return failed tests from the last run                                     |
-| `get_test_attachment` | Read a named attachment for a failed test                                 |
-| `list_tests`          | List tests with spec file and tags without running them                   |
+| Variable          | Value in this repo | Description                                                                 |
+| ----------------- | ------------------ | --------------------------------------------------------------------------- |
+| `PW_ALLOWED_DIRS` | `".."`             | Authorizes sibling worktrees under the repo parent                          |
+| `PW_RESULTS_FILE` | _(unset)_          | Optional absolute path override for `test-results/results.json` per call    |
+
+#### Tools
+
+| Tool                  | Description                                                                 |
+| --------------------- | --------------------------------------------------------------------------- |
+| `run_tests`           | Run the suite; return structured pass/fail summary                          |
+| `get_run_status`      | Poll a background run started with `run_tests` and `wait: false`            |
+| `get_failed_tests`    | Return failed tests from the last `results.json` without re-running          |
+| `get_test_attachment` | Read a named text attachment for a failed test                              |
+| `list_tests`          | List tests with spec file and tags without running them                     |
+
+**`run_tests`** inputs: `workingDirectory`, `spec`, `browser` (`Chromium`, `Firefox`, `Webkit`, `Mobile Chrome`, `Mobile Safari`), `tag`, `timeout` (ms, default `300000`), `wait` (default `true`; set `false` for background runs), `updateSnapshots` (`all`, `changed`, `missing`, `none`), `headed`, `workers`, `retries`, `maxFailures`, `trace`.
+
+When `wait` is `false`, the tool returns a `runId`. Poll **`get_run_status`** with that `runId` until `state` is terminal, then call **`get_failed_tests`** or **`get_test_attachment`** as needed.
+
+**`get_run_status`** inputs: `runId` (optional), `workingDirectory` (optional; with `runId`, must match the run directory).
+
+**`get_failed_tests`** inputs: `workingDirectory`.
+
+**`get_test_attachment`** inputs: `workingDirectory`, `testTitle` (exact title from the report), `attachmentName` (e.g. `error-context`).
+
+**`list_tests`** inputs: `workingDirectory`, `tag` (optional).
+
+#### Excluding visual regression tests
+
+`run_tests` exposes `tag` (`--grep`) but not `--grep-invert` yet. Visual tests live in `tests/visual.spec.ts` and share `@regression` with most of the suite, so a tag filter alone cannot drop only visual tests.
+
+Supported patterns today:
+
+- **Smoke subset:** `run_tests` with `tag: "@smoke"` (excludes visual and most regression depth).
+- **Single spec:** `run_tests` with `spec: "tests/navigation.spec.ts"` (repeat per file as needed).
+- **Visual only:** `run_tests` with `spec: "tests/visual.spec.ts"`.
+- **Full non-visual suite:** iterate non-visual spec files under `tests/` (every `*.spec.ts` except `visual.spec.ts`), or use human/CI shell with `npx playwright test --grep-invert "visual regression"` — blocked for hooked assistants; prefer MCP per spec until upstream adds `grepInvert`.
+
+Use **`list_tests`** to enumerate titles and spec files when planning multi-spec runs.
 
 ### playwright
 
