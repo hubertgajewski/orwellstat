@@ -11,6 +11,8 @@ import sys
 from pathlib import Path
 from typing import Literal
 
+from shell_c_option_utils import inline_c_command
+
 
 Decision = Literal["none", "block", "allow"]
 MAX_ENV_SPLIT_DEPTH = 3
@@ -349,10 +351,11 @@ def interpreter_string_contains_publish(segment: list[str], depth: int) -> bool:
         return False
 
     for index, token in enumerate(segment[1:], start=1):
+        inner = inline_c_command(token)
+        if inner is not None:
+            return command_decision(inner, depth + 1) != "none"
         if token == "-c":
             return index + 1 < len(segment) and command_decision(segment[index + 1], depth + 1) != "none"
-        if token.startswith("-c") and len(token) > 2 and not token.startswith("--"):
-            return command_decision(token[2:], depth + 1) != "none"
         if token.startswith("-") and not token.startswith("--") and "c" in token[1:]:
             return index + 1 < len(segment) and command_decision(segment[index + 1], depth + 1) != "none"
         if token in {"--rcfile", "--init-file"}:

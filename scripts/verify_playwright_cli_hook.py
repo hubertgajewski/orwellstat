@@ -7,10 +7,12 @@ import re
 import shlex
 import sys
 
+from shell_c_option_utils import inline_c_command, short_option_includes_c
+
 BLOCK_MESSAGE = (
-    "BLOCKED: direct Playwright CLI is forbidden. Use mcp__playwright-report-mcp__run_tests "
-    "instead (see CLAUDE.md MCP servers section). For multiple iterations, call the MCP "
-    "tool repeatedly."
+    "BLOCKED: direct Playwright CLI is forbidden. Use the playwright-report-mcp "
+    "run_tests MCP tool instead (see docs/AI_ASSISTANTS.md). For multiple iterations, "
+    "call the MCP tool repeatedly."
 )
 
 # Fallback when shlex cannot parse a segment (combined playwright / cli.js / .bin paths).
@@ -29,37 +31,23 @@ def collapse_shell_obfuscation(command: str) -> str:
     return command.replace("'", "").replace('"', "").replace("\\", "")
 
 
-def short_option_includes_c(token: str) -> bool:
-    return token.startswith("-") and not token.startswith("--") and "c" in token[1:]
-
-
-def inline_c_command(token: str) -> str | None:
-    if token.startswith("-c") and len(token) > 2:
-        return token[2:]
-    return None
-
-
 def tokens_match_playwright_test(tokens: list[str]) -> bool:
     for index, token in enumerate(tokens):
         normalized = collapse_shell_obfuscation(token)
         executable = normalized.rsplit("/", 1)[-1]
-        if index + 1 < len(tokens):
-            next_token = tokens[index + 1]
-            next_normalized = collapse_shell_obfuscation(next_token)
+        has_next = index + 1 < len(tokens)
+        if has_next:
+            next_normalized = collapse_shell_obfuscation(tokens[index + 1])
             if executable == "playwright" and next_normalized == "test":
                 return True
             if normalized.endswith("@playwright/test/cli.js") and next_normalized == "test":
                 return True
 
-        if token in WRAPPER_INNER_TOKENS and index + 1 < len(tokens):
-            if is_playwright_test_invocation(tokens[index + 1]):
-                return True
-
-        inline = inline_c_command(token)
-        if inline is not None and is_playwright_test_invocation(inline):
+        inner = inline_c_command(token)
+        if inner is not None and is_playwright_test_invocation(inner):
             return True
 
-        if short_option_includes_c(token) and index + 1 < len(tokens):
+        if has_next and (token in WRAPPER_INNER_TOKENS or short_option_includes_c(token)):
             if is_playwright_test_invocation(tokens[index + 1]):
                 return True
 

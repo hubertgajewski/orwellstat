@@ -39,6 +39,9 @@ class PlaywrightCliHookTests(unittest.TestCase):
             "npm install\nnpm run tsc",
             "echo 'not playwright' test",
             "   &&   ",
+            "bash -lc 'git status'",
+            "bash -c'echo hello'",
+            "bash -lc 'npx playwright install'",
         ):
             with self.subTest(command=command):
                 status, stderr = run_hook(command)
@@ -61,6 +64,7 @@ class PlaywrightCliHookTests(unittest.TestCase):
             "false || npx playwright test",
             "bash -c 'npx playwright test'",
             "bash -lc 'npx playwright test'",
+            "bash -lc'npx playwright test'",
             "bash -c'npx playwright test'",
             "eval 'npx playwright test'",
             "npx playwright test 'unclosed",
@@ -80,6 +84,13 @@ class PlaywrightCliHookUnitTests(unittest.TestCase):
             hook.collapse_shell_obfuscation('node "@playwright/test/cli.js" test'),
             "node @playwright/test/cli.js test",
         )
+
+    def test_inline_c_command_helpers(self) -> None:
+        from shell_c_option_utils import inline_c_command
+
+        self.assertEqual(inline_c_command("-cnpx playwright test"), "npx playwright test")
+        self.assertEqual(inline_c_command("-lcnpx playwright test"), "npx playwright test")
+        self.assertIsNone(inline_c_command("-lc"))
 
 
 if __name__ == "__main__":

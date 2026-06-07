@@ -185,13 +185,13 @@
         "hooks": [
           {
             "type": "command",
-            "command": "INPUT=$(cat); CMD=$(printf '%s' \"$INPUT\" | jq -r '.tool_input.command // empty'); case \"$CMD\" in *git*|*send-pack*|*\\'*|*\\\"*|*\\\\*|*';'*|*'&'*|*'|'*|*'<'*|*'>'*|*'$'*|*'('*|*')'*|*'{'*|*'}'*|*'='*|*'`'*) ;; *) exit 0;; esac; ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0; SCRIPT=\"$ROOT/scripts/verify_commit_command_hook.py\"; EXPECTED='f5c8549116a0de826c12cfeb8e39b7a593fa333577ceb6e987e8c5ea3eeac161'; ACTUAL=$(shasum -a 256 \"$SCRIPT\" 2>/dev/null | awk '{print $1}') || exit 2; if [ \"$ACTUAL\" != \"$EXPECTED\" ]; then echo 'BLOCKED: publish hook helper hash mismatch; review scripts/verify_commit_command_hook.py and update the pinned hook hash deliberately.' >&2; exit 2; fi; printf '%s' \"$INPUT\" | python3 \"$SCRIPT\" claude",
+            "command": "INPUT=$(cat); CMD=$(printf '%s' \"$INPUT\" | jq -r '.tool_input.command // empty'); case \"$CMD\" in *git*|*send-pack*|*\\'*|*\\\"*|*\\\\*|*';'*|*'&'*|*'|'*|*'<'*|*'>'*|*'$'*|*'('*|*')'*|*'{'*|*'}'*|*'='*|*'`'*) ;; *) exit 0;; esac; ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0; SCRIPT=\"$ROOT/scripts/verify_commit_command_hook.py\"; EXPECTED='c9715b4e19aeff49de3c2c373962c518249a609af87f3595f28003ee86d2ebbe'; ACTUAL=$(shasum -a 256 \"$SCRIPT\" 2>/dev/null | awk '{print $1}') || exit 2; if [ \"$ACTUAL\" != \"$EXPECTED\" ]; then echo 'BLOCKED: publish hook helper hash mismatch; review scripts/verify_commit_command_hook.py and update the pinned hook hash deliberately.' >&2; exit 2; fi; printf '%s' \"$INPUT\" | python3 \"$SCRIPT\" claude",
             "timeout": 60,
             "statusMessage": "Verifying types and format before push..."
           },
           {
             "type": "command",
-            "command": "INPUT=$(cat); CMD=$(printf '%s' \"$INPUT\" | jq -r '.tool_input.command // empty'); ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0; SCRIPT=\"$ROOT/scripts/verify_playwright_cli_hook.py\"; EXPECTED='e78a0b2b2a536109ef7bfa42a2d648187d095028f761ac70111715ff1a45ea88'; ACTUAL=$(shasum -a 256 \"$SCRIPT\" 2>/dev/null | awk '{print $1}') || exit 2; if [ \"$ACTUAL\" != \"$EXPECTED\" ]; then echo 'BLOCKED: playwright CLI hook helper hash mismatch; review scripts/verify_playwright_cli_hook.py and update the pinned hook hash deliberately.' >&2; exit 2; fi; python3 \"$SCRIPT\" \"$CMD\"",
+            "command": "INPUT=$(cat); CMD=$(printf '%s' \"$INPUT\" | jq -r '.tool_input.command // empty'); ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0; SCRIPT=\"$ROOT/scripts/verify_playwright_cli_hook.py\"; EXPECTED='aabcec97ca42a49647c37d72a4bc9631a7e0d4ea95e626af225f4781373f04b8'; ACTUAL=$(shasum -a 256 \"$SCRIPT\" 2>/dev/null | awk '{print $1}') || exit 2; if [ \"$ACTUAL\" != \"$EXPECTED\" ]; then echo 'BLOCKED: playwright CLI hook helper hash mismatch; review scripts/verify_playwright_cli_hook.py and update the pinned hook hash deliberately.' >&2; exit 2; fi; python3 \"$SCRIPT\" \"$CMD\"",
             "timeout": 10,
             "statusMessage": "Checking for direct Playwright CLI..."
           },
