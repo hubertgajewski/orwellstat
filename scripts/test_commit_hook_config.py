@@ -295,7 +295,13 @@ class CommandDecisionTests(unittest.TestCase):
 
 
 class PublishCommandHookTests(unittest.TestCase):
-    def run_hook_command(self, hook_command: str, command: str) -> tuple[int, list[str], str]:
+    def run_hook_command(
+        self,
+        hook_command: str,
+        command: str,
+        *,
+        cwd: str | Path | None = None,
+    ) -> tuple[int, list[str], str]:
         with tempfile.TemporaryDirectory() as tmpdir:
             calls_path = Path(tmpdir) / "calls.log"
             for executable in ("npx", "npm"):
@@ -316,7 +322,7 @@ class PublishCommandHookTests(unittest.TestCase):
             env["PATH"] = f"{tmpdir}{os.pathsep}{env['PATH']}"
             result = subprocess.run(
                 ["/bin/sh", "-c", hook_command],
-                cwd=REPO_ROOT,
+                cwd=Path(cwd) if cwd is not None else REPO_ROOT,
                 env=env,
                 input=json.dumps({"tool_input": {"command": command}}),
                 capture_output=True,
@@ -333,7 +339,7 @@ class PublishCommandHookTests(unittest.TestCase):
         return self._bash_hook_command(hook_file, "verify_commit_command_hook.py")
 
     def playwright_hook_command(self, hook_file: str) -> str:
-        return self._bash_hook_command(hook_file, "verify_playwright_cli_hook.sh")
+        return self._bash_hook_command(hook_file, "verify_playwright_cli_hook.py")
 
     def _bash_hook_command(self, hook_file: str, marker: str) -> str:
         hook_config = json.loads((REPO_ROOT / hook_file).read_text(encoding="utf-8"))
@@ -451,17 +457,20 @@ class PublishCommandHookTests(unittest.TestCase):
         commands = [self.playwright_hook_command(hook_file) for hook_file in HOOK_FILES]
         self.assertEqual(commands[0], commands[1])
         for command in commands:
-            self.assertIn("verify_playwright_cli_hook.sh", command)
+            self.assertIn("verify_playwright_cli_hook.py", command)
 
-    def test_playwright_hook_blocks_cli_bypasses(self):
+    def test_playwright_hook_graceful_outside_repo(self):
         for hook_file in HOOK_FILES:
             with self.subTest(hook_file=hook_file):
-                status, _, stderr = self.run_hook_command(
-                    self.playwright_hook_command(hook_file),
-                    "node node_modules/@playwright/test/cli.js test",
-                )
-                self.assertEqual(status, 2)
-                self.assertIn("playwright-report-mcp", stderr)
+                with tempfile.TemporaryDirectory() as tmpdir:
+                    status, calls, stderr = self.run_hook_command(
+                        self.playwright_hook_command(hook_file),
+                        "npx playwright test",
+                        cwd=tmpdir,
+                    )
+                self.assertEqual(status, 0)
+                self.assertEqual(calls, [])
+                self.assertEqual(stderr, "")
 
 
 if __name__ == "__main__":
