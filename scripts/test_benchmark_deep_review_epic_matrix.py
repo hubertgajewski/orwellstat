@@ -61,6 +61,7 @@ class EpicBenchmarkMatrixTests(unittest.TestCase):
                 "post-583",
                 "post-584",
                 "post-585",
+                "post-586",
             ],
         )
         self.assertEqual(epic.DEFAULT_CHECKPOINTS[0].ref, "4398fc9")
@@ -73,6 +74,9 @@ class EpicBenchmarkMatrixTests(unittest.TestCase):
         self.assertEqual(epic.DEFAULT_CHECKPOINTS[6].ref, "825069c")
         self.assertEqual(epic.DEFAULT_CHECKPOINTS[6].issue, 585)
         self.assertEqual(epic.DEFAULT_CHECKPOINTS[6].previous, "post-584")
+        self.assertEqual(epic.DEFAULT_CHECKPOINTS[7].ref, "64e0f12")
+        self.assertEqual(epic.DEFAULT_CHECKPOINTS[7].issue, 586)
+        self.assertEqual(epic.DEFAULT_CHECKPOINTS[7].previous, "post-585")
         self.assertEqual(
             [checkpoint.dispatch_contract for checkpoint in epic.DEFAULT_CHECKPOINTS],
             [
@@ -82,6 +86,7 @@ class EpicBenchmarkMatrixTests(unittest.TestCase):
                 "dispatch-v1",
                 "dispatch-v1",
                 "dispatch-v1",
+                "dispatch-static-v1",
                 "dispatch-static-v1",
             ],
         )
@@ -95,6 +100,7 @@ class EpicBenchmarkMatrixTests(unittest.TestCase):
                 "scoped-v1",
                 "scoped-v1",
                 "scoped-v1",
+                "scoped-bucketed-v1",
             ],
         )
         self.assertEqual(
@@ -107,12 +113,17 @@ class EpicBenchmarkMatrixTests(unittest.TestCase):
                 "compact-v1",
                 "compact-v1",
                 "compact-static-v1",
+                "compact-static-bucketed-v1",
             ],
         )
         self.assertEqual(epic.output_mode_for_contract("detailed-v1"), "detailed")
         self.assertEqual(epic.output_mode_for_contract("detailed-reuse-v1"), "detailed")
         self.assertEqual(epic.output_mode_for_contract("compact-v1"), "compact")
         self.assertEqual(epic.output_mode_for_contract("compact-static-v1"), "compact")
+        self.assertEqual(
+            epic.output_mode_for_contract("compact-static-bucketed-v1"),
+            "compact",
+        )
         self.assertRegex(epic.resolve_ref("HEAD"), r"^[0-9a-f]+$")
         self.assertEqual(epic.resolve_ref("WORKTREE"), "WORKTREE")
         self.assertEqual(
@@ -391,7 +402,7 @@ class EpicBenchmarkMatrixTests(unittest.TestCase):
                 ("pass", "secret-scan", "owner=deep-review-security; scanned clean"),
             ]
 
-        with patch.object(epic, "static_prepass_proxy_rows", unavailable_blocking_rows):
+        with patch.object(epic, "static_prepass_proxy_rows_from_blocks", unavailable_blocking_rows):
             output = epic.compact_static_output_proxy(
                 fixture={"name": "docs"},
                 roster={},
@@ -776,6 +787,7 @@ class EpicBenchmarkMatrixTests(unittest.TestCase):
             583: "Incremental Delta: post-582 -> post-583",
             584: "Incremental Delta: post-583 -> post-584",
             585: "Incremental Delta: post-584 -> post-585",
+            586: "Incremental Delta: post-585 -> post-586",
         }
         report_paths = {
             580: REPO_ROOT / "docs/deep-review-pro-benchmark/reports/580-conditional-dispatch.md",
@@ -784,6 +796,7 @@ class EpicBenchmarkMatrixTests(unittest.TestCase):
             583: REPO_ROOT / "docs/deep-review-pro-benchmark/reports/583-output-verbosity.md",
             584: REPO_ROOT / "docs/deep-review-pro-benchmark/reports/584-shared-boilerplate.md",
             585: REPO_ROOT / "docs/deep-review-pro-benchmark/reports/585-static-prepass.md",
+            586: REPO_ROOT / "docs/deep-review-pro-benchmark/reports/586-large-diff-bucketing.md",
         }
 
         for issue, expected_line in expected.items():
@@ -793,6 +806,104 @@ class EpicBenchmarkMatrixTests(unittest.TestCase):
                 self.assertIn(expected_line, report)
                 self.assertIn("Cumulative Delta: original-580 -> post-", report)
                 self.assertIn("Combined est. tokens", report)
+
+    def test_large_diff_bucketing_proxy_noops_below_threshold(self):
+        diff_text = "\n".join(
+            [
+                "diff --git a/docs/small.md b/docs/small.md",
+                "new file mode 100644",
+                "--- /dev/null",
+                "+++ b/docs/small.md",
+                "@@ -0,0 +1,1 @@",
+                "+hello",
+            ]
+        ) + "\n"
+        section, total, partial_flag = epic.large_diff_bucketing_proxy_section(diff_text)
+
+        self.assertEqual(section, "")
+        self.assertEqual(partial_flag, 0)
+        self.assertIn("0 large-diff-partial", total)
+
+    def test_large_diff_bucketing_proxy_reports_partial_review_no_for_high_risk_only_large_diff(
+        self,
+    ):
+        body = [f"x = {index}" for index in range(1, 3002)]
+        diff_text = "\n".join(
+            [
+                "diff --git a/scripts/large_bucket_fixture.py b/scripts/large_bucket_fixture.py",
+                "new file mode 100644",
+                "--- /dev/null",
+                "+++ b/scripts/large_bucket_fixture.py",
+                "@@ -0,0 +1,3001 @@",
+                *[f"+{line}" for line in body],
+            ]
+        ) + "\n"
+        output = epic.compact_static_bucketed_output_proxy(
+            fixture={"name": "script-code-only"},
+            roster={},
+            agents=[],
+            skipped=[],
+            diff_text=diff_text,
+        )
+
+        self.assertIn("### large-diff-bucketing", output)
+        self.assertIn("partial-review: no", output)
+        self.assertIn("0 large-diff-partial", output)
+        self.assertIn("status: ready", output)
+
+    def test_compact_static_bucketed_output_proxy_reports_blocked_status_for_large_diff_partial(
+        self,
+    ):
+        fixture = next(
+            fixture for fixture in epic.load_fixtures() if fixture["name"] == "high-lines"
+        )
+        diff_text = epic.generated_fixture_text(fixture)
+        output = epic.compact_static_bucketed_output_proxy(
+            fixture=fixture,
+            roster={},
+            agents=[],
+            skipped=[],
+            diff_text=diff_text,
+        )
+
+        self.assertIn("### large-diff-bucketing", output)
+        self.assertIn("partial-review: yes", output)
+        self.assertIn("1 large-diff-partial", output)
+        self.assertIn("status: blocked", output)
+
+    def test_large_diff_bucketing_proxy_marks_high_lines_partial(self):
+        fixture = next(
+            fixture for fixture in epic.load_fixtures() if fixture["name"] == "high-lines"
+        )
+        diff_text = epic.generated_fixture_text(fixture)
+        section, total, partial_flag = epic.large_diff_bucketing_proxy_section(diff_text)
+
+        self.assertIn("### large-diff-bucketing", section)
+        self.assertIn("partial-review: yes", section)
+        self.assertIn("1 large-diff-partial", total)
+        self.assertEqual(partial_flag, 1)
+
+    def test_high_lines_bucketed_prompt_frames_are_smaller_than_scoped(self):
+        fixture = next(
+            fixture for fixture in epic.load_fixtures() if fixture["name"] == "high-lines"
+        )
+        diff_text = epic.generated_fixture_text(fixture)
+        roster = epic.parse_deep_review_pro_roster(
+            epic.git_show("WORKTREE", epic.SKILL_PATH)
+        )
+        agents = epic.selected_agents_for_diff_static_v1(roster, diff_text)
+        scoped = epic.prompt_frame_lengths_scoped_v1(
+            diff_text=diff_text,
+            roster=roster,
+            agents=agents,
+        )
+        bucketed = epic.prompt_frame_lengths_scoped_bucketed_v1(
+            diff_text=diff_text,
+            roster=roster,
+            agents=agents,
+        )
+
+        self.assertLess(sum(bucketed.values()), sum(scoped.values()))
 
 
 if __name__ == "__main__":

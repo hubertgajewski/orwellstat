@@ -102,6 +102,14 @@ def prompt_block(frame: str, tag_name: str) -> str:
     return match.group(1) if match else ""
 
 
+def classified_plan_and_bucketed(diff_text: str):
+    parsed = support.parse_diff(diff_text)
+    classified = support.blocks_with_buckets_v1(parsed)
+    plan = support.plan_large_diff_bucketing_v1(parsed, classified=classified)
+    bucketed = support.build_bucketed_diff_text_v1(plan=plan, classified=classified)
+    return plan, bucketed
+
+
 class OrchestratorUsageTests(unittest.TestCase):
     def test_sums_exact_jsonl_usage_fields(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -449,6 +457,29 @@ class FixtureTests(unittest.TestCase):
         )
         self.assertIn("## Shared specialist-agent contract", report_text)
         self.assertIn("does not change dispatch triggers", report_text)
+
+    def test_issue_586_benchmark_report_records_large_diff_bucketing_comparison(self):
+        report = (
+            Path(__file__).parents[1]
+            / "docs/deep-review-pro-benchmark/reports/586-large-diff-bucketing.md"
+        )
+
+        report_text = report.read_text()
+
+        self.assertIn("# Issue 586 Large-Diff Bucketing Benchmark", report_text)
+        self.assertIn("## Epic Comparable Benchmark", report_text)
+        self.assertIn("## Prompt-Footprint Estimate", report_text)
+        self.assertIn("### Incremental Delta: post-585 -> post-586", report_text)
+        self.assertIn(
+            "| Combined est. tokens | 490,433 | 134,442 | -355,991 (-72.59%) |",
+            report_text,
+        )
+        self.assertIn(
+            "| **Total** | **1,946,824** | **522,614** | **486,708** | **130,656** | **-356,052 (-73.16%)** |",
+            report_text,
+        )
+        self.assertIn("scoped-bucketed-v1", report_text)
+        self.assertIn("partial-review: yes", report_text.lower())
 
     def test_issue_585_benchmark_report_records_static_prepass_comparison(self):
         report = (
@@ -1055,6 +1086,148 @@ copy to {target_path}
                 fixture = fixtures[name]
                 self.assertEqual(set(fixture["expected_dispatched"]), expected["dispatched"])
                 self.assertEqual(set(fixture["expected_skipped"]), expected["skipped"])
+
+    def test_deep_review_pro_skill_documents_large_diff_bucketing(self):
+        skill_text = read_deep_review_pro_skill_text()
+
+        self.assertIn("## Large-diff risk bucketing", skill_text)
+        self.assertIn("CHANGED_LINE_COUNT", skill_text)
+        self.assertIn("### large-diff-bucketing", skill_text)
+        self.assertIn("large-diff-partial", skill_text)
+        self.assertIn("metadata-only placeholder hunk", skill_text)
+
+    def test_parse_diff_block_counts_deletion_hunk_lines(self):
+        diff_text = "\n".join(
+            [
+                "diff --git a/scripts/example.py b/scripts/example.py",
+                "index 1111111..2222222 100644",
+                "--- a/scripts/example.py",
+                "+++ b/scripts/example.py",
+                "@@ -1,3 +1,1 @@",
+                "-line one",
+                "-line two",
+                "+line three",
+            ]
+        ) + "\n"
+        block = support.parse_diff(diff_text)[0]
+
+        self.assertEqual(block["changed_line_count"], 3)
+        self.assertEqual(support.count_changed_lines(support.parse_diff(diff_text)), 3)
+
+    def test_plan_large_diff_bucketing_threshold_boundary(self):
+        def synthetic_diff(line_count: int) -> str:
+            body = [f"line {index}" for index in range(1, line_count + 1)]
+            lines = [
+                "diff --git a/docs/synthetic.md b/docs/synthetic.md",
+                "new file mode 100644",
+                "--- /dev/null",
+                "+++ b/docs/synthetic.md",
+                f"@@ -0,0 +1,{line_count} @@",
+            ]
+            lines.extend(f"+{line}" for line in body)
+            return "\n".join(lines) + "\n"
+
+        below = support.plan_large_diff_bucketing_v1(support.parse_diff(synthetic_diff(3000)))
+        above = support.plan_large_diff_bucketing_v1(support.parse_diff(synthetic_diff(3001)))
+
+        self.assertFalse(below.threshold_exceeded)
+        self.assertTrue(above.threshold_exceeded)
+
+    def test_partial_review_false_when_only_high_risk_paths_exceed_threshold(self):
+        body = [f"x = {index}" for index in range(1, 3002)]
+        diff_text = "\n".join(
+            [
+                "diff --git a/scripts/large_bucket_fixture.py b/scripts/large_bucket_fixture.py",
+                "new file mode 100644",
+                "--- /dev/null",
+                "+++ b/scripts/large_bucket_fixture.py",
+                "@@ -0,0 +1,3001 @@",
+                *[f"+{line}" for line in body],
+            ]
+        ) + "\n"
+        plan = support.plan_large_diff_bucketing_v1(support.parse_diff(diff_text))
+
+        self.assertTrue(plan.threshold_exceeded)
+        self.assertFalse(plan.partial_review)
+        self.assertEqual(plan.bucket_counts["low-risk"], 0)
+
+    def test_classify_path_bucket_v1_covers_all_buckets(self):
+        self.assertEqual(
+            support.classify_path_bucket_v1("package-lock.json"),
+            "generated",
+        )
+        self.assertEqual(
+            support.classify_path_bucket_v1("playwright/typescript/package-lock.json"),
+            "generated",
+        )
+        self.assertEqual(
+            support.classify_path_bucket_v1("package.json"),
+            "high-risk",
+        )
+        self.assertEqual(
+            support.classify_path_bucket_v1("scripts/auth_helper.py"),
+            "high-risk",
+        )
+        self.assertEqual(
+            support.classify_path_bucket_v1("docs/guide.md"),
+            "low-risk",
+        )
+        self.assertEqual(
+            support.classify_path_bucket_v1("playwright/typescript/tests/auth.spec.ts"),
+            "low-risk",
+        )
+        self.assertEqual(
+            support.classify_path_bucket_v1(".claude/skills/deep-review-pro/SKILL.md"),
+            "low-risk",
+        )
+        self.assertEqual(support.classify_path_bucket_v1("Makefile"), "normal")
+        self.assertEqual(
+            support.classify_path_bucket_v1("scripts/example.py", block_status="binary"),
+            "generated",
+        )
+
+    def test_bucketed_diff_uses_metadata_only_for_generated_lockfiles(self):
+        body = [f'    "dep-{index}": "1.0.0",' for index in range(1, 3002)]
+        diff_text = "\n".join(
+            [
+                "diff --git a/package-lock.json b/package-lock.json",
+                "index 1111111..2222222 100644",
+                "--- a/package-lock.json",
+                "+++ b/package-lock.json",
+                "@@ -1,3001 +1,3001 @@",
+                *[f"+{line}" for line in body],
+            ]
+        ) + "\n"
+        plan, bucketed = classified_plan_and_bucketed(diff_text)
+
+        self.assertTrue(plan.threshold_exceeded)
+        self.assertIn("@@ large-diff-bucket: metadata-only @@", bucketed)
+        self.assertNotIn('"dep-0001"', bucketed)
+
+    def test_bucketed_diff_uses_metadata_only_for_low_risk_paths(self):
+        diff_text = high_lines_generator.build_high_lines_fixture()
+        _plan, bucketed = classified_plan_and_bucketed(diff_text)
+
+        self.assertIn("@@ large-diff-bucket: metadata-only @@", bucketed)
+        self.assertNotIn("Synthetic benchmark line 0001", bucketed)
+        self.assertIn("+++ b/scripts/deep_review_high_lines_fixture.py", bucketed)
+
+    def test_large_diff_bucketing_reduces_high_lines_prompt_frames(self):
+        diff_text = high_lines_generator.build_high_lines_fixture()
+        roster = read_deep_review_pro_roster()
+        agents = support.selected_agents_for_diff_static_v1(roster, diff_text)
+        scoped = support.build_scoped_prompt_frames_v1(diff_text, roster={
+            agent: roster[agent] for agent in agents
+        })
+        bucketed = support.build_scoped_prompt_frames_bucketed_v1(diff_text, roster={
+            agent: roster[agent] for agent in agents
+        })
+
+        self.assertLess(sum(len(frame) for frame in bucketed.values()),
+                        sum(len(frame) for frame in scoped.values()))
+        plan = support.plan_large_diff_bucketing_v1(support.parse_diff(diff_text))
+        self.assertTrue(plan.threshold_exceeded)
+        self.assertTrue(plan.partial_review)
 
     def test_default_high_lines_fixture_exercises_full_roster_with_large_diff(self):
         fixtures = benchmark.load_fixtures()

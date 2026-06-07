@@ -24,6 +24,7 @@ Exact runtime token usage is unavailable in this Codex run, so token fields belo
 | post-583 | f3952ee | 2,026,319 | 506,583 | 11,561 | 2,894 | 2,037,880 | 509,477 |
 | post-584 | 0d7add0 | 1,964,147 | 491,040 | 11,561 | 2,894 | 1,975,708 | 493,934 |
 | post-585 | 825069c | 1,946,824 | 486,708 | 14,886 | 3,725 | 1,961,710 | 490,433 |
+| post-586 | 64e0f12 | 522,614 | 130,656 | 15,132 | 3,786 | 537,746 | 134,442 |
 
 ## Checkpoint Contracts
 
@@ -36,6 +37,7 @@ Exact runtime token usage is unavailable in this Codex run, so token fields belo
 | post-583 | dispatch-v1 | scoped-v1 | compact-v1 |
 | post-584 | dispatch-v1 | scoped-v1 | compact-v1 |
 | post-585 | dispatch-static-v1 | scoped-v1 | compact-static-v1 |
+| post-586 | dispatch-static-v1 | scoped-bucketed-v1 | compact-static-bucketed-v1 |
 
 ## Incremental Deltas
 
@@ -47,6 +49,7 @@ Exact runtime token usage is unavailable in this Codex run, so token fields belo
 | #583 | post-582 | post-583 | 2,053,428 | 2,037,880 | -15,548 (-0.76%) | 513,364 | 509,477 | -3,887 (-0.76%) |
 | #584 | post-583 | post-584 | 2,037,880 | 1,975,708 | -62,172 (-3.05%) | 509,477 | 493,934 | -15,543 (-3.05%) |
 | #585 | post-584 | post-585 | 1,975,708 | 1,961,710 | -13,998 (-0.71%) | 493,934 | 490,433 | -3,501 (-0.71%) |
+| #586 | post-585 | post-586 | 1,961,710 | 537,746 | -1,423,964 (-72.59%) | 490,433 | 134,442 | -355,991 (-72.59%) |
 
 ## Cumulative Deltas vs Original #580 Baseline
 
@@ -58,6 +61,7 @@ Exact runtime token usage is unavailable in this Codex run, so token fields belo
 | #583 | original-580 | post-583 | 3,822,193 | 2,037,880 | -1,784,313 (-46.68%) | 955,555 | 509,477 | -446,078 (-46.68%) |
 | #584 | original-580 | post-584 | 3,822,193 | 1,975,708 | -1,846,485 (-48.31%) | 955,555 | 493,934 | -461,621 (-48.31%) |
 | #585 | original-580 | post-585 | 3,822,193 | 1,961,710 | -1,860,483 (-48.68%) | 955,555 | 490,433 | -465,122 (-48.68%) |
+| #586 | original-580 | post-586 | 3,822,193 | 537,746 | -3,284,447 (-85.93%) | 955,555 | 134,442 | -821,113 (-85.93%) |
 
 ## Fixture Set
 

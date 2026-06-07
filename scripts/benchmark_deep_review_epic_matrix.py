@@ -20,7 +20,9 @@ from pathlib import Path
 from typing import Literal
 
 from deep_review_benchmark_support import (
+    LARGE_DIFF_CHANGED_LINE_THRESHOLD_V1,
     build_full_prompt_frame_v1,
+    build_scoped_prompt_frames_bucketed_v1,
     build_scoped_prompt_frames_v1,
     changed_paths,
     collect_added_lines,
@@ -31,6 +33,7 @@ from deep_review_benchmark_support import (
     load_fixtures,
     parse_deep_review_pro_roster,
     parse_diff,
+    plan_large_diff_bucketing_v1,
     SECURITY_CREDENTIAL_LINE_RE_V1,
     selected_agents_for_diff_static_v1,
     selected_agents_for_diff_v1,
@@ -47,12 +50,13 @@ ORIGINAL_580_REF = "4398fc9"
 WORKTREE_REF = "WORKTREE"
 OutputMode = Literal["detailed", "compact"]
 DeltaKey = Literal["incremental", "cumulative"]
-PromptFrameContract = Literal["full-v1", "scoped-v1"]
+PromptFrameContract = Literal["full-v1", "scoped-v1", "scoped-bucketed-v1"]
 OutputContract = Literal[
     "detailed-v1",
     "detailed-reuse-v1",
     "compact-v1",
     "compact-static-v1",
+    "compact-static-bucketed-v1",
 ]
 DispatchContract = Literal["dispatch-v1", "dispatch-static-v1"]
 
@@ -165,6 +169,16 @@ DEFAULT_CHECKPOINTS = (
         output_contract="compact-static-v1",
         label="After #585 static pre-pass and ownership cleanup",
     ),
+    Checkpoint(
+        name="post-586",
+        ref="64e0f12",
+        issue=586,
+        previous="post-585",
+        dispatch_contract="dispatch-static-v1",
+        prompt_frame_contract="scoped-bucketed-v1",
+        output_contract="compact-static-bucketed-v1",
+        label="After #586 large-diff risk bucketing",
+    ),
 )
 
 
@@ -207,6 +221,7 @@ OUTPUT_CONTRACT_MODES = {
     "detailed-reuse-v1": "detailed",
     "compact-v1": "compact",
     "compact-static-v1": "compact",
+    "compact-static-bucketed-v1": "compact",
 }
 
 
@@ -358,28 +373,52 @@ def prompt_frame_lengths_full_v1(
     }
 
 
+def _prompt_frame_lengths_for_builder(
+    *,
+    diff_text: str,
+    roster: dict[str, dict[str, str]],
+    agents: list[str],
+    frame_builder,
+) -> dict[str, int]:
+    selected_roster = {agent: roster[agent] for agent in agents}
+    return {
+        agent: len(frame)
+        for agent, frame in frame_builder(diff_text, roster=selected_roster).items()
+    }
+
+
 def prompt_frame_lengths_scoped_v1(
     *,
     diff_text: str,
     roster: dict[str, dict[str, str]],
     agents: list[str],
 ) -> dict[str, int]:
-    selected_roster = {
-        agent: roster[agent]
-        for agent in agents
-    }
-    return {
-        agent: len(frame)
-        for agent, frame in build_scoped_prompt_frames_v1(
-            diff_text,
-            roster=selected_roster,
-        ).items()
-    }
+    return _prompt_frame_lengths_for_builder(
+        diff_text=diff_text,
+        roster=roster,
+        agents=agents,
+        frame_builder=build_scoped_prompt_frames_v1,
+    )
+
+
+def prompt_frame_lengths_scoped_bucketed_v1(
+    *,
+    diff_text: str,
+    roster: dict[str, dict[str, str]],
+    agents: list[str],
+) -> dict[str, int]:
+    return _prompt_frame_lengths_for_builder(
+        diff_text=diff_text,
+        roster=roster,
+        agents=agents,
+        frame_builder=build_scoped_prompt_frames_bucketed_v1,
+    )
 
 
 PROMPT_FRAME_CONTRACT_BUILDERS = {
     "full-v1": prompt_frame_lengths_full_v1,
     "scoped-v1": prompt_frame_lengths_scoped_v1,
+    "scoped-bucketed-v1": prompt_frame_lengths_scoped_bucketed_v1,
 }
 
 
@@ -554,10 +593,11 @@ def compact_output_proxy(
     )
 
 
-def static_prepass_proxy_rows(diff_text: str) -> list[tuple[str, str, str]]:
-    parsed = parse_diff(diff_text)
-    paths = changed_paths(parsed)
-    added_lines = collect_added_lines(parsed)
+def static_prepass_proxy_rows_from_blocks(
+    parsed_blocks,
+) -> list[tuple[str, str, str]]:
+    paths = changed_paths(parsed_blocks)
+    added_lines = collect_added_lines(parsed_blocks)
     has_typescript = any(is_typescript_path_v1(path) for path in paths)
     has_playwright_typescript = any(
         is_playwright_typescript_dir_path_v1(path) for path in paths
@@ -608,6 +648,10 @@ def static_prepass_proxy_rows(diff_text: str) -> list[tuple[str, str, str]]:
     ]
 
 
+def static_prepass_proxy_rows(diff_text: str) -> list[tuple[str, str, str]]:
+    return static_prepass_proxy_rows_from_blocks(parse_diff(diff_text))
+
+
 def static_unavailable_blocking_count(rows: list[tuple[str, str, str]]) -> int:
     return sum(
         1
@@ -616,8 +660,10 @@ def static_unavailable_blocking_count(rows: list[tuple[str, str, str]]) -> int:
     )
 
 
-def static_prepass_proxy_section(diff_text: str) -> tuple[str, str, dict[str, int]]:
-    rows = static_prepass_proxy_rows(diff_text)
+def static_prepass_proxy_section_from_blocks(
+    parsed_blocks,
+) -> tuple[str, str, dict[str, int]]:
+    rows = static_prepass_proxy_rows_from_blocks(parsed_blocks)
     blocking_unavailable = static_unavailable_blocking_count(rows)
     counts = {
         status: sum(1 for row in rows if row[0] == status)
@@ -638,6 +684,61 @@ def static_prepass_proxy_section(diff_text: str) -> tuple[str, str, dict[str, in
     return f"### static-pre-pass\n{body}\n{summary}", total, counts
 
 
+def static_prepass_proxy_section(diff_text: str) -> tuple[str, str, dict[str, int]]:
+    return static_prepass_proxy_section_from_blocks(parse_diff(diff_text))
+
+
+def _render_compact_static_aggregate_proxy(
+    *,
+    context: AggregateRenderContext,
+    static_section: str,
+    static_total: str,
+    static_counts: dict[str, int],
+    middle_sections: tuple[str, ...] = (),
+    extra_total_parts: tuple[str, ...] = (),
+    large_diff_blocked: bool = False,
+) -> str:
+    aggregate_agent_total = aggregate_total_line(context.agents, context.roster)
+    total_parts = [static_total, *extra_total_parts]
+    if context.agents:
+        total_parts.append(aggregate_agent_total.removeprefix("total: "))
+    total_line = (
+        f"total: {total_parts[0]}"
+        if len(total_parts) == 1
+        else f"total: {' / '.join(total_parts)}"
+    )
+    static_blocked = (
+        static_counts["fail"] > 0 or static_counts["unavailable_blocking"] > 0
+    )
+    status_line = (
+        "status: blocked"
+        if static_blocked or large_diff_blocked
+        else "status: ready"
+    )
+    lines = [
+        f"fixture: {context.fixture['name']}",
+        f"mode: {output_mode_for_contract(context.output_contract)} aggregate output",
+        "",
+        static_section,
+    ]
+    for section in middle_sections:
+        lines.extend(["", section])
+    lines.append("")
+    lines.extend(compact_agent_section(agent, context.roster[agent]) for agent in context.agents)
+    lines.extend(skipped_agent_section(agent, context.roster[agent]) for agent in context.skipped)
+    lines.extend(
+        [
+            "",
+            "### aggregate",
+            total_line,
+            status_line,
+            aggregate_reuse_line(context.agents, context.skipped),
+            "tokens: total <value|unavailable> (use --usage or --verbose for the detailed table)",
+        ]
+    )
+    return "\n".join(lines)
+
+
 def compact_static_output_proxy(
     *,
     fixture: dict,
@@ -654,35 +755,72 @@ def compact_static_output_proxy(
         skipped=skipped,
         output_contract="compact-static-v1",
     )
-    aggregate_agent_total = aggregate_total_line(context.agents, context.roster)
-    if not context.agents:
-        total_line = f"total: {static_total}"
-    else:
-        total_line = f"total: {static_total} / {aggregate_agent_total.removeprefix('total: ')}"
-    static_blocked = (
-        static_counts["fail"] > 0 or static_counts["unavailable_blocking"] > 0
+    return _render_compact_static_aggregate_proxy(
+        context=context,
+        static_section=static_section,
+        static_total=static_total,
+        static_counts=static_counts,
     )
-    status_line = "status: blocked" if static_blocked else "status: ready"
-    lines = [
-        f"fixture: {context.fixture['name']}",
-        f"mode: {output_mode_for_contract(context.output_contract)} aggregate output",
-        "",
-        static_section,
-        "",
-    ]
-    lines.extend(compact_agent_section(agent, context.roster[agent]) for agent in context.agents)
-    lines.extend(skipped_agent_section(agent, context.roster[agent]) for agent in context.skipped)
-    lines.extend(
-        [
-            "",
-            "### aggregate",
-            total_line,
-            status_line,
-            aggregate_reuse_line(context.agents, context.skipped),
-            "tokens: total <value|unavailable> (use --usage or --verbose for the detailed table)",
-        ]
+
+
+def large_diff_bucketing_proxy_section_from_blocks(
+    parsed_blocks,
+) -> tuple[str, str, int]:
+    plan = plan_large_diff_bucketing_v1(parsed_blocks)
+    if not plan.threshold_exceeded:
+        return "", "0 large-diff-partial", 0
+    counts = plan.bucket_counts
+    partial_flag = 1 if plan.partial_review else 0
+    body = (
+        "### large-diff-bucketing\n"
+        f"changed-lines: {plan.changed_line_count} "
+        f"(threshold={LARGE_DIFF_CHANGED_LINE_THRESHOLD_V1})\n"
+        "buckets: "
+        f"high-risk={counts['high-risk']} / normal={counts['normal']} / "
+        f"low-risk={counts['low-risk']} / generated={counts['generated']}\n"
+        f"partial-review: {'yes' if plan.partial_review else 'no'} — "
+        "low-risk and generated buckets use metadata-only inline hunks\n"
+        "override: none"
     )
-    return "\n".join(lines)
+    total = f"{partial_flag} large-diff-partial"
+    return body, total, partial_flag
+
+
+def large_diff_bucketing_proxy_section(diff_text: str) -> tuple[str, str, int]:
+    return large_diff_bucketing_proxy_section_from_blocks(parse_diff(diff_text))
+
+
+def compact_static_bucketed_output_proxy(
+    *,
+    fixture: dict,
+    roster: dict[str, dict[str, str]],
+    agents: list[str],
+    skipped: list[str],
+    diff_text: str,
+) -> str:
+    parsed_blocks = parse_diff(diff_text)
+    static_section, static_total, static_counts = static_prepass_proxy_section_from_blocks(
+        parsed_blocks
+    )
+    bucketing_section, bucketing_total, partial_flag = (
+        large_diff_bucketing_proxy_section_from_blocks(parsed_blocks)
+    )
+    context = AggregateRenderContext(
+        fixture=fixture,
+        roster=roster,
+        agents=agents,
+        skipped=skipped,
+        output_contract="compact-static-bucketed-v1",
+    )
+    return _render_compact_static_aggregate_proxy(
+        context=context,
+        static_section=static_section,
+        static_total=static_total,
+        static_counts=static_counts,
+        middle_sections=(bucketing_section,) if bucketing_section else (),
+        extra_total_parts=(bucketing_total,) if bucketing_section else (),
+        large_diff_blocked=partial_flag > 0,
+    )
 
 
 def aggregate_output_text_detailed_v1(
@@ -752,11 +890,29 @@ def aggregate_output_text_compact_static_v1(
     )
 
 
+def aggregate_output_text_compact_static_bucketed_v1(
+    *,
+    fixture: dict,
+    roster: dict[str, dict[str, str]],
+    agents: list[str],
+    skipped: list[str],
+    diff_text: str = "",
+) -> str:
+    return compact_static_bucketed_output_proxy(
+        fixture=fixture,
+        roster=roster,
+        agents=agents,
+        skipped=skipped,
+        diff_text=diff_text,
+    )
+
+
 OUTPUT_CONTRACT_BUILDERS = {
     "detailed-v1": aggregate_output_text_detailed_v1,
     "detailed-reuse-v1": aggregate_output_text_detailed_reuse_v1,
     "compact-v1": aggregate_output_text_compact_v1,
     "compact-static-v1": aggregate_output_text_compact_static_v1,
+    "compact-static-bucketed-v1": aggregate_output_text_compact_static_bucketed_v1,
 }
 
 
