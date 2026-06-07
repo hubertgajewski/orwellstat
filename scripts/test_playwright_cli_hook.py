@@ -38,6 +38,7 @@ class PlaywrightCliHookTests(unittest.TestCase):
             "git status",
             "",
             "npm install\nnpm run tsc",
+            "echo 'not playwright' test",
         ):
             with self.subTest(command=command):
                 status, stderr = run_hook(command)

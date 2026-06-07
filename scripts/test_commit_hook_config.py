@@ -472,6 +472,28 @@ class PublishCommandHookTests(unittest.TestCase):
                 self.assertEqual(calls, [])
                 self.assertEqual(stderr, "")
 
+    def test_playwright_hook_blocks_in_repo(self):
+        for hook_file in HOOK_FILES:
+            with self.subTest(hook_file=hook_file):
+                status, calls, stderr = self.run_hook_command(
+                    self.playwright_hook_command(hook_file),
+                    "npx playwright test",
+                )
+                self.assertEqual(status, 2)
+                self.assertEqual(calls, [])
+                self.assertIn("playwright-report-mcp", stderr)
+
+    def test_playwright_hook_hash_mismatch_blocks(self):
+        for hook_file in HOOK_FILES:
+            with self.subTest(hook_file=hook_file):
+                hook_command = self.playwright_hook_command(hook_file).replace(
+                    "EXPECTED='", "EXPECTED='000"
+                )
+                status, calls, stderr = self.run_hook_command(hook_command, "npx playwright test")
+                self.assertEqual(status, 2)
+                self.assertEqual(calls, [])
+                self.assertIn("hash mismatch", stderr)
+
 
 if __name__ == "__main__":
     unittest.main()

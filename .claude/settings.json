@@ -191,7 +191,7 @@
           },
           {
             "type": "command",
-            "command": "INPUT=$(cat); CMD=$(echo \"$INPUT\" | jq -r '.tool_input.command // empty'); ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0; python3 \"$ROOT/scripts/verify_playwright_cli_hook.py\" \"$CMD\"",
+            "command": "INPUT=$(cat); CMD=$(printf '%s' \"$INPUT\" | jq -r '.tool_input.command // empty'); case \"$CMD\" in *playwright*|*@playwright/test/cli.js*|*.bin/playwright*) ;; *) exit 0;; esac; ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0; SCRIPT=\"$ROOT/scripts/verify_playwright_cli_hook.py\"; EXPECTED='54fc664462aa173cafef7521a320d348b2a6512037fec2a7af9a36d741a71f57'; ACTUAL=$(shasum -a 256 \"$SCRIPT\" 2>/dev/null | awk '{print $1}') || exit 2; if [ \"$ACTUAL\" != \"$EXPECTED\" ]; then echo 'BLOCKED: playwright CLI hook helper hash mismatch; review scripts/verify_playwright_cli_hook.py and update the pinned hook hash deliberately.' >&2; exit 2; fi; python3 \"$SCRIPT\" \"$CMD\"",
             "timeout": 10,
             "statusMessage": "Checking for direct Playwright CLI..."
           },
