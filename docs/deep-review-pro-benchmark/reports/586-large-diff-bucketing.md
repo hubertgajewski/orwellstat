@@ -2,7 +2,7 @@
 
 This report records the `/deep-review-pro` benchmark evidence for issue #586, which adds orchestrator-level large-diff risk bucketing when changed lines exceed 3000, metadata-only hunks for low-risk and generated paths, and a `### large-diff-bucketing` aggregate section that blocks `status: ready` while `partial-review: yes`.
 
-Checkpoint: `WORKTREE` (`post-586`).
+Checkpoint: `21373dc` (`post-586`).
 
 ## Benchmark Scope
 
