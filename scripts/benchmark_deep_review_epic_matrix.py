@@ -171,7 +171,7 @@ DEFAULT_CHECKPOINTS = (
     ),
     Checkpoint(
         name="post-586",
-        ref="21373dc",
+        ref="64e0f12",
         issue=586,
         previous="post-585",
         dispatch_contract="dispatch-static-v1",
