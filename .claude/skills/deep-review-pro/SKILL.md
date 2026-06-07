@@ -171,6 +171,7 @@ Derived values:
 - `CHANGED_PATHS`: every path named by `diff --git`, `+++ b/...`, `--- a/...`, `rename from`, `rename to`, and every path listed in `UNTRACKED`. Ignore `/dev/null`.
 - `NEW_PATHS`: every path whose hunk includes `new file mode`, `--- /dev/null`, or appears in `UNTRACKED`.
 - `ADDED_LINES`: every line in `DIFF` that starts with `+` except `+++ ...`, with the leading `+` removed.
+- `CHANGED_LINE_COUNT`: count of every hunk line in `DIFF` that starts with `+` or `-`, excluding `+++` / `---` file headers.
 - `CHANGED_FILES`: a complete changed-file manifest with one line per path in `CHANGED_PATHS`, in first-seen order. Format each line as `<status> <path>`, where status is `added`, `modified`, `deleted`, `renamed`, `copied`, `binary`, or `untracked`. For renames and copies, include the destination path as the manifest key and append `(from <old-path>)`.
 
 Build each agent's prompt frame by substituting that agent's selected diff into the normal `{{DIFF}}` slot, substituting the same complete `CHANGED_FILES` manifest into `{{CHANGED_FILES}}`, and preserving the same `UNTRACKED`, `PR_DESC`, and `BIAS` values. This spec names the placeholder form `PROMPT_FRAME_<Agent>`; an actual shell implementation can store those frames in an associative map keyed by agent name or normalize hyphens to underscores (for example, `PROMPT_FRAME_deep_review_typescript`). If a specialist needs context outside its inline subdiff, the complete changed-file manifest tells it what was omitted, and its granted `Read`, `Grep`, and `Glob` tools remain available for surrounding code lookup.
@@ -209,7 +210,36 @@ The static pre-pass emits exactly one aggregate section before specialist sectio
 summary: <static-pass> pass / <static-fail> fail / <static-unavailable> unavailable / <static-N/A> N/A
 ```
 
-For checks whose trigger is absent, emit `N/A` with a short reason. In compact mode, keep every static `fail` and `unavailable` row. Static `pass` and `N/A` rows may be omitted in compact mode only when the summary line still preserves the counts; detailed mode emits all rows. Static `fail` counts are included in the aggregate `total:` line as `<static-fail> static-fail / <static-unavailable-blocking> static-unavailable-blocking` before the specialist counts. `status:` is `blocked` when `static-fail > 0`, when `static-unavailable-blocking > 0`, or when any roster blocking metric is non-zero.
+For checks whose trigger is absent, emit `N/A` with a short reason. In compact mode, keep every static `fail` and `unavailable` row. Static `pass` and `N/A` rows may be omitted in compact mode only when the summary line still preserves the counts; detailed mode emits all rows. Static `fail` counts are included in the aggregate `total:` line as `<static-fail> static-fail / <static-unavailable-blocking> static-unavailable-blocking` before the specialist counts. `status:` is `blocked` when `static-fail > 0`, when `static-unavailable-blocking > 0`, when `large-diff-partial > 0`, or when any roster blocking metric is non-zero.
+
+## Large-diff risk bucketing
+
+After the static pre-pass and before dispatch trigger evaluation, count changed lines in `DIFF` as every hunk line that starts with `+` or `-`, excluding `+++` / `---` file headers. When the count exceeds **3000**, classify every changed path into exactly one bucket:
+
+| Bucket | Examples | Inline diff treatment when threshold exceeded |
+| --- | --- | --- |
+| `high-risk` | workflows, auth/session/crypto/config/env paths, dependency manifests, production source, deny/sensitive path components | full hunks, emitted first |
+| `normal` | remaining non-generated source or config not in the low-risk list | full hunks, after high-risk |
+| `low-risk` | docs, generated snapshots, test-only files, Bruno collections | metadata-only placeholder hunk |
+| `generated` | lockfiles, visual baselines, binary diffs | metadata-only placeholder hunk |
+
+Metadata-only hunks name the path, status, and omitted line count; they tell the agent to use the complete `<changed-files>` manifest and granted `Read` tools for governing manifests or source instead of repeating thousands of low-value lines.
+
+Per-agent prompt frames still follow roster **Prompt scope** rules. Scoped specialists receive bucketed hunks only for paths matching their selector; broad reviewers receive the bucketed full diff. Never silently restore the unbucketed diff for scoped specialists when bucketing is active.
+
+Emit one aggregate section after `static-pre-pass` and before specialist sections when bucketing runs:
+
+```text
+### large-diff-bucketing
+changed-lines: <count> (threshold=3000)
+buckets: high-risk=<n> / normal=<n> / low-risk=<n> / generated=<n>
+partial-review: <yes|no> — low-risk and generated buckets use metadata-only inline hunks
+override: <none|caller-documented>
+```
+
+Set `partial-review: yes` when the threshold is exceeded and any `low-risk` or `generated` bucket file is present. When `partial-review: yes`, `status:` cannot be `ready` unless the caller supplied an explicit full-review override in the invocation bias (for example `full review required before merge`) and every required non-generated bucket has since been covered in the convergence loop. Without that override, emit `status: blocked` and surface that a follow-up full review is required for deferred buckets.
+
+Include `large-diff-partial` in the aggregate `total:` line as `0` or `1` before specialist counts when bucketing is active.
 
 ## PROMPT_FRAME contract
 
@@ -419,7 +449,7 @@ After the `static-pre-pass` section and every per-agent section, emit:
 ### aggregate
 [UNAVAILABLE: <Agent>: <reason>   ← one line per UNAVAILABLE agent, if any]
 total: <static-fail> static-fail / <static-unavailable-blocking> static-unavailable-blocking / <enumerate every non-skipped row's format-relevant placeholders, in roster order, separated by " / ". Both format families contribute all of their counts; concrete tokens follow the three-row example table above.>
-status: ready if `static-fail`, `static-unavailable-blocking`, and every metric named in each row's Blocking column are zero (a SKIPPED row contributes 0); otherwise blocked.
+status: ready if `static-fail`, `static-unavailable-blocking`, `large-diff-partial`, and every metric named in each row's Blocking column are zero (a SKIPPED row contributes 0); otherwise blocked.
 reuse: dispatched <N> / skipped <N> / reused <N> / final_full_matching_pass <yes|no>
 ```
 

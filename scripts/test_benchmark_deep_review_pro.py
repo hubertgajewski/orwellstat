@@ -450,6 +450,29 @@ class FixtureTests(unittest.TestCase):
         self.assertIn("## Shared specialist-agent contract", report_text)
         self.assertIn("does not change dispatch triggers", report_text)
 
+    def test_issue_586_benchmark_report_records_large_diff_bucketing_comparison(self):
+        report = (
+            Path(__file__).parents[1]
+            / "docs/deep-review-pro-benchmark/reports/586-large-diff-bucketing.md"
+        )
+
+        report_text = report.read_text()
+
+        self.assertIn("# Issue 586 Large-Diff Bucketing Benchmark", report_text)
+        self.assertIn("## Epic Comparable Benchmark", report_text)
+        self.assertIn("## Prompt-Footprint Estimate", report_text)
+        self.assertIn("### Incremental Delta: post-585 -> post-586", report_text)
+        self.assertIn(
+            "| Combined est. tokens | 490,433 | 134,442 | -355,991 (-72.59%) |",
+            report_text,
+        )
+        self.assertIn(
+            "| **Total** | **1,946,824** | **522,624** | **486,708** | **130,656** | **-356,052 (-73.16%)** |",
+            report_text,
+        )
+        self.assertIn("scoped-bucketed-v1", report_text)
+        self.assertIn("partial-review: yes", report_text.lower())
+
     def test_issue_585_benchmark_report_records_static_prepass_comparison(self):
         report = (
             Path(__file__).parents[1]
@@ -1055,6 +1078,32 @@ copy to {target_path}
                 fixture = fixtures[name]
                 self.assertEqual(set(fixture["expected_dispatched"]), expected["dispatched"])
                 self.assertEqual(set(fixture["expected_skipped"]), expected["skipped"])
+
+    def test_deep_review_pro_skill_documents_large_diff_bucketing(self):
+        skill_text = read_deep_review_pro_skill_text()
+
+        self.assertIn("## Large-diff risk bucketing", skill_text)
+        self.assertIn("CHANGED_LINE_COUNT", skill_text)
+        self.assertIn("### large-diff-bucketing", skill_text)
+        self.assertIn("large-diff-partial", skill_text)
+        self.assertIn("metadata-only placeholder hunk", skill_text)
+
+    def test_large_diff_bucketing_reduces_high_lines_prompt_frames(self):
+        diff_text = high_lines_generator.build_high_lines_fixture()
+        roster = read_deep_review_pro_roster()
+        agents = support.selected_agents_for_diff_static_v1(roster, diff_text)
+        scoped = support.build_scoped_prompt_frames_v1(diff_text, roster={
+            agent: roster[agent] for agent in agents
+        })
+        bucketed = support.build_scoped_prompt_frames_bucketed_v1(diff_text, roster={
+            agent: roster[agent] for agent in agents
+        })
+
+        self.assertLess(sum(len(frame) for frame in bucketed.values()),
+                        sum(len(frame) for frame in scoped.values()))
+        plan = support.plan_large_diff_bucketing_v1(support.parse_diff(diff_text))
+        self.assertTrue(plan.threshold_exceeded)
+        self.assertTrue(plan.partial_review)
 
     def test_default_high_lines_fixture_exercises_full_roster_with_large_diff(self):
         fixtures = benchmark.load_fixtures()

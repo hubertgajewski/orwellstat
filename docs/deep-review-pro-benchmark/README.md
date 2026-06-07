@@ -124,7 +124,7 @@ The #587 epic uses fixed checkpoints:
 | `post-583` | After #583 compact aggregate output |
 | `post-584` | After #584 shared-boilerplate compaction |
 | `post-585` | After #585 static pre-pass and ownership cleanup |
-| `post-586` | Reserved for #586 large-diff risk bucketing |
+| `post-586` | After #586 large-diff risk bucketing |
 
 Every child story in #587 must report two comparable deltas:
 
