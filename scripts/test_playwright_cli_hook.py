@@ -8,7 +8,6 @@ import subprocess
 import sys
 import unittest
 from pathlib import Path
-from unittest import mock
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 HOOK_SCRIPT = REPO_ROOT / "scripts" / "verify_playwright_cli_hook.py"
@@ -39,6 +38,7 @@ class PlaywrightCliHookTests(unittest.TestCase):
             "",
             "npm install\nnpm run tsc",
             "echo 'not playwright' test",
+            "   &&   ",
         ):
             with self.subTest(command=command):
                 status, stderr = run_hook(command)
@@ -53,11 +53,17 @@ class PlaywrightCliHookTests(unittest.TestCase):
             "node_modules/.bin/playwright test",
             "npx play'wright' test",
             "npx play\\wright test",
+            "npx playw''right test",
             'node "@playwright/test/cli.js" test',
             "playwright\ttest",
             "npm install\nplaywright test",
+            "npm install; playwright test",
+            "false || npx playwright test",
             "bash -c 'npx playwright test'",
+            "bash -lc 'npx playwright test'",
+            "bash -c'npx playwright test'",
             "eval 'npx playwright test'",
+            "npx playwright test 'unclosed",
         ):
             with self.subTest(command=command):
                 status, stderr = run_hook(command)
@@ -75,16 +81,6 @@ class PlaywrightCliHookUnitTests(unittest.TestCase):
             "node @playwright/test/cli.js test",
         )
 
-    def test_is_playwright_test_invocation_empty(self) -> None:
-        self.assertFalse(hook.is_playwright_test_invocation(""))
-
-    def test_main_empty_argv(self) -> None:
-        with mock.patch.object(sys, "argv", ["verify_playwright_cli_hook.py"]):
-            self.assertEqual(hook.main(), 0)
-
-    def test_main_blocks_playwright_test(self) -> None:
-        with mock.patch.object(sys, "argv", ["verify_playwright_cli_hook.py", "npx playwright test"]):
-            self.assertEqual(hook.main(), 2)
 
 if __name__ == "__main__":
     unittest.main()

@@ -29,20 +29,45 @@ def collapse_shell_obfuscation(command: str) -> str:
     return command.replace("'", "").replace('"', "").replace("\\", "")
 
 
+def short_option_includes_c(token: str) -> bool:
+    return token.startswith("-") and not token.startswith("--") and "c" in token[1:]
+
+
+def inline_c_command(token: str) -> str | None:
+    if token.startswith("-c") and len(token) > 2:
+        return token[2:]
+    return None
+
+
 def tokens_match_playwright_test(tokens: list[str]) -> bool:
     for index, token in enumerate(tokens):
         normalized = collapse_shell_obfuscation(token)
         executable = normalized.rsplit("/", 1)[-1]
-        if executable == "playwright" and index + 1 < len(tokens) and collapse_shell_obfuscation(tokens[index + 1]) == "test":
+        if index + 1 < len(tokens):
+            next_token = tokens[index + 1]
+            next_normalized = collapse_shell_obfuscation(next_token)
+            if executable == "playwright" and next_normalized == "test":
+                return True
+            if normalized.endswith("@playwright/test/cli.js") and next_normalized == "test":
+                return True
+
+        if token in WRAPPER_INNER_TOKENS and index + 1 < len(tokens):
+            if is_playwright_test_invocation(tokens[index + 1]):
+                return True
+
+        inline = inline_c_command(token)
+        if inline is not None and is_playwright_test_invocation(inline):
             return True
-        if normalized.endswith("@playwright/test/cli.js") and index + 1 < len(tokens) and collapse_shell_obfuscation(tokens[index + 1]) == "test":
-            return True
-        if token in WRAPPER_INNER_TOKENS and index + 1 < len(tokens) and is_playwright_test_invocation(tokens[index + 1]):
-            return True
+
+        if short_option_includes_c(token) and index + 1 < len(tokens):
+            if is_playwright_test_invocation(tokens[index + 1]):
+                return True
+
     return False
 
 
 def is_playwright_test_invocation(command: str) -> bool:
+    """Return True when any command segment invokes Playwright's test runner."""
     if not command:
         return False
 
