@@ -47,6 +47,7 @@ Root scripts support CI workflows, hooks, and generated reports:
 | `scripts/test_generate_quality_metrics.py` | Unit tests for generated quality-metrics behavior                                                |
 | `scripts/test_self_healing.py`             | Unit tests for self-healing loop prevention, classification, redaction, and AI boundaries        |
 | `scripts/test_runner_scripts.py`           | Unit tests for self-hosted runner setup/removal scripts                                          |
+| `scripts/run_pinned_hook.sh`               | Shared pinned-hash launcher for Claude/Codex PreToolUse hook scripts                             |
 | `scripts/shell_c_option_utils.py`          | Shared `-c` / clustered short-option parsing helpers for hook scripts                            |
 | `scripts/verify_playwright_cli_hook.py`    | Pinned PreToolUse helper that blocks direct Playwright CLI invocations and directs agents to `playwright-report-mcp` |
 | `scripts/test_playwright_cli_hook.py`      | Unit tests for the Playwright CLI hook script                                                    |

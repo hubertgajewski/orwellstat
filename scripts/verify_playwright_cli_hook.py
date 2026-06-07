@@ -23,7 +23,7 @@ PLAYWRIGHT_TEST_PATTERN = re.compile(
 )
 
 COMMAND_SEGMENT_SPLIT = re.compile(r"\s*&&\s*|\s*;\s*|\s*\|\|\s*")
-WRAPPER_INNER_TOKENS = frozenset({"-c", "eval"})
+EVAL_TOKEN = "eval"
 
 
 def collapse_shell_obfuscation(command: str) -> str:
@@ -44,10 +44,17 @@ def tokens_match_playwright_test(tokens: list[str]) -> bool:
                 return True
 
         inner = inline_c_command(token)
-        if inner is not None and is_playwright_test_invocation(inner):
-            return True
+        if inner is not None:
+            try:
+                inner_tokens = shlex.split(inner.strip(), posix=True)
+            except ValueError:
+                if PLAYWRIGHT_TEST_PATTERN.search(collapse_shell_obfuscation(inner)):
+                    return True
+            else:
+                if tokens_match_playwright_test(inner_tokens):
+                    return True
 
-        if has_next and (token in WRAPPER_INNER_TOKENS or short_option_includes_c(token)):
+        if has_next and (token == EVAL_TOKEN or short_option_includes_c(token)):
             if is_playwright_test_invocation(tokens[index + 1]):
                 return True
 

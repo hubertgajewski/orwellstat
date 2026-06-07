@@ -392,7 +392,10 @@ class PublishCommandHookTests(unittest.TestCase):
         ):
             for hook_file in HOOK_FILES:
                 with self.subTest(hook_file=hook_file, command=command):
-                    hook_command = self.publish_hook_command(hook_file).replace("EXPECTED='", "EXPECTED='000")
+                    hook_command = self.publish_hook_command(hook_file).replace(
+                        "a0a57b05707532855e41e8da8c542ba13bd3565b04d29f7517a1162815a0dd63",
+                        "0" * 64,
+                    )
                     status, calls, stderr = self.run_hook_command(hook_command, command)
                     self.assertEqual(status, 2)
                     self.assertEqual(calls, [])
@@ -447,7 +450,7 @@ class PublishCommandHookTests(unittest.TestCase):
 
     def test_hook_configs_keep_publish_gate_in_sync(self):
         commands = [self.publish_hook_command(hook_file) for hook_file in HOOK_FILES]
-        normalized = [command.replace(" python3 \"$SCRIPT\" claude", " python3 \"$SCRIPT\"") for command in commands]
+        normalized = [command.replace(" -- claude", " --") for command in commands]
         self.assertEqual(normalized[0], normalized[1])
         for command in commands:
             self.assertIn("*git*", command)
@@ -488,7 +491,8 @@ class PublishCommandHookTests(unittest.TestCase):
         for hook_file in HOOK_FILES:
             with self.subTest(hook_file=hook_file):
                 hook_command = self.playwright_hook_command(hook_file).replace(
-                    "EXPECTED='", "EXPECTED='000"
+                    "3f4a721e31ad0ace2364639c25bd195f6a6f05bc36b662baba34e86947f29909",
+                    "0" * 64,
                 )
                 status, calls, stderr = self.run_hook_command(hook_command, "npx playwright test")
                 self.assertEqual(status, 2)
