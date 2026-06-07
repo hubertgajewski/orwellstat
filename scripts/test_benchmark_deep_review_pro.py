@@ -1131,6 +1131,10 @@ copy to {target_path}
             "generated",
         )
         self.assertEqual(
+            support.classify_path_bucket_v1("package.json"),
+            "high-risk",
+        )
+        self.assertEqual(
             support.classify_path_bucket_v1("scripts/auth_helper.py"),
             "high-risk",
         )
@@ -1146,6 +1150,31 @@ copy to {target_path}
             support.classify_path_bucket_v1(".claude/skills/deep-review-pro/SKILL.md"),
             "low-risk",
         )
+        self.assertEqual(support.classify_path_bucket_v1("Makefile"), "normal")
+        self.assertEqual(
+            support.classify_path_bucket_v1("scripts/example.py", block_status="binary"),
+            "generated",
+        )
+
+    def test_bucketed_diff_uses_metadata_only_for_generated_lockfiles(self):
+        body = [f'    "dep-{index}": "1.0.0",' for index in range(1, 3002)]
+        diff_text = "\n".join(
+            [
+                "diff --git a/package-lock.json b/package-lock.json",
+                "index 1111111..2222222 100644",
+                "--- a/package-lock.json",
+                "+++ b/package-lock.json",
+                "@@ -1,3001 +1,3001 @@",
+                *[f"+{line}" for line in body],
+            ]
+        ) + "\n"
+        parsed = support.parse_diff(diff_text)
+        plan = support.plan_large_diff_bucketing_v1(parsed)
+        bucketed = support.build_bucketed_diff_text_v1(parsed, plan=plan)
+
+        self.assertTrue(plan.threshold_exceeded)
+        self.assertIn("@@ large-diff-bucket: metadata-only @@", bucketed)
+        self.assertNotIn('"dep-0001"', bucketed)
 
     def test_bucketed_diff_uses_metadata_only_for_low_risk_paths(self):
         diff_text = high_lines_generator.build_high_lines_fixture()

@@ -373,23 +373,32 @@ def prompt_frame_lengths_full_v1(
     }
 
 
+def _prompt_frame_lengths_for_builder(
+    *,
+    diff_text: str,
+    roster: dict[str, dict[str, str]],
+    agents: list[str],
+    frame_builder,
+) -> dict[str, int]:
+    selected_roster = {agent: roster[agent] for agent in agents}
+    return {
+        agent: len(frame)
+        for agent, frame in frame_builder(diff_text, roster=selected_roster).items()
+    }
+
+
 def prompt_frame_lengths_scoped_v1(
     *,
     diff_text: str,
     roster: dict[str, dict[str, str]],
     agents: list[str],
 ) -> dict[str, int]:
-    selected_roster = {
-        agent: roster[agent]
-        for agent in agents
-    }
-    return {
-        agent: len(frame)
-        for agent, frame in build_scoped_prompt_frames_v1(
-            diff_text,
-            roster=selected_roster,
-        ).items()
-    }
+    return _prompt_frame_lengths_for_builder(
+        diff_text=diff_text,
+        roster=roster,
+        agents=agents,
+        frame_builder=build_scoped_prompt_frames_v1,
+    )
 
 
 def prompt_frame_lengths_scoped_bucketed_v1(
@@ -398,17 +407,12 @@ def prompt_frame_lengths_scoped_bucketed_v1(
     roster: dict[str, dict[str, str]],
     agents: list[str],
 ) -> dict[str, int]:
-    selected_roster = {
-        agent: roster[agent]
-        for agent in agents
-    }
-    return {
-        agent: len(frame)
-        for agent, frame in build_scoped_prompt_frames_bucketed_v1(
-            diff_text,
-            roster=selected_roster,
-        ).items()
-    }
+    return _prompt_frame_lengths_for_builder(
+        diff_text=diff_text,
+        roster=roster,
+        agents=agents,
+        frame_builder=build_scoped_prompt_frames_bucketed_v1,
+    )
 
 
 PROMPT_FRAME_CONTRACT_BUILDERS = {
@@ -673,6 +677,57 @@ def static_prepass_proxy_section(diff_text: str) -> tuple[str, str, dict[str, in
     return f"### static-pre-pass\n{body}\n{summary}", total, counts
 
 
+def _render_compact_static_aggregate_proxy(
+    *,
+    context: AggregateRenderContext,
+    static_section: str,
+    static_total: str,
+    static_counts: dict[str, int],
+    middle_sections: tuple[str, ...] = (),
+    extra_total_parts: tuple[str, ...] = (),
+    large_diff_blocked: bool = False,
+) -> str:
+    aggregate_agent_total = aggregate_total_line(context.agents, context.roster)
+    total_parts = [static_total, *extra_total_parts]
+    if context.agents:
+        total_parts.append(aggregate_agent_total.removeprefix("total: "))
+    total_line = (
+        f"total: {total_parts[0]}"
+        if len(total_parts) == 1
+        else f"total: {' / '.join(total_parts)}"
+    )
+    static_blocked = (
+        static_counts["fail"] > 0 or static_counts["unavailable_blocking"] > 0
+    )
+    status_line = (
+        "status: blocked"
+        if static_blocked or large_diff_blocked
+        else "status: ready"
+    )
+    lines = [
+        f"fixture: {context.fixture['name']}",
+        f"mode: {output_mode_for_contract(context.output_contract)} aggregate output",
+        "",
+        static_section,
+    ]
+    for section in middle_sections:
+        lines.extend(["", section])
+    lines.append("")
+    lines.extend(compact_agent_section(agent, context.roster[agent]) for agent in context.agents)
+    lines.extend(skipped_agent_section(agent, context.roster[agent]) for agent in context.skipped)
+    lines.extend(
+        [
+            "",
+            "### aggregate",
+            total_line,
+            status_line,
+            aggregate_reuse_line(context.agents, context.skipped),
+            "tokens: total <value|unavailable> (use --usage or --verbose for the detailed table)",
+        ]
+    )
+    return "\n".join(lines)
+
+
 def compact_static_output_proxy(
     *,
     fixture: dict,
@@ -689,39 +744,18 @@ def compact_static_output_proxy(
         skipped=skipped,
         output_contract="compact-static-v1",
     )
-    aggregate_agent_total = aggregate_total_line(context.agents, context.roster)
-    if not context.agents:
-        total_line = f"total: {static_total}"
-    else:
-        total_line = f"total: {static_total} / {aggregate_agent_total.removeprefix('total: ')}"
-    static_blocked = (
-        static_counts["fail"] > 0 or static_counts["unavailable_blocking"] > 0
+    return _render_compact_static_aggregate_proxy(
+        context=context,
+        static_section=static_section,
+        static_total=static_total,
+        static_counts=static_counts,
     )
-    status_line = "status: blocked" if static_blocked else "status: ready"
-    lines = [
-        f"fixture: {context.fixture['name']}",
-        f"mode: {output_mode_for_contract(context.output_contract)} aggregate output",
-        "",
-        static_section,
-        "",
-    ]
-    lines.extend(compact_agent_section(agent, context.roster[agent]) for agent in context.agents)
-    lines.extend(skipped_agent_section(agent, context.roster[agent]) for agent in context.skipped)
-    lines.extend(
-        [
-            "",
-            "### aggregate",
-            total_line,
-            status_line,
-            aggregate_reuse_line(context.agents, context.skipped),
-            "tokens: total <value|unavailable> (use --usage or --verbose for the detailed table)",
-        ]
-    )
-    return "\n".join(lines)
 
 
-def large_diff_bucketing_proxy_section(diff_text: str) -> tuple[str, str, int]:
-    plan = plan_large_diff_bucketing_v1(parse_diff(diff_text))
+def large_diff_bucketing_proxy_section_from_blocks(
+    parsed_blocks,
+) -> tuple[str, str, int]:
+    plan = plan_large_diff_bucketing_v1(parsed_blocks)
     if not plan.threshold_exceeded:
         return "", "0 large-diff-partial", 0
     counts = plan.bucket_counts
@@ -741,6 +775,10 @@ def large_diff_bucketing_proxy_section(diff_text: str) -> tuple[str, str, int]:
     return body, total, partial_flag
 
 
+def large_diff_bucketing_proxy_section(diff_text: str) -> tuple[str, str, int]:
+    return large_diff_bucketing_proxy_section_from_blocks(parse_diff(diff_text))
+
+
 def compact_static_bucketed_output_proxy(
     *,
     fixture: dict,
@@ -749,9 +787,10 @@ def compact_static_bucketed_output_proxy(
     skipped: list[str],
     diff_text: str,
 ) -> str:
+    parsed_blocks = parse_diff(diff_text)
     static_section, static_total, static_counts = static_prepass_proxy_section(diff_text)
-    bucketing_section, bucketing_total, partial_flag = large_diff_bucketing_proxy_section(
-        diff_text
+    bucketing_section, bucketing_total, partial_flag = (
+        large_diff_bucketing_proxy_section_from_blocks(parsed_blocks)
     )
     context = AggregateRenderContext(
         fixture=fixture,
@@ -760,44 +799,15 @@ def compact_static_bucketed_output_proxy(
         skipped=skipped,
         output_contract="compact-static-bucketed-v1",
     )
-    aggregate_agent_total = aggregate_total_line(context.agents, context.roster)
-    total_parts = [static_total]
-    if bucketing_section:
-        total_parts.append(bucketing_total)
-    if context.agents:
-        total_parts.append(aggregate_agent_total.removeprefix("total: "))
-    total_line = f"total: {' / '.join(total_parts)}"
-    static_blocked = (
-        static_counts["fail"] > 0 or static_counts["unavailable_blocking"] > 0
+    return _render_compact_static_aggregate_proxy(
+        context=context,
+        static_section=static_section,
+        static_total=static_total,
+        static_counts=static_counts,
+        middle_sections=(bucketing_section,) if bucketing_section else (),
+        extra_total_parts=(bucketing_total,) if bucketing_section else (),
+        large_diff_blocked=partial_flag > 0,
     )
-    large_diff_blocked = partial_flag > 0
-    status_line = (
-        "status: blocked"
-        if static_blocked or large_diff_blocked
-        else "status: ready"
-    )
-    lines = [
-        f"fixture: {context.fixture['name']}",
-        f"mode: {output_mode_for_contract(context.output_contract)} aggregate output",
-        "",
-        static_section,
-    ]
-    if bucketing_section:
-        lines.extend(["", bucketing_section])
-    lines.append("")
-    lines.extend(compact_agent_section(agent, context.roster[agent]) for agent in context.agents)
-    lines.extend(skipped_agent_section(agent, context.roster[agent]) for agent in context.skipped)
-    lines.extend(
-        [
-            "",
-            "### aggregate",
-            total_line,
-            status_line,
-            aggregate_reuse_line(context.agents, context.skipped),
-            "tokens: total <value|unavailable> (use --usage or --verbose for the detailed table)",
-        ]
-    )
-    return "\n".join(lines)
 
 
 def aggregate_output_text_detailed_v1(

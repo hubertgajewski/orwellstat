@@ -824,6 +824,26 @@ class EpicBenchmarkMatrixTests(unittest.TestCase):
         self.assertEqual(partial_flag, 0)
         self.assertIn("0 large-diff-partial", total)
 
+    def test_compact_static_bucketed_output_proxy_reports_blocked_status_for_large_diff_partial(
+        self,
+    ):
+        fixture = next(
+            fixture for fixture in epic.load_fixtures() if fixture["name"] == "high-lines"
+        )
+        diff_text = epic.generated_fixture_text(fixture)
+        output = epic.compact_static_bucketed_output_proxy(
+            fixture=fixture,
+            roster={},
+            agents=[],
+            skipped=[],
+            diff_text=diff_text,
+        )
+
+        self.assertIn("### large-diff-bucketing", output)
+        self.assertIn("partial-review: yes", output)
+        self.assertIn("1 large-diff-partial", output)
+        self.assertIn("status: blocked", output)
+
     def test_large_diff_bucketing_proxy_marks_high_lines_partial(self):
         fixture = next(
             fixture for fixture in epic.load_fixtures() if fixture["name"] == "high-lines"
