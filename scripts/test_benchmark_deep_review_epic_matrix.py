@@ -774,12 +774,16 @@ class EpicBenchmarkMatrixTests(unittest.TestCase):
             581: "Incremental Delta: post-580 -> post-581",
             582: "Incremental Delta: post-581 -> post-582",
             583: "Incremental Delta: post-582 -> post-583",
+            584: "Incremental Delta: post-583 -> post-584",
+            585: "Incremental Delta: post-584 -> post-585",
         }
         report_paths = {
             580: REPO_ROOT / "docs/deep-review-pro-benchmark/reports/580-conditional-dispatch.md",
             581: REPO_ROOT / "docs/deep-review-pro-benchmark/reports/581-agent-subdiffs.md",
             582: REPO_ROOT / "docs/deep-review-pro-benchmark/reports/582-rerun-cache.md",
             583: REPO_ROOT / "docs/deep-review-pro-benchmark/reports/583-output-verbosity.md",
+            584: REPO_ROOT / "docs/deep-review-pro-benchmark/reports/584-shared-boilerplate.md",
+            585: REPO_ROOT / "docs/deep-review-pro-benchmark/reports/585-static-prepass.md",
         }
 
         for issue, expected_line in expected.items():

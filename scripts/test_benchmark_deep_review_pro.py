@@ -418,6 +418,76 @@ class FixtureTests(unittest.TestCase):
         )
         self.assertIn("compact output still surfaces schema violations", report_text.lower())
 
+    def test_issue_584_benchmark_report_records_shared_boilerplate_comparison(self):
+        report = (
+            Path(__file__).parents[1]
+            / "docs/deep-review-pro-benchmark/reports/584-shared-boilerplate.md"
+        )
+
+        report_text = report.read_text()
+
+        self.assertIn("# Issue 584 Shared Boilerplate Benchmark", report_text)
+        self.assertIn("Checkpoint: `0d7add0` (`post-584`)", report_text)
+        self.assertIn("## Epic Comparable Benchmark", report_text)
+        self.assertIn("## Prompt-Footprint Estimate", report_text)
+        self.assertIn("### Incremental Delta: post-583 -> post-584", report_text)
+        self.assertIn(
+            "| Combined est. tokens | 509,477 | 493,934 | -15,543 (-3.05%) |",
+            report_text,
+        )
+        self.assertIn(
+            "### Cumulative Delta: original-580 -> post-584",
+            report_text,
+        )
+        self.assertIn(
+            "| Combined est. tokens | 955,555 | 493,934 | -461,621 (-48.31%) |",
+            report_text,
+        )
+        self.assertIn(
+            "| **Total** | **2,026,319** | **1,964,147** | **506,583** | **491,040** | **-15,543 (-3.07%)** |",
+            report_text,
+        )
+        self.assertIn("## Shared specialist-agent contract", report_text)
+        self.assertIn("does not change dispatch triggers", report_text)
+
+    def test_issue_585_benchmark_report_records_static_prepass_comparison(self):
+        report = (
+            Path(__file__).parents[1]
+            / "docs/deep-review-pro-benchmark/reports/585-static-prepass.md"
+        )
+
+        report_text = report.read_text()
+
+        self.assertIn("# Issue 585 Static Pre-Pass Benchmark", report_text)
+        self.assertIn("Checkpoint: `825069c` (`post-585`)", report_text)
+        self.assertIn("## Epic Comparable Benchmark", report_text)
+        self.assertIn("## Prompt-Input Proxy Comparison", report_text)
+        self.assertIn("## Static Pre-Pass Aggregate-Output Proxy", report_text)
+        self.assertIn("## Dispatch Comparison", report_text)
+        self.assertIn("### Incremental Delta: post-584 -> post-585", report_text)
+        self.assertIn(
+            "| Combined est. tokens | 493,934 | 490,433 | -3,501 (-0.71%) |",
+            report_text,
+        )
+        self.assertIn(
+            "### Cumulative Delta: original-580 -> post-585",
+            report_text,
+        )
+        self.assertIn(
+            "| Combined est. tokens | 955,555 | 490,433 | -465,122 (-48.68%) |",
+            report_text,
+        )
+        self.assertIn(
+            "| **Total** | **1,964,147** | **1,946,824** | **491,040** | **486,708** | **-4,332 (-0.88%)** |",
+            report_text,
+        )
+        self.assertIn(
+            "| **Total** | **11,561** | **14,886** | **2,894** | **3,725** | **831 (28.71%)** |",
+            report_text,
+        )
+        self.assertIn("`workflow` | 7 | 6 |", report_text)
+        self.assertIn("dispatch-static-v1", report_text)
+
     def test_issue_582_benchmark_report_records_rerun_sequence_validation(self):
         report = (
             Path(__file__).parents[1]
