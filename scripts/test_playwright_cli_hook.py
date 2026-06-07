@@ -86,11 +86,15 @@ class PlaywrightCliHookUnitTests(unittest.TestCase):
         )
 
     def test_inline_c_command_helpers(self) -> None:
-        from shell_c_option_utils import inline_c_command
+        from shell_c_option_utils import inline_c_command, short_option_includes_c
 
         self.assertEqual(inline_c_command("-cnpx playwright test"), "npx playwright test")
         self.assertEqual(inline_c_command("-lcnpx playwright test"), "npx playwright test")
+        self.assertEqual(inline_c_command("-ilcnpx playwright test"), "npx playwright test")
         self.assertIsNone(inline_c_command("-lc"))
+        self.assertIsNone(inline_c_command("--config"))
+        self.assertTrue(short_option_includes_c("-lc"))
+        self.assertFalse(short_option_includes_c("--config"))
 
 
 if __name__ == "__main__":

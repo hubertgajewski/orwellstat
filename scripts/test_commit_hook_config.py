@@ -151,6 +151,7 @@ class CommandDecisionTests(unittest.TestCase):
             "node -pe'require(\"child_process\").execSync(\"git push origin HEAD\")'",
             "bash -c 'git push origin HEAD'",
             "bash -lc 'git push origin HEAD'",
+            "bash -lc'git push origin HEAD'",
             "bash --rcfile /tmp/x -c 'git push origin HEAD'",
             "bash <<EOF\ngit push origin HEAD\nEOF",
             "true\nbash <<EOF\ngit push origin HEAD\nEOF",
