@@ -31,6 +31,17 @@ def collapse_shell_obfuscation(command: str) -> str:
     return command.replace("'", "").replace('"', "").replace("\\", "")
 
 
+def tokens_or_pattern_match(text: str) -> bool:
+    stripped = text.strip()
+    if not stripped:
+        return False
+    try:
+        tokens = shlex.split(stripped, posix=True)
+    except ValueError:
+        return bool(PLAYWRIGHT_TEST_PATTERN.search(collapse_shell_obfuscation(stripped)))
+    return tokens_match_playwright_test(tokens)
+
+
 def tokens_match_playwright_test(tokens: list[str]) -> bool:
     for index, token in enumerate(tokens):
         normalized = collapse_shell_obfuscation(token)
@@ -44,15 +55,8 @@ def tokens_match_playwright_test(tokens: list[str]) -> bool:
                 return True
 
         inner = inline_c_command(token)
-        if inner is not None:
-            try:
-                inner_tokens = shlex.split(inner.strip(), posix=True)
-            except ValueError:
-                if PLAYWRIGHT_TEST_PATTERN.search(collapse_shell_obfuscation(inner)):
-                    return True
-            else:
-                if tokens_match_playwright_test(inner_tokens):
-                    return True
+        if inner is not None and tokens_or_pattern_match(inner):
+            return True
 
         if has_next and (token == EVAL_TOKEN or short_option_includes_c(token)):
             if is_playwright_test_invocation(tokens[index + 1]):
@@ -70,13 +74,7 @@ def is_playwright_test_invocation(command: str) -> bool:
         stripped = segment.strip()
         if not stripped:
             continue
-        try:
-            tokens = shlex.split(stripped, posix=True)
-        except ValueError:
-            if PLAYWRIGHT_TEST_PATTERN.search(collapse_shell_obfuscation(stripped)):
-                return True
-            continue
-        if tokens_match_playwright_test(tokens):
+        if tokens_or_pattern_match(stripped):
             return True
 
     return False

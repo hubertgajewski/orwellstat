@@ -47,7 +47,7 @@
           },
           {
             "type": "command",
-            "command": "INPUT=$(cat); CMD=$(printf '%s' \"$INPUT\" | jq -r '.tool_input.command // empty'); ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0; \"$ROOT/scripts/run_pinned_hook.sh\" scripts/verify_playwright_cli_hook.py 3f4a721e31ad0ace2364639c25bd195f6a6f05bc36b662baba34e86947f29909 -- \"$CMD\"",
+            "command": "INPUT=$(cat); CMD=$(printf '%s' \"$INPUT\" | jq -r '.tool_input.command // empty'); ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0; \"$ROOT/scripts/run_pinned_hook.sh\" scripts/verify_playwright_cli_hook.py eef0f69a26d2655db48a292e449abd09fc79095544d77b1c36126e544eb903dc -- \"$CMD\"",
             "timeout": 10,
             "statusMessage": "Checking for direct Playwright CLI..."
           }

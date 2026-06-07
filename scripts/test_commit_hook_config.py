@@ -491,7 +491,7 @@ class PublishCommandHookTests(unittest.TestCase):
         for hook_file in HOOK_FILES:
             with self.subTest(hook_file=hook_file):
                 hook_command = self.playwright_hook_command(hook_file).replace(
-                    "3f4a721e31ad0ace2364639c25bd195f6a6f05bc36b662baba34e86947f29909",
+                    "eef0f69a26d2655db48a292e449abd09fc79095544d77b1c36126e544eb903dc",
                     "0" * 64,
                 )
                 status, calls, stderr = self.run_hook_command(hook_command, "npx playwright test")
