@@ -1,6 +1,6 @@
 # Quality Metrics
 
-> Last updated: 2026-06-01
+> Last updated: 2026-07-01
 
 ## Defect Escape Rate
 
@@ -59,3 +59,4 @@
 | 2026-04-10 | 14% | 1.4 days | 64% |
 | 2026-05-01 | 5% | 13.7 hours | 83% |
 | 2026-06-01 | 4% | 1.0 days | 96% |
+| 2026-07-01 | 4% | 1.0 days | 96% |
