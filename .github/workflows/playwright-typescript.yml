@@ -143,6 +143,7 @@ jobs:
         with:
           browser: chromium
       - name: Run auth.setup.ts
+        id: run-auth-setup
         run: npx playwright test --project=setup
         working-directory: playwright/typescript
         env:
@@ -153,6 +154,56 @@ jobs:
           ORWELLSTAT_PASSWORD_EMPTY: ${{ secrets.ORWELLSTAT_PASSWORD_EMPTY }}
           BASIC_AUTH_USER: ${{ (inputs.env || 'staging') == 'staging' && secrets.BASIC_AUTH_USER || '' }}
           BASIC_AUTH_PASSWORD: ${{ (inputs.env || 'staging') == 'staging' && secrets.BASIC_AUTH_PASSWORD || '' }}
+      - name: Detect local act runner
+        id: detect-act
+        if: ${{ !cancelled() }}
+        run: |
+          if [ "${ACT}" = "true" ]; then
+            echo "running=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Collect failure evidence
+        if: ${{ failure() && steps.run-auth-setup.outcome == 'failure' }}
+        working-directory: playwright/typescript
+        env:
+          ARTIFACT_NAME: failure-evidence-auth-setup-${{ matrix.id }}
+          PROJECT: ${{ matrix.id }}
+        run: |
+          mkdir -p failure-evidence
+          if ! node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/collect-failure-evidence.ts \
+            --results test-results/results.json \
+            --source test-results \
+            --out failure-evidence \
+            --artifact-name "$ARTIFACT_NAME" \
+            --run-id "$GITHUB_RUN_ID" \
+            --project "$PROJECT" \
+            --shard auth-setup \
+            --total-shards 1; then
+            {
+              echo "# Playwright Failure Evidence"
+              echo
+              echo "| Field | Value |"
+              echo "| --- | --- |"
+              echo "| Run | $GITHUB_RUN_ID |"
+              echo "| Artifact | $ARTIFACT_NAME |"
+              echo "| Download command | gh run download $GITHUB_RUN_ID --name $ARTIFACT_NAME |"
+              echo "| Project | $PROJECT |"
+              echo "| Shard | auth-setup/1 |"
+              echo "| Results | not produced |"
+              echo
+              echo "## Warnings"
+              echo
+              echo "- Failure evidence collection failed before an index could be generated."
+            } > failure-evidence/index.md
+          fi
+
+          cat failure-evidence/index.md >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
+      - uses: actions/upload-artifact@v7
+        if: ${{ failure() && steps.run-auth-setup.outcome == 'failure' && steps.detect-act.outputs.running != 'true' }}
+        with:
+          name: failure-evidence-auth-setup-${{ matrix.id }}
+          path: playwright/typescript/failure-evidence/
+          retention-days: 30
+          if-no-files-found: ignore
       - name: Upload storage states
         uses: actions/upload-artifact@v7
         with:
