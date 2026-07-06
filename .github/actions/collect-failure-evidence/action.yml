@@ -1,0 +1,126 @@
+name: Collect Failure Evidence
+description: Build and optionally upload an indexed Playwright failure-evidence artifact.
+
+inputs:
+  artifact-name:
+    description: Artifact name to write into the index and upload.
+    required: true
+  project:
+    description: Playwright project name shown in the evidence index.
+    required: true
+  shard:
+    description: Shard label shown in the evidence index.
+    required: true
+  total-shards:
+    description: Total shard count shown in the evidence index.
+    required: true
+  working-directory:
+    description: Directory containing the Playwright TypeScript package.
+    required: false
+    default: playwright/typescript
+  upload-artifact:
+    description: Whether to upload the generated evidence artifact.
+    required: false
+    default: "true"
+  withhold-sensitive-details:
+    description: Whether to withhold raw results and error text from public evidence.
+    required: false
+    default: "false"
+  withhold-binary-attachments:
+    description: Whether to index binary attachments without copying their bodies.
+    required: false
+    default: "false"
+  redact-env-names:
+    description: Whitespace- or comma-separated environment variable names whose values should be redacted from text evidence.
+    required: false
+    default: ""
+  retention-days:
+    description: Artifact retention in days.
+    required: false
+    default: "30"
+
+runs:
+  using: composite
+  steps:
+    - name: Collect failure evidence
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        ARTIFACT_NAME: ${{ inputs.artifact-name }}
+        PROJECT: ${{ inputs.project }}
+        SHARD: ${{ inputs.shard }}
+        TOTAL_SHARDS: ${{ inputs.total-shards }}
+        WITHHOLD_SENSITIVE_DETAILS: ${{ inputs.withhold-sensitive-details }}
+        WITHHOLD_BINARY_ATTACHMENTS: ${{ inputs.withhold-binary-attachments }}
+        REDACT_ENV_NAMES: ${{ inputs.redact-env-names }}
+      run: |
+        withhold_args=()
+        if [ "$WITHHOLD_SENSITIVE_DETAILS" = "true" ]; then
+          withhold_args+=(--withhold-sensitive-details)
+        fi
+        if [ "$WITHHOLD_BINARY_ATTACHMENTS" = "true" ]; then
+          withhold_args+=(--withhold-binary-attachments)
+        fi
+        redact_args=()
+        if [ -n "$REDACT_ENV_NAMES" ]; then
+          redact_args+=(--redact-env-names "$REDACT_ENV_NAMES")
+        fi
+
+        if ! node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/collect-failure-evidence.ts \
+          --results test-results/results.json \
+          --source test-results \
+          --out failure-evidence \
+          --artifact-name "$ARTIFACT_NAME" \
+          --run-id "$GITHUB_RUN_ID" \
+          --project "$PROJECT" \
+          --shard "$SHARD" \
+          --total-shards "$TOTAL_SHARDS" \
+          "${withhold_args[@]}" \
+          "${redact_args[@]}"; then
+          rm -rf failure-evidence
+          mkdir -p failure-evidence
+          {
+            echo "# Playwright Failure Evidence"
+            echo
+            echo "| Field | Value |"
+            echo "| --- | --- |"
+            echo "| Run | $GITHUB_RUN_ID |"
+            echo "| Artifact | $ARTIFACT_NAME |"
+            echo "| Download command | gh run download $GITHUB_RUN_ID --name $ARTIFACT_NAME |"
+            echo "| Project | $PROJECT |"
+            echo "| Shard | $SHARD/$TOTAL_SHARDS |"
+            echo "| Results | not produced |"
+            echo
+            echo "## Warnings"
+            echo
+            echo "- Failure evidence collection failed before an index could be generated."
+          } > failure-evidence/index.md
+        fi
+
+        summary_limit_bytes=900000
+        if [ -f failure-evidence/index.md ]; then
+          summary_bytes=$(wc -c < failure-evidence/index.md | tr -d ' ')
+          if [ "$summary_bytes" -le "$summary_limit_bytes" ]; then
+            cat failure-evidence/index.md >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
+          else
+            head -c "$summary_limit_bytes" failure-evidence/index.md >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
+            {
+              echo
+              echo
+              echo "> Failure evidence summary truncated at ${summary_limit_bytes} bytes. Download the ${ARTIFACT_NAME} artifact for the full index."
+            } >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
+          fi
+        fi
+
+    - name: Upload failure evidence
+      if: ${{ inputs.upload-artifact == 'true' && env.ACT != 'true' }}
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: |
+          ${{ inputs.working-directory }}/failure-evidence/index.md
+          ${{ inputs.working-directory }}/failure-evidence/manifest.json
+          ${{ inputs.working-directory }}/failure-evidence/results.json
+          ${{ inputs.working-directory }}/failure-evidence/failures/
+        retention-days: ${{ inputs.retention-days }}
+        if-no-files-found: ignore
