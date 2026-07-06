@@ -42,15 +42,16 @@ This file describes what each Playwright spec covers. For commands, tags, fixtur
 
 ## Unit Test Suites
 
-| Spec                                     | Scope                             | Coverage                                                                                                                                                                       |
-| ---------------------------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `utils/svg-chart-table.util.test.ts`     | XHTML table extraction            | Parses captured XHTML as `application/xhtml+xml`, trims cells, respects row limits, and returns `[]` on parse error or missing table.                                          |
-| `utils/svg-chart-percent.util.test.ts`   | Chart/table percentage comparison | Covers bracket stripping, integer-hundredths gap math, tolerance boundaries, and empirical 4-hundredths gaps.                                                                  |
-| `utils/diagnosis.util.test.ts`           | AI-diagnosis redaction            | Exercises cookie, set-cookie, bearer, API key, query token, JWT, email, mixed, no-match, char-budget, XHTML-structure, multiline, order-sensitivity, and bypass-attempt cases. |
-| `utils/auth-state-metadata.util.test.ts` | Auth-state metadata               | Verifies `.auth/metadata.json` contains generation time, GitHub run identifiers, and account labels without writing credential values.                                         |
-| `utils/css-validator.util.test.ts`       | CSS validation formatting         | Verifies intentionally broken CSS reports per-line errors with line numbers and source URL.                                                                                    |
-| `scripts/verify-coverage-matrix.test.ts` | Coverage-matrix drift verifier    | Covers false-positive, false-negative, in-sync, matrix-edit regression, and parser edge cases.                                                                                 |
-| `scripts/redact.test.ts`                 | Redaction CLI                     | Runs the real stdin/stdout subprocess path for `scripts/redact.ts`.                                                                                                            |
+| Spec                                       | Scope                             | Coverage                                                                                                                                                                       |
+| ------------------------------------------ | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `utils/svg-chart-table.util.test.ts`       | XHTML table extraction            | Parses captured XHTML as `application/xhtml+xml`, trims cells, respects row limits, and returns `[]` on parse error or missing table.                                          |
+| `utils/svg-chart-percent.util.test.ts`     | Chart/table percentage comparison | Covers bracket stripping, integer-hundredths gap math, tolerance boundaries, and empirical 4-hundredths gaps.                                                                  |
+| `utils/diagnosis.util.test.ts`             | AI-diagnosis redaction            | Exercises cookie, set-cookie, bearer, API key, query token, JWT, email, mixed, no-match, char-budget, XHTML-structure, multiline, order-sensitivity, and bypass-attempt cases. |
+| `utils/auth-state-metadata.util.test.ts`   | Auth-state metadata               | Verifies `.auth/metadata.json` contains generation time, GitHub run identifiers, and account labels without writing credential values.                                         |
+| `utils/css-validator.util.test.ts`         | CSS validation formatting         | Verifies intentionally broken CSS reports per-line errors with line numbers and source URL.                                                                                    |
+| `scripts/verify-coverage-matrix.test.ts`   | Coverage-matrix drift verifier    | Covers false-positive, false-negative, in-sync, matrix-edit regression, and parser edge cases.                                                                                 |
+| `scripts/collect-failure-evidence.test.ts` | Failure-evidence collector        | Covers failed-attempt indexing, attachment copying and warnings, duplicate names, visual baselines, malformed reporter shapes, top-level errors, redaction, and run metadata.  |
+| `scripts/redact.test.ts`                   | Redaction CLI                     | Runs the real stdin/stdout subprocess path for `scripts/redact.ts`.                                                                                                            |
 
 ## Coverage Matrix
 

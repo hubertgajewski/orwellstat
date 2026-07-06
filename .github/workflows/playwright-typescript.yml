@@ -69,8 +69,8 @@ jobs:
           # Visual-baseline runs collapse to total-shards=1 — sharding visual.spec.ts can leave a
           # shard with zero PNGs to upload for low-snapshot projects, tripping
           # `if-no-files-found: error` in playwright-run.yml. Regular runs fan out across 2 shards
-          # to halve per-leg wall-clock; the merge-reports job stitches blob reports back into
-          # a single HTML report covering the full spec set.
+          # to halve per-leg wall-clock; failed shards publish sanitized failure-evidence indexes
+          # instead of raw Playwright reports because the jobs run with account and drain-token secrets.
           if [ "$UPDATE_BASELINES" = "true" ]; then
             TOTAL_SHARDS=1
           else
@@ -135,14 +135,15 @@ jobs:
         run: npm ci
         working-directory: playwright/typescript
       - name: Set up Playwright Chromium
-        # `auth.setup.ts` has no `use` block in `playwright.config.ts` so it always runs in
-        # default Chromium — every auth-setup leg shares the same chromium cache regardless of
-        # `matrix.browser`. Test-leg caches (keyed on each leg's actual browser) are populated
-        # separately by `playwright-run.yml`.
+        # The setup project does not override browser/device, so it always runs in default
+        # Chromium; its `use` block only disables trace/screenshot/video capture for sensitive
+        # auth setup failures. Every auth-setup leg can share the chromium cache regardless of
+        # `matrix.browser`, while test-leg caches are populated separately by `playwright-run.yml`.
         uses: ./.github/actions/setup-playwright-browser
         with:
           browser: chromium
       - name: Run auth.setup.ts
+        id: run-auth-setup
         run: npx playwright test --project=setup
         working-directory: playwright/typescript
         env:
@@ -153,6 +154,15 @@ jobs:
           ORWELLSTAT_PASSWORD_EMPTY: ${{ secrets.ORWELLSTAT_PASSWORD_EMPTY }}
           BASIC_AUTH_USER: ${{ (inputs.env || 'staging') == 'staging' && secrets.BASIC_AUTH_USER || '' }}
           BASIC_AUTH_PASSWORD: ${{ (inputs.env || 'staging') == 'staging' && secrets.BASIC_AUTH_PASSWORD || '' }}
+      - name: Collect failure evidence
+        if: ${{ failure() && steps.run-auth-setup.outcome == 'failure' }}
+        uses: ./.github/actions/collect-failure-evidence
+        with:
+          artifact-name: failure-evidence-auth-setup-${{ matrix.id }}
+          project: ${{ matrix.id }}
+          shard: auth-setup
+          total-shards: "1"
+          withhold-sensitive-details: "true"
       - name: Upload storage states
         uses: actions/upload-artifact@v7
         with:
@@ -186,45 +196,6 @@ jobs:
       shard: ${{ matrix.shard }}
       total-shards: ${{ matrix.total }}
     secrets: inherit
-
-  merge-reports:
-    needs: [setup-matrix, test]
-    # Only run when the matrix actually fanned out (regular runs); visual-baseline runs collapse
-    # to total-shards=1 with no per-leg blob reports worth merging. `always()` keeps the merge
-    # alive when individual shards fail so the unified HTML report still surfaces the failures.
-    if: ${{ github.repository == 'hubertgajewski/orwellstat' && always() && needs.test.result != 'skipped' && needs.test.result != 'cancelled' && needs.setup-matrix.outputs.total-shards != '1' }}
-    timeout-minutes: 5
-    runs-on: ${{ inputs.runner || vars.RUNNER || 'ubuntu-latest' }}
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          ref: ${{ github.event.inputs.ref || github.ref }}
-      - uses: actions/setup-node@v6
-        with:
-          node-version-file: .node-version
-          check-latest: true
-          cache: "npm"
-          cache-dependency-path: playwright/typescript/package-lock.json
-      - name: Install dependencies
-        run: npm ci
-        working-directory: playwright/typescript
-      - name: Download blob reports
-        # `merge-multiple: true` flattens every shard's blob-report-* artifact into a single
-        # directory; the per-blob filenames are unique so they can co-exist without collision.
-        uses: actions/download-artifact@v8
-        with:
-          pattern: blob-report-*
-          path: playwright/typescript/all-blob-reports
-          merge-multiple: true
-      - name: Merge blob reports into a unified HTML report
-        run: npx playwright merge-reports --reporter=html ./all-blob-reports
-        working-directory: playwright/typescript
-      - name: Upload merged HTML report
-        uses: actions/upload-artifact@v7
-        with:
-          name: playwright-report-merged
-          path: playwright/typescript/playwright-report
-          retention-days: 30
 
   commit-baselines:
     needs: test

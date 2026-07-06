@@ -74,6 +74,11 @@ export default defineConfig({
       testDir: '.',
       // Serial so the two account logins do not race each other or trip login throttling.
       fullyParallel: false,
+      use: {
+        trace: 'off',
+        screenshot: 'off',
+        video: 'off',
+      },
     },
     {
       name: 'Chromium',
