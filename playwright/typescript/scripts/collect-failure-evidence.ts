@@ -1,43 +1,13 @@
-import { copyFile, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
-import { dirname, extname, isAbsolute, join, relative, resolve } from 'node:path';
+import { copyFile, lstat, mkdir, readFile, realpath, rm, writeFile } from 'node:fs/promises';
+import { basename, dirname, extname, isAbsolute, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parseArgs as parseNodeArgs } from 'node:util';
+import { parseArgs as parseNodeArgs, stripVTControlCharacters } from 'node:util';
+import { redactSensitive } from '../utils/diagnosis.util.ts';
 
-type RawAttachment = {
-  name?: unknown;
-  contentType?: unknown;
-  path?: unknown;
-};
-
-type RawResult = {
-  retry?: unknown;
-  status?: unknown;
-  duration?: unknown;
-  error?: { message?: unknown };
-  errors?: { message?: unknown }[];
-  attachments?: RawAttachment[];
-};
-
-type RawTest = {
-  projectName?: unknown;
-  results?: RawResult[];
-};
-
-type RawSpec = {
-  file?: unknown;
-  line?: unknown;
-  title?: unknown;
-  tests?: RawTest[];
-};
-
-type RawSuite = {
-  suites?: RawSuite[];
-  specs?: RawSpec[];
-};
-
-type RawResults = {
-  suites?: RawSuite[];
-};
+type JsonRecord = Record<string, unknown>;
+type RawResult = JsonRecord;
+type RawSuite = JsonRecord;
+type RawResults = JsonRecord;
 
 export type EvidenceAttachment = {
   name: string;
@@ -54,7 +24,7 @@ export type EvidenceFailure = {
   title: string;
   projectName: string;
   retry: number;
-  status: string;
+  status: FailedStatus;
   duration: number | null;
   error: string | null;
   attachments: EvidenceAttachment[];
@@ -82,6 +52,9 @@ export type CollectFailureEvidenceOptions = {
   artifactName?: string;
   runId?: string | null;
   generatedAt?: string;
+  withholdSensitiveDetails?: boolean;
+  withholdBinaryAttachments?: boolean;
+  redactEnvNames?: string[];
 };
 
 type InternalAttachment = EvidenceAttachment & {
@@ -97,10 +70,18 @@ type CopyAttachmentContext = {
   sourceRoot: string;
   outRoot: string;
   attachment: InternalAttachment;
+  withholdSensitiveDetails: boolean;
+  withholdBinaryAttachments: boolean;
+  redactor: EvidenceRedactor;
 };
 
+type EvidenceRedactor = (value: string) => string;
+
 const FAILED_STATUSES = ['failed', 'timedOut', 'interrupted'] as const;
+type FailedStatus = (typeof FAILED_STATUSES)[number];
+
 const FAILED_STATUS_SET = new Set<string>(FAILED_STATUSES);
+const MIN_CONFIGURED_SECRET_LENGTH = 3;
 
 function asString(value: unknown, fallback: string): string {
   return typeof value === 'string' && value.length > 0 ? value : fallback;
@@ -119,16 +100,72 @@ function hasErrorCode(error: unknown, code: string): boolean {
   );
 }
 
-function stripAnsi(value: string): string {
-  return value.replace(/\u001b(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])/g, '');
+function isRecord(value: unknown): value is JsonRecord {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function recordArray(record: JsonRecord, key: string): JsonRecord[] {
+  const value = record[key];
+  return Array.isArray(value) ? value.filter(isRecord) : [];
+}
+
+function isFailedStatus(value: string): value is FailedStatus {
+  return FAILED_STATUS_SET.has(value);
+}
+
+function redactConfiguredSecretValues(value: string, secretValues: readonly string[]): string {
+  let redacted = value;
+  for (const secretValue of secretValues) {
+    redacted = redacted.replaceAll(secretValue, '[REDACTED]');
+  }
+  return redacted;
+}
+
+function configuredSecretValues(envNames: readonly string[]): string[] {
+  return Array.from(
+    new Set(
+      envNames
+        .map((name) => process.env[name])
+        .filter(
+          (value): value is string =>
+            value !== undefined && value.length >= MIN_CONFIGURED_SECRET_LENGTH
+        )
+    )
+  ).sort((left, right) => right.length - left.length);
+}
+
+function createRedactor(envNames: readonly string[] = []): EvidenceRedactor {
+  const secretValues = configuredSecretValues(envNames);
+  return (value) => redactSensitive(redactConfiguredSecretValues(value, secretValues));
+}
+
+function redactEvidenceText(value: string, redactor: EvidenceRedactor): string {
+  return redactor(value);
+}
+
+function redactJsonValue(value: unknown, redactor: EvidenceRedactor): unknown {
+  if (typeof value === 'string') return redactEvidenceText(value, redactor);
+  if (Array.isArray(value)) return value.map((nested) => redactJsonValue(nested, redactor));
+  if (!isRecord(value)) return value;
+
+  return Object.fromEntries(
+    Object.entries(value).map(([key, nested]) => [key, redactJsonValue(nested, redactor)])
+  );
 }
 
 function stripControls(value: string): string {
-  return stripAnsi(value).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '');
+  return stripVTControlCharacters(value).replace(
+    /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g,
+    ''
+  );
 }
 
 function cleanText(value: string): string {
   return stripControls(value).replace(/\r\n?/g, '\n').trim();
+}
+
+function cleanPublicText(value: string, redactor: EvidenceRedactor): string {
+  return cleanText(redactEvidenceText(value, redactor));
 }
 
 function markdownCell(value: string | number | null): string {
@@ -176,6 +213,10 @@ function attachmentFileName(attachment: InternalAttachment): string {
   return ext.length > 0 && name.toLowerCase().endsWith(ext.toLowerCase()) ? name : `${name}${ext}`;
 }
 
+function withheldAttachmentFileName(index: number, attachment: InternalAttachment): string {
+  return `attachment-${String(index + 1).padStart(2, '0')}${extensionFor(attachment.contentType)}`;
+}
+
 function uniqueFileName(fileName: string, usedFileNames: Set<string>): string {
   if (!usedFileNames.has(fileName)) {
     usedFileNames.add(fileName);
@@ -215,8 +256,8 @@ function isVisualSnapshotAttachment(
   if (attachment.contentType !== 'image/png') return false;
 
   const testsRoot = join(projectRoot, 'tests');
+  if (!isInside(testsRoot, sourcePath)) return false;
   const rel = relative(testsRoot, sourcePath);
-  if (rel.length === 0 || rel.startsWith('..') || isAbsolute(rel)) return false;
 
   return rel.split(/[\\/]/).some((part) => part.endsWith('-snapshots'));
 }
@@ -233,17 +274,59 @@ function isAllowedAttachmentSource(
   );
 }
 
-function errorMessage(result: RawResult): string | null {
-  if (typeof result.error?.message === 'string') return cleanText(result.error.message);
-  const firstError = Array.isArray(result.errors) ? result.errors[0] : undefined;
-  return typeof firstError?.message === 'string' ? cleanText(firstError.message) : null;
+function isTextAttachment(sourcePath: string, attachment: InternalAttachment): boolean {
+  const contentType = attachment.contentType?.toLowerCase().split(';', 1)[0].trim() ?? '';
+  if (
+    contentType.startsWith('text/') ||
+    ['application/json', 'application/xml', 'application/xhtml+xml'].includes(contentType) ||
+    contentType.endsWith('+json') ||
+    contentType.endsWith('+xml')
+  ) {
+    return true;
+  }
+  return ['.html', '.xhtml', '.xml', '.json', '.log', '.md', '.txt'].includes(
+    extname(sourcePath).toLowerCase()
+  );
+}
+
+function errorMessage(result: RawResult, redactor: EvidenceRedactor): string | null {
+  const error = isRecord(result.error) ? result.error : null;
+  if (typeof error?.message === 'string') return cleanPublicText(error.message, redactor);
+  const firstError = recordArray(result, 'errors')[0];
+  return typeof firstError?.message === 'string'
+    ? cleanPublicText(firstError.message, redactor)
+    : null;
 }
 
 function attemptId(index: number, retry: number): string {
   return `F${String(index + 1).padStart(3, '0')}-R${retry}`;
 }
 
-function publicFailure(failure: InternalFailure): EvidenceFailure {
+function publicFailure(
+  failure: InternalFailure,
+  options: { withholdSensitiveDetails: boolean }
+): EvidenceFailure {
+  if (options.withholdSensitiveDetails) {
+    return {
+      attemptId: failure.attemptId,
+      specFile: 'withheld',
+      line: null,
+      title: `Withheld failure ${failure.attemptId}`,
+      projectName: 'withheld',
+      retry: failure.retry,
+      status: failure.status,
+      duration: null,
+      error: null,
+      attachments: failure.attachments.map((attachment, index) => ({
+        name: `Attachment ${index + 1}`,
+        contentType: null,
+        outputPath: attachment.outputPath,
+        copied: false,
+        ...(attachment.warning === undefined ? {} : { warning: attachment.warning }),
+      })),
+    };
+  }
+
   return {
     ...failure,
     attachments: failure.attachments.map((attachment) => ({
@@ -256,24 +339,30 @@ function publicFailure(failure: InternalFailure): EvidenceFailure {
   };
 }
 
-function collectFailures(results: RawResults): InternalFailure[] {
+function collectFailures(
+  results: RawResults,
+  options: { includeErrorMessages: boolean; redactor: EvidenceRedactor }
+): InternalFailure[] {
   const failures: InternalFailure[] = [];
 
   function visitSuite(suite: RawSuite): void {
-    for (const nested of Array.isArray(suite.suites) ? suite.suites : []) {
+    for (const nested of recordArray(suite, 'suites')) {
       visitSuite(nested);
     }
 
-    for (const spec of Array.isArray(suite.specs) ? suite.specs : []) {
-      const specFile = cleanText(asString(spec.file, 'unknown.spec.ts'));
-      const title = cleanText(asString(spec.title, 'untitled test'));
+    for (const spec of recordArray(suite, 'specs')) {
+      const specFile = cleanPublicText(asString(spec.file, 'unknown.spec.ts'), options.redactor);
+      const title = cleanPublicText(asString(spec.title, 'untitled test'), options.redactor);
       const line = asNumber(spec.line);
 
-      for (const test of Array.isArray(spec.tests) ? spec.tests : []) {
-        const projectName = cleanText(asString(test.projectName, 'unknown-project'));
-        for (const result of Array.isArray(test.results) ? test.results : []) {
-          const status = cleanText(asString(result.status, 'unknown'));
-          if (!FAILED_STATUS_SET.has(status)) continue;
+      for (const test of recordArray(spec, 'tests')) {
+        const projectName = cleanPublicText(
+          asString(test.projectName, 'unknown-project'),
+          options.redactor
+        );
+        for (const result of recordArray(test, 'results')) {
+          const status = cleanPublicText(asString(result.status, 'unknown'), options.redactor);
+          if (!isFailedStatus(status)) continue;
 
           const retry = asNumber(result.retry) ?? 0;
           failures.push({
@@ -285,30 +374,38 @@ function collectFailures(results: RawResults): InternalFailure[] {
             retry,
             status,
             duration: asNumber(result.duration),
-            error: errorMessage(result),
-            attachments: (Array.isArray(result.attachments) ? result.attachments : []).map(
-              (attachment) => ({
-                name: cleanText(asString(attachment.name, 'attachment')),
-                contentType:
-                  typeof attachment.contentType === 'string'
-                    ? cleanText(attachment.contentType)
-                    : null,
-                sourcePath: typeof attachment.path === 'string' ? attachment.path : null,
-                outputPath: '',
-                copied: false,
-              })
-            ),
+            error: options.includeErrorMessages ? errorMessage(result, options.redactor) : null,
+            attachments: recordArray(result, 'attachments').map((attachment) => ({
+              name: cleanPublicText(asString(attachment.name, 'attachment'), options.redactor),
+              contentType:
+                typeof attachment.contentType === 'string'
+                  ? cleanText(attachment.contentType)
+                  : null,
+              sourcePath: typeof attachment.path === 'string' ? attachment.path : null,
+              outputPath: '',
+              copied: false,
+            })),
           });
         }
       }
     }
   }
 
-  for (const suite of Array.isArray(results.suites) ? results.suites : []) {
+  for (const suite of recordArray(results, 'suites')) {
     visitSuite(suite);
   }
 
   return failures;
+}
+
+function topLevelErrorWarnings(results: RawResults, redactor: EvidenceRedactor): string[] {
+  return recordArray(results, 'errors').map(
+    (error) =>
+      `Playwright reported top-level error: ${cleanPublicText(
+        asString(error.message, 'unknown error'),
+        redactor
+      )}`
+  );
 }
 
 async function copyAttachment({
@@ -316,21 +413,51 @@ async function copyAttachment({
   sourceRoot,
   outRoot,
   attachment,
+  withholdSensitiveDetails,
+  withholdBinaryAttachments,
+  redactor,
 }: CopyAttachmentContext): Promise<void> {
   const sourcePath = attachmentSourcePath(sourceRoot, attachment);
   if (sourcePath === null) {
     attachment.warning = 'attachment has no path';
     return;
   }
-  if (!isAllowedAttachmentSource(projectRoot, sourceRoot, sourcePath, attachment)) {
+
+  if (withholdSensitiveDetails) {
+    attachment.warning = 'attachment body withheld';
+    return;
+  }
+  if (withholdBinaryAttachments && !isTextAttachment(sourcePath, attachment)) {
+    attachment.warning = 'binary attachment body withheld';
+    return;
+  }
+
+  let canonicalSourcePath: string;
+  try {
+    canonicalSourcePath = await realpath(sourcePath);
+  } catch (error) {
+    if (hasErrorCode(error, 'ENOENT')) {
+      attachment.warning = 'attachment file is missing';
+      return;
+    }
+    throw error;
+  }
+
+  if (!isAllowedAttachmentSource(projectRoot, sourceRoot, canonicalSourcePath, attachment)) {
     attachment.warning = 'attachment path is outside source directory';
     return;
   }
 
   const destination = join(outRoot, attachment.outputPath);
-  await mkdir(dirname(destination), { recursive: true });
   try {
-    await copyFile(sourcePath, destination);
+    if (isTextAttachment(canonicalSourcePath, attachment)) {
+      await writeFile(
+        destination,
+        redactEvidenceText(await readFile(canonicalSourcePath, 'utf8'), redactor)
+      );
+    } else {
+      await copyFile(canonicalSourcePath, destination);
+    }
     attachment.copied = true;
   } catch (error) {
     if (hasErrorCode(error, 'ENOENT')) {
@@ -342,13 +469,19 @@ async function copyAttachment({
 }
 
 async function cleanOutput(outDir: string): Promise<void> {
+  try {
+    const outStat = await lstat(outDir);
+    if (outStat.isSymbolicLink()) {
+      throw Object.assign(new Error(`Output directory must not be a symlink: ${outDir}`), {
+        code: 'ELOOP',
+      });
+    }
+  } catch (error) {
+    if (!hasErrorCode(error, 'ENOENT')) throw error;
+  }
+
+  await rm(outDir, { recursive: true, force: true });
   await mkdir(outDir, { recursive: true });
-  await Promise.all([
-    rm(join(outDir, 'failures'), { recursive: true, force: true }),
-    rm(join(outDir, 'index.md'), { force: true }),
-    rm(join(outDir, 'manifest.json'), { force: true }),
-    rm(join(outDir, 'results.json'), { force: true }),
-  ]);
 }
 
 function testLocation(failure: EvidenceFailure): string {
@@ -356,9 +489,7 @@ function testLocation(failure: EvidenceFailure): string {
 }
 
 function attachmentDisplayName(attachment: EvidenceAttachment): string {
-  return (
-    attachment.outputPath.split('/').pop() ?? sanitizePathComponent(attachment.name, 'attachment')
-  );
+  return basename(attachment.outputPath) || sanitizePathComponent(attachment.name, 'attachment');
 }
 
 function artifactDownloadCommand(manifest: EvidenceManifest): string | null {
@@ -436,6 +567,10 @@ function defaultArtifactName(project: string, shard: string): string {
   )}`;
 }
 
+function authSetupWithheldWarning(): string {
+  return 'Raw Playwright results and error messages were withheld to avoid exposing sensitive account values.';
+}
+
 function createEmptyManifest(options: CollectFailureEvidenceOptions): EvidenceManifest {
   const artifactName = options.artifactName ?? defaultArtifactName(options.project, options.shard);
   return {
@@ -452,8 +587,19 @@ function createEmptyManifest(options: CollectFailureEvidenceOptions): EvidenceMa
 }
 
 async function writeManifest(outRoot: string, manifest: EvidenceManifest): Promise<void> {
-  await writeFile(join(outRoot, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
-  await writeFile(join(outRoot, 'index.md'), renderIndex(manifest));
+  await Promise.all([
+    writeFile(join(outRoot, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`),
+    writeFile(join(outRoot, 'index.md'), renderIndex(manifest)),
+  ]);
+}
+
+async function writeMissingResultsManifest(
+  outRoot: string,
+  manifest: EvidenceManifest
+): Promise<EvidenceManifest> {
+  manifest.warnings.push('No results file was produced.');
+  await writeManifest(outRoot, manifest);
+  return manifest;
 }
 
 export async function collectFailureEvidence(
@@ -463,61 +609,128 @@ export async function collectFailureEvidence(
   const projectRoot = dirname(sourceRoot);
   const outRoot = resolve(options.outDir);
   const resultsPath = resolve(options.resultsPath);
+  const redactor = createRedactor(options.redactEnvNames);
 
   await cleanOutput(outRoot);
 
   const manifest = createEmptyManifest(options);
 
   let raw: string;
+  let canonicalProjectRoot: string;
+  let canonicalSourceRoot: string;
+  let canonicalResultsPath: string;
   try {
-    raw = await readFile(resultsPath, 'utf8');
+    [canonicalProjectRoot, canonicalSourceRoot, canonicalResultsPath] = await Promise.all([
+      realpath(projectRoot),
+      realpath(sourceRoot),
+      realpath(resultsPath),
+    ]);
   } catch (error) {
     if (hasErrorCode(error, 'ENOENT')) {
-      manifest.warnings.push('No results file was produced.');
-      await writeManifest(outRoot, manifest);
-      return manifest;
+      return writeMissingResultsManifest(outRoot, manifest);
     }
     throw error;
   }
 
-  manifest.resultsPath = 'results.json';
-  await writeFile(join(outRoot, 'results.json'), raw);
-
-  let parsed: RawResults;
-  try {
-    parsed = JSON.parse(raw) as RawResults;
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    manifest.warnings.push(`Could not parse results.json: ${cleanText(message)}`);
+  if (!isInside(canonicalSourceRoot, canonicalResultsPath)) {
+    manifest.warnings.push('Results file path is outside source directory.');
     await writeManifest(outRoot, manifest);
     return manifest;
   }
 
-  const failures = collectFailures(parsed);
+  try {
+    raw = await readFile(canonicalResultsPath, 'utf8');
+  } catch (error) {
+    if (hasErrorCode(error, 'ENOENT')) {
+      return writeMissingResultsManifest(outRoot, manifest);
+    }
+    throw error;
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (error) {
+    if (options.withholdSensitiveDetails === true) {
+      manifest.warnings.push(authSetupWithheldWarning());
+      manifest.warnings.push('Could not parse results.json.');
+    } else {
+      manifest.resultsPath = 'results.json';
+      await writeFile(join(outRoot, 'results.json'), redactEvidenceText(raw, redactor));
+      const message = error instanceof Error ? error.message : String(error);
+      manifest.warnings.push(`Could not parse results.json: ${cleanPublicText(message, redactor)}`);
+    }
+    await writeManifest(outRoot, manifest);
+    return manifest;
+  }
+
+  const withholdSensitiveDetails = options.withholdSensitiveDetails === true;
+  const withholdBinaryAttachments = options.withholdBinaryAttachments === true;
+  if (withholdSensitiveDetails) {
+    manifest.warnings.push(authSetupWithheldWarning());
+  } else {
+    const redactedResults = redactJsonValue(parsed, redactor);
+    manifest.resultsPath = 'results.json';
+    await writeFile(join(outRoot, 'results.json'), `${JSON.stringify(redactedResults, null, 2)}\n`);
+  }
+
+  if (!isRecord(parsed)) {
+    manifest.warnings.push('results.json did not contain a Playwright JSON object.');
+    await writeManifest(outRoot, manifest);
+    return manifest;
+  }
+
+  if (withholdSensitiveDetails) {
+    if (recordArray(parsed, 'errors').length > 0) {
+      manifest.warnings.push(
+        'Playwright reported top-level errors, but their messages were withheld.'
+      );
+    }
+  } else {
+    manifest.warnings.push(...topLevelErrorWarnings(parsed, redactor));
+  }
+
+  const failures = collectFailures(parsed, {
+    includeErrorMessages: !withholdSensitiveDetails,
+    redactor,
+  });
   await Promise.all(
     failures.map(async (failure) => {
       const usedFileNames = new Set<string>();
-      for (const attachment of failure.attachments) {
+      for (const [index, attachment] of failure.attachments.entries()) {
         attachment.outputPath = join(
           'failures',
           failure.attemptId,
-          uniqueFileName(attachmentFileName(attachment), usedFileNames)
+          uniqueFileName(
+            withholdSensitiveDetails
+              ? withheldAttachmentFileName(index, attachment)
+              : attachmentFileName(attachment),
+            usedFileNames
+          )
         );
+      }
+      if (!withholdSensitiveDetails && failure.attachments.length > 0) {
+        await mkdir(join(outRoot, 'failures', failure.attemptId), { recursive: true });
       }
       await Promise.all(
         failure.attachments.map((attachment) =>
           copyAttachment({
-            projectRoot,
-            sourceRoot,
+            projectRoot: canonicalProjectRoot,
+            sourceRoot: canonicalSourceRoot,
             outRoot,
             attachment,
+            withholdSensitiveDetails,
+            withholdBinaryAttachments,
+            redactor,
           })
         )
       );
     })
   );
 
-  manifest.failures = failures.map(publicFailure);
+  manifest.failures = failures.map((failure) =>
+    publicFailure(failure, { withholdSensitiveDetails })
+  );
   await writeManifest(outRoot, manifest);
   return manifest;
 }
@@ -535,6 +748,9 @@ function parseArgs(argv: string[]): CollectFailureEvidenceOptions {
       'total-shards': { type: 'string' },
       'artifact-name': { type: 'string' },
       'run-id': { type: 'string' },
+      'withhold-sensitive-details': { type: 'boolean' },
+      'withhold-binary-attachments': { type: 'boolean' },
+      'redact-env-names': { type: 'string' },
     },
   });
 
@@ -548,9 +764,21 @@ function parseArgs(argv: string[]): CollectFailureEvidenceOptions {
     project,
     shard,
     totalShards: values['total-shards'] ?? '1',
-    artifactName: values['artifact-name'] ?? defaultArtifactName(project, shard),
+    artifactName: values['artifact-name'],
     runId: values['run-id'] ?? process.env.GITHUB_RUN_ID ?? null,
+    withholdSensitiveDetails: values['withhold-sensitive-details'] ?? false,
+    withholdBinaryAttachments: values['withhold-binary-attachments'] ?? false,
+    redactEnvNames: splitList(values['redact-env-names']),
   };
+}
+
+function splitList(value: string | undefined): string[] {
+  return value === undefined
+    ? []
+    : value
+        .split(/[\s,]+/)
+        .map((item) => item.trim())
+        .filter((item) => item.length > 0);
 }
 
 async function main(): Promise<number> {

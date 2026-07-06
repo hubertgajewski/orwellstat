@@ -1,10 +1,9 @@
 name: Playwright Run
 
 # Reusable workflow that encapsulates a single matrix entry's Playwright run:
-# checkout → install Node + browsers + xmllint → run tests → upload reports
-# and (on failure) self-healing artefacts. Callers pass the matrix entry as
-# discrete inputs so this workflow has no implicit knowledge of the caller's
-# matrix shape.
+# checkout → install Node + browsers + xmllint → run tests → upload sanitized failure evidence.
+# Callers pass the matrix entry as discrete inputs so this workflow has no implicit knowledge of
+# the caller's matrix shape.
 
 on:
   workflow_call:
@@ -239,92 +238,12 @@ jobs:
           # Fail loudly if snap-token ever drifts from the real filename rule (e.g. a project rename
           # that forgets to update the matrix JSON) — default `warn` would silently lose baselines.
           if-no-files-found: error
-      - name: Detect local act runner
-        id: detect-act
-        if: ${{ !cancelled() }}
-        run: |
-          if [ "${ACT}" = "true" ]; then
-            echo "running=true" >> "$GITHUB_OUTPUT"
-          fi
-      - uses: actions/upload-artifact@v7
-        if: ${{ !cancelled() && steps.detect-act.outputs.running != 'true' && steps.run-playwright-tests.outcome != 'skipped' }}
-        with:
-          name: playwright-report-${{ inputs.id }}-${{ inputs.shard }}
-          path: playwright/typescript/playwright-report/
-          retention-days: 30
-      - uses: actions/upload-artifact@v7
-        if: ${{ !cancelled() && steps.detect-act.outputs.running != 'true' && steps.run-playwright-tests.outcome != 'skipped' }}
-        with:
-          name: blob-report-${{ inputs.id }}-${{ inputs.shard }}
-          path: playwright/typescript/blob-report/
-          retention-days: 30
       - name: Collect failure evidence
         if: ${{ failure() && steps.run-playwright-tests.outcome == 'failure' }}
-        working-directory: playwright/typescript
-        env:
-          ARTIFACT_NAME: failure-evidence-${{ inputs.id }}-${{ inputs.shard }}
-          PROJECT: ${{ inputs.project }}
-          SHARD: ${{ inputs.shard }}
-          TOTAL_SHARDS: ${{ inputs.total-shards }}
-        run: |
-          mkdir -p failure-evidence
-          if ! node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/collect-failure-evidence.ts \
-            --results test-results/results.json \
-            --source test-results \
-            --out failure-evidence \
-            --artifact-name "$ARTIFACT_NAME" \
-            --run-id "$GITHUB_RUN_ID" \
-            --project "$PROJECT" \
-            --shard "$SHARD" \
-            --total-shards "$TOTAL_SHARDS"; then
-            {
-              echo "# Playwright Failure Evidence"
-              echo
-              echo "| Field | Value |"
-              echo "| --- | --- |"
-              echo "| Run | $GITHUB_RUN_ID |"
-              echo "| Artifact | $ARTIFACT_NAME |"
-              echo "| Download command | gh run download $GITHUB_RUN_ID --name $ARTIFACT_NAME |"
-              echo "| Project | $PROJECT |"
-              echo "| Shard | $SHARD/$TOTAL_SHARDS |"
-              echo "| Results | not produced |"
-              echo
-              echo "## Warnings"
-              echo
-              echo "- Failure evidence collection failed before an index could be generated."
-            } > failure-evidence/index.md
-          fi
-
-          cat failure-evidence/index.md >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
-      - uses: actions/upload-artifact@v7
-        if: ${{ failure() && steps.run-playwright-tests.outcome == 'failure' && steps.detect-act.outputs.running != 'true' }}
+        uses: ./.github/actions/collect-failure-evidence
         with:
-          name: failure-evidence-${{ inputs.id }}-${{ inputs.shard }}
-          path: playwright/typescript/failure-evidence/
-          retention-days: 30
-          if-no-files-found: ignore
-      - name: Collect self-healing data
-        if: ${{ failure() && steps.run-playwright-tests.outcome == 'failure' }}
-        working-directory: playwright/typescript
-        run: |
-          mkdir -p self-healing-data
-          cp test-results/results.json self-healing-data/ 2>/dev/null || true
-          find test-results -maxdepth 2 -name 'selector-fix.md' -not -path '*/attachments/*' | while IFS= read -r f; do
-            dir="self-healing-data/$(dirname "$f")"
-            mkdir -p "$dir"
-            cp "$f" "$dir/"
-          done
-          for name in dom.xhtml error-context.md; do
-            find test-results -maxdepth 2 -name "$name" -not -path '*/attachments/*' | while IFS= read -r f; do
-              dir="self-healing-data/$(dirname "$f")"
-              mkdir -p "$dir"
-              cp "$f" "$dir/"
-            done
-          done
-      - uses: actions/upload-artifact@v7
-        if: ${{ failure() && steps.run-playwright-tests.outcome == 'failure' && steps.detect-act.outputs.running != 'true' }}
-        with:
-          name: self-healing-data-${{ inputs.id }}-${{ inputs.shard }}
-          path: playwright/typescript/self-healing-data/
-          retention-days: 7
-          if-no-files-found: ignore
+          artifact-name: failure-evidence-${{ inputs.id }}-${{ inputs.shard }}
+          project: ${{ inputs.project }}
+          shard: ${{ inputs.shard }}
+          total-shards: ${{ inputs.total-shards }}
+          withhold-sensitive-details: "true"

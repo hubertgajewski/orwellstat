@@ -75,15 +75,13 @@ VALIDATE_REMOTE=true npx playwright test tests/validation.spec.ts
 
 Use `VALIDATE_REMOTE=true` sparingly; it posts XHTML to `validator.w3.org/check` and sends CSS URIs to `jigsaw.w3.org/css-validator`.
 
-To inspect flaky tests across CI runs, download blob artifacts and merge them:
+To inspect CI failures, start with the sanitized failure-evidence artifacts:
 
 ```bash
-gh run list --workflow=playwright-typescript.yml --limit 10 --json databaseId \
-  --jq '.[].databaseId' | \
-  xargs -I{} sh -c 'gh run download {} --pattern "blob-report-*" --dir ./blobs/{} 2>/dev/null || true'
-
-npx playwright merge-reports --reporter=html ./blobs/*/blob-report-*
+gh run download <run-id> --pattern "failure-evidence-*"
 ```
+
+Secret-bearing CI shards do not upload raw Playwright HTML/blob reports, traces, screenshots, videos, DOM snapshots, or self-healing data. Their failure-evidence indexes preserve the error-to-attachment mapping and mark withheld bodies explicitly.
 
 ## Test Tags
 
@@ -153,27 +151,27 @@ Public page classes live under `pages/public/`; authenticated page classes live 
 
 ## Fixtures And Utilities
 
-| Path                                  | Purpose                                                                                                                                                  |
-| ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `fixtures/base.fixture.ts`            | Extends Playwright `test`, captures console logs and `dom.xhtml` on failure, attaches AI diagnosis when enabled, and re-exports common Playwright types  |
-| `fixtures/api.fixture.ts`             | Adds `unauthenticatedRequest` and `authenticatedRequest` API fixtures                                                                                    |
-| `fixtures/storage-state.ts`           | Exports populated and empty storage-state paths                                                                                                          |
-| `utils/accessibility.util.ts`         | Axe WCAG checks                                                                                                                                          |
-| `utils/string.util.ts`                | Heading visibility helper                                                                                                                                |
-| `utils/svg-chart.util.ts`             | SVG chart loading, parsing, and chart/table comparison helpers                                                                                           |
-| `utils/svg-chart-table.util.ts`       | Fixture-free XHTML snapshot table extractor                                                                                                              |
-| `utils/svg-chart-percent.util.ts`     | Percentage normalization and chart/table tolerance helpers                                                                                               |
-| `utils/validation.util.ts`            | XHTML and CSS validators with local and remote modes                                                                                                     |
-| `utils/track-hit.util.ts`             | Tracking-hit seeding through live snippets and `/scripts/drain.php`                                                                                      |
-| `utils/env.util.ts`                   | `.env` loading and credential validation                                                                                                                 |
-| `utils/auth-state-metadata.util.ts`   | Non-secret `.auth/metadata.json` writer for CI auth-state freshness checks                                                                               |
-| `utils/diagnosis.util.ts`             | AI diagnosis, selector-fix attachment, and redaction rules                                                                                               |
-| `utils/css-validator.util.ts`         | Pure helpers around `csstree-validator`                                                                                                                  |
-| `scripts/collect-failure-evidence.ts` | Builds CI `failure-evidence-*` artifacts with an indexed `index.md`, `manifest.json`, `results.json`, and failed-attempt attachments grouped by error id |
-| `scripts/verify-coverage-matrix.ts`   | Cross-checks active tests against `coverage-matrix.json`                                                                                                 |
-| `scripts/redact.ts`                   | stdin/stdout redaction CLI used by self-healing                                                                                                          |
-| `test-data/scripts/snippet-*.txt`     | Canonical HTML5, HTML4, and XHTML tracking snippets with `{{ORWELLSTAT_BASE}}` placeholders                                                              |
-| `test-data/scripts/tracking-*`        | HTML/HTML4/XHTML shells used by tracking E2E tests after inserting the matching live snippet                                                             |
+| Path                                  | Purpose                                                                                                                                                                                                                                                                |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `fixtures/base.fixture.ts`            | Extends Playwright `test`, captures console logs and `dom.xhtml` on failure, attaches AI diagnosis when enabled, and re-exports common Playwright types                                                                                                                |
+| `fixtures/api.fixture.ts`             | Adds `unauthenticatedRequest` and `authenticatedRequest` API fixtures                                                                                                                                                                                                  |
+| `fixtures/storage-state.ts`           | Exports populated and empty storage-state paths                                                                                                                                                                                                                        |
+| `utils/accessibility.util.ts`         | Axe WCAG checks                                                                                                                                                                                                                                                        |
+| `utils/string.util.ts`                | Heading visibility helper                                                                                                                                                                                                                                              |
+| `utils/svg-chart.util.ts`             | SVG chart loading, parsing, and chart/table comparison helpers                                                                                                                                                                                                         |
+| `utils/svg-chart-table.util.ts`       | Fixture-free XHTML snapshot table extractor                                                                                                                                                                                                                            |
+| `utils/svg-chart-percent.util.ts`     | Percentage normalization and chart/table tolerance helpers                                                                                                                                                                                                             |
+| `utils/validation.util.ts`            | XHTML and CSS validators with local and remote modes                                                                                                                                                                                                                   |
+| `utils/track-hit.util.ts`             | Tracking-hit seeding through live snippets and `/scripts/drain.php`                                                                                                                                                                                                    |
+| `utils/env.util.ts`                   | `.env` loading and credential validation                                                                                                                                                                                                                               |
+| `utils/auth-state-metadata.util.ts`   | Non-secret `.auth/metadata.json` writer for CI auth-state freshness checks                                                                                                                                                                                             |
+| `utils/diagnosis.util.ts`             | AI diagnosis, selector-fix attachment, and redaction rules                                                                                                                                                                                                             |
+| `utils/css-validator.util.ts`         | Pure helpers around `csstree-validator`                                                                                                                                                                                                                                |
+| `scripts/collect-failure-evidence.ts` | Builds CI `failure-evidence-*` artifacts with an indexed `index.md`, `manifest.json`, redacted `results.json`, Playwright top-level errors, and failed-attempt attachments grouped by error id; secret-bearing jobs can index attachments without copying their bodies |
+| `scripts/verify-coverage-matrix.ts`   | Cross-checks active tests against `coverage-matrix.json`                                                                                                                                                                                                               |
+| `scripts/redact.ts`                   | stdin/stdout redaction CLI used by self-healing                                                                                                                                                                                                                        |
+| `test-data/scripts/snippet-*.txt`     | Canonical HTML5, HTML4, and XHTML tracking snippets with `{{ORWELLSTAT_BASE}}` placeholders                                                                                                                                                                            |
+| `test-data/scripts/tracking-*`        | HTML/HTML4/XHTML shells used by tracking E2E tests after inserting the matching live snippet                                                                                                                                                                           |
 
 Unit tests for pure utilities run through `npm run test:unit`.
 
@@ -203,7 +201,7 @@ Defined in `tsconfig.json`:
 
 Important defaults:
 
-- Failure artifacts: screenshots, video, console log, `dom.xhtml`, and optional AI diagnosis. CI failed shards upload `failure-evidence-<id>-<shard>` artifacts that index those files with traces, error context, selector-fix notes, and `results.json` when Playwright produced them. Failed auth setup legs upload `failure-evidence-auth-setup-<id>` with trace, screenshot, and video capture disabled. The evidence index gives each failed attempt an error id and shows the artifact name plus the path inside that artifact for every attachment.
+- Failure artifacts: screenshots, video, console log, `dom.xhtml`, and optional AI diagnosis. CI failed shards upload `failure-evidence-<id>-<shard>` artifacts that index those files with traces, error context, selector-fix notes, and `results.json` metadata when Playwright produced it. Because shard and auth setup jobs run with account or drain-token secrets, they pass `withhold-sensitive-details`: raw `results.json`, error text, and attachment bodies are not uploaded, and each attachment row is kept in the index with an `attachment body withheld` note. The evidence index gives each failed attempt an error id, strips generic sensitive patterns from non-withheld evidence, and shows the artifact name plus the path inside that artifact for every attachment.
 - `trace: 'on-first-retry'`.
 - `baseURL` from `ENV` (`production` by default, `staging` when `ENV=staging`).
 - `httpCredentials` injected automatically when `BASIC_AUTH_USER` is set.
