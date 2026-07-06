@@ -1,4 +1,5 @@
 import { test, expect } from '@fixtures/base.fixture';
+import { expectTitleNavigationReady } from '@utils/navigation.util';
 import { expectHeadings } from '@utils/string.util';
 import {
   AboutSystemPage,
@@ -11,14 +12,14 @@ import { AUTHENTICATED_PAGE_CLASSES } from '@pages/authenticated/index';
 
 for (const PageClass of PUBLIC_PAGE_CLASSES) {
   test(`${PageClass.url} has correct title`, { tag: '@smoke' }, async ({ page }) => {
-    await page.goto(PageClass.url);
+    await expectTitleNavigationReady(page, PageClass.url);
     await expect(page).toHaveTitle(PageClass.title);
   });
 }
 
 for (const PageClass of AUTHENTICATED_PAGE_CLASSES) {
   test(`${PageClass.url} has correct title`, { tag: '@smoke' }, async ({ page }) => {
-    await page.goto(PageClass.url);
+    await expectTitleNavigationReady(page, PageClass.url);
     await expect(page).toHaveTitle(PageClass.title);
   });
 }
