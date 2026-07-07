@@ -3,7 +3,7 @@
     "@anthropic-ai/sdk": "^0.105.0",
     "@axe-core/playwright": "^4.11.3",
     "@google/generative-ai": "^0.24.1",
-    "@playwright/test": "^1.61.0",
+    "@playwright/test": "1.62.0-alpha-2026-07-07",
     "@prettier/plugin-xml": "^3.4.2",
     "@types/node": "^26.0.0",
     "@types/pngjs": "^6.0.5",
