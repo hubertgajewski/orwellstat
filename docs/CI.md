@@ -35,23 +35,24 @@ Use [CI_LOCAL.md](CI_LOCAL.md) for self-hosted runner setup, security model, and
 
 Root scripts support CI workflows, hooks, and generated reports:
 
-| Script                                     | Purpose                                                                                          |
-| ------------------------------------------ | ------------------------------------------------------------------------------------------------ |
-| `scripts/generate-quality-metrics.py`      | Generates `QUALITY_METRICS.md` and appends `quality-metrics-history.json` data points            |
-| `scripts/self-healing.py`                  | Parses Playwright failure artifacts and posts selector-fix comments or creates draft PRs         |
-| `scripts/provision-worktree-env.sh`        | Symlinks or copies gitignored env files into per-issue worktrees                                 |
-| `scripts/setup-runners.sh`                 | Registers and starts the self-hosted runner pool as launchd services                             |
-| `scripts/remove-runners.sh`                | De-registers and stops the self-hosted runner pool                                               |
-| `scripts/runner-lib.sh`                    | Shared helpers for the self-hosted runner setup/removal scripts                                  |
-| `scripts/verify_commit_command_hook.py`    | Shared pinned-hook check that verifies direct `git push` commands and rejects wrapped push forms |
-| `scripts/test_generate_quality_metrics.py` | Unit tests for generated quality-metrics behavior                                                |
-| `scripts/test_self_healing.py`             | Unit tests for self-healing loop prevention, classification, redaction, and AI boundaries        |
-| `scripts/test_runner_scripts.py`           | Unit tests for self-hosted runner setup/removal scripts                                          |
-| `scripts/run_pinned_hook.sh`               | Shared pinned-hash launcher for Claude/Codex PreToolUse hook scripts                             |
-| `scripts/shell_c_option_utils.py`          | Shared `-c` / clustered short-option parsing helpers for hook scripts                            |
-| `scripts/verify_playwright_cli_hook.py`    | Pinned PreToolUse helper that blocks direct Playwright CLI invocations and directs agents to `playwright-report-mcp` |
-| `scripts/test_playwright_cli_hook.py`      | Unit tests for the Playwright CLI hook script                                                    |
-| `scripts/test_commit_hook_config.py`       | Unit tests for Claude/Codex publish-time and Playwright CLI PreToolUse hook configuration        |
+| Script                                                      | Purpose                                                                                                                |
+| ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `scripts/generate-quality-metrics.py`                       | Generates `QUALITY_METRICS.md` and appends `quality-metrics-history.json` data points                                  |
+| `scripts/self-healing.py`                                   | Parses Playwright failure artifacts and posts selector-fix comments or creates draft PRs                               |
+| `scripts/provision-worktree-env.sh`                         | Symlinks or copies gitignored env files into per-issue worktrees                                                       |
+| `scripts/setup-runners.sh`                                  | Registers and starts the self-hosted runner pool as launchd services                                                   |
+| `scripts/remove-runners.sh`                                 | De-registers and stops the self-hosted runner pool                                                                     |
+| `scripts/runner-lib.sh`                                     | Shared helpers for the self-hosted runner setup/removal scripts                                                        |
+| `scripts/verify_commit_command_hook.py`                     | Shared pinned-hook check that verifies direct `git push` commands and rejects wrapped push forms                       |
+| `scripts/test_generate_quality_metrics.py`                  | Unit tests for generated quality-metrics behavior                                                                      |
+| `scripts/test_self_healing.py`                              | Unit tests for self-healing loop prevention, classification, redaction, and AI boundaries                              |
+| `scripts/test_runner_scripts.py`                            | Unit tests for self-hosted runner setup/removal scripts                                                                |
+| `scripts/run_pinned_hook.sh`                                | Shared pinned-hash launcher for Claude/Codex PreToolUse hook scripts                                                   |
+| `scripts/shell_c_option_utils.py`                           | Shared `-c` / clustered short-option parsing helpers for hook scripts                                                  |
+| `scripts/verify_playwright_cli_hook.py`                     | Pinned PreToolUse helper that blocks direct Playwright CLI invocations and directs agents to `playwright-report-mcp`   |
+| `scripts/test_playwright_cli_hook.py`                       | Unit tests for the Playwright CLI hook script                                                                          |
+| `scripts/test_commit_hook_config.py`                        | Unit tests for Claude/Codex publish-time and Playwright CLI PreToolUse hook configuration                              |
+| `playwright/typescript/scripts/collect-failure-evidence.ts` | Builds an indexed failure-evidence artifact from Playwright `test-results/results.json` and failed-attempt attachments |
 
 ## Playwright Typescript Tests
 
@@ -65,13 +66,14 @@ Run shape:
 - A `setup-matrix` job computes the matrix at runtime for full or browser-filtered dispatch runs.
 - An `auth-setup` job runs the setup project once per browser project before the test matrix fans out.
 - The `test` matrix calls reusable workflow `.github/workflows/playwright-run.yml`.
-- `merge-reports` runs with `always()` and publishes one merged Playwright HTML report from blob artifacts.
+- Failed shard diagnostics are published through sanitized `failure-evidence-*` indexes only; raw Playwright HTML/blob reports and self-healing data are not uploaded from the secret-bearing shard jobs.
 
 Auth setup details:
 
 - `auth-setup` runs `npx playwright test --project=setup` once per browser project.
 - Each setup leg logs in both populated and empty accounts, so normal runs perform 10 logins total, independent of shard count.
 - Auth state artifacts are named `auth-state-<id>` and retained for 1 day. Each artifact contains `.auth/populated.json`, `.auth/empty.json`, and `.auth/metadata.json` with non-secret generation time and GitHub run identifiers.
+- Failed setup legs upload indexed diagnostics as `failure-evidence-auth-setup-<id>` and append the same `index.md` map to the job summary. Setup runs disable trace, screenshot, and video capture so credential-entry artifacts are not published.
 - Downstream test legs depend on auth setup, so a setup failure skips tests instead of letting them pass with stale state.
 
 Reusable test job:
@@ -81,7 +83,8 @@ Reusable test job:
 - Each leg normally installs only the browser it needs.
 - It validates downloaded auth-state files and metadata before running the shard. Missing metadata, invalid timestamps, or metadata older than 1 hour triggers a local setup-project rerun in that leg; this protects failed-job reruns from reusing expired storage-state artifacts. Local auth regeneration reuses the shared browser setup action to install Chromium only for non-Chromium shard legs because the setup project uses Playwright's default browser.
 - It runs `npx playwright test --project=<project> --shard=<shard>/<total-shards>`.
-- Per-leg artifacts use `-<id>-<shard>` suffixes for reports, blob reports, self-healing data, and visual baselines. Report/blob uploads only run after the shard test step is reached, and self-healing data is collected/uploaded only when that shard test step fails.
+- Per-leg artifacts use `-<id>-<shard>` suffixes for sanitized failure evidence and visual baselines. Raw Playwright HTML/blob reports and self-healing data are intentionally not uploaded from secret-bearing shard jobs.
+- Failure evidence artifacts are named `failure-evidence-auth-setup-<id>` for setup failures and `failure-evidence-<id>-<shard>` for shard failures, then retained for 30 days. `.github/actions/collect-failure-evidence` owns the shared collection, fallback-index, job-summary, and upload steps for both auth setup and test shards. The collector normally writes `index.md`, `manifest.json`, a redacted copy of `results.json` when Playwright produced it, and failed-attempt attachments under stable paths such as `failures/F002-R0/console.log`; if the collector itself crashes, the action uploads a fallback artifact with `index.md` only. Secret-bearing shard and auth setup runs explicitly set `withhold-sensitive-details`, so raw `results.json`, error text, and attachment bodies are not published when messages or DOM snapshots can contain account identifiers, drain tokens, or other sensitive values. Their indexes still list each attachment path with an `attachment body withheld` note, preserving the failure-to-attachment mapping without uploading the body. The collector copies generated attachments from `test-results/` and visual expected-baseline attachments from `tests/**-snapshots/`; other outside paths stay blocked. The `index.md` summary assigns every failed attempt an error id, shows the artifact download command, repeats the artifact name beside every attachment path, strips terminal color codes and generic sensitive patterns from displayed non-withheld evidence, surfaces Playwright top-level JSON errors for non-withheld shard runs, and avoids runner-local absolute paths. The workflow also appends `index.md` to the job summary so the first diagnostic map is visible without downloading the artifact.
 - Artifacts are retained for 30 days unless otherwise noted.
 
 Caching:
@@ -89,6 +92,7 @@ Caching:
 - Node uses `actions/setup-node@v6` with `node-version-file: .node-version` and `check-latest: true`.
 - npm dependencies are cached by `package-lock.json`.
 - `.github/actions/setup-playwright-browser` restores an isolated Playwright browser cache under `RUNNER_TEMP`.
+- `.github/actions/collect-failure-evidence` centralizes failure-evidence collection and upload behavior used by auth setup and shard jobs.
 - Browser cache keys include runner OS, runner architecture, browser, and `@playwright/test` version.
 - The browser setup always runs `install-deps`, then lets `playwright install` reuse restored browsers or download missing binaries.
 - Artifact upload is skipped under `act`.
@@ -120,7 +124,7 @@ Purpose:
 - The dedicated config sets `retries: 0`.
 - Trace, screenshot, and video are disabled so the form-encoded POST body cannot be captured in published artifacts on a flake.
 - The spec guard only opens when `REAL_CREDENTIAL_RUN === 'true'`, keeping the test out of the standard matrix.
-- The workflow uploads only the HTML report; no trace, screenshot, video, blob, or self-healing artifacts are produced.
+- The workflow uploads only the HTML report; no trace, screenshot, video, blob, failure-evidence, or self-healing artifacts are produced.
 
 ## Lint And Type-Check Backstop
 
@@ -162,7 +166,7 @@ The workflow uses a non-cancelling concurrency group keyed by target branch so p
 
 ## Automated Code Review
 
-`.github/workflows/claude-code-review.yml` runs on PR opened, synchronize, ready-for-review, and reopened events. It uses `anthropics/claude-code-action@v1` to submit a formal GitHub review with inline comments.
+`.github/workflows/claude-code-review.yml` runs on PR opened, synchronize, ready-for-review, and reopened events. It pins `anthropics/claude-code-action` to the reviewed v1.0.159 commit SHA so proxy/OpenRouter routing stays stable until a future action bump has verified internal Agent SDK model routing for 48 hours.
 
 The workflow uses two tiers:
 
@@ -241,12 +245,12 @@ The workflow runs `scripts/generate-quality-metrics.py` to regenerate [QUALITY_M
 
 ## Self-Healing Selector Fix
 
-`.github/workflows/self-healing.yml` triggers through `workflow_run` after "Playwright Typescript Tests" fails. It detects selector/locator failures and either comments on the PR or creates a draft PR.
+`.github/workflows/self-healing.yml` triggers through `workflow_run` after "Playwright Typescript Tests" fails, then runs only when a `self-healing-data-*` artifact exists. The secret-bearing Playwright shard workflow no longer uploads that raw artifact; failed shards publish sanitized `failure-evidence-*` indexes instead.
 
 Data sources:
 
-- Uses precomputed `selector-fix.md` attachments when `AI_DIAGNOSIS` is enabled.
-- Otherwise calls the configured AI provider directly with redacted error context and DOM snapshot.
+- Uses precomputed `selector-fix.md` attachments when a trusted producer uploads `self-healing-data-*` and `AI_DIAGNOSIS` is enabled.
+- Otherwise calls the configured AI provider directly with redacted error context and DOM snapshot from that trusted artifact.
 - Redaction is performed by `playwright/typescript/scripts/redact.ts`, which reuses `redactSensitive` from `utils/diagnosis.util.ts`.
 - Redaction subprocess failure aborts the run instead of sending unredacted content.
 
