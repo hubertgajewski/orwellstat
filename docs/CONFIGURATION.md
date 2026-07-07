@@ -8,15 +8,15 @@ This file owns local setup prerequisites, `.env`, `.vars`, GitHub Actions variab
 
 ## Prerequisites
 
-| Tool                                                               | Required for                         | Install                                                                         |
-| ------------------------------------------------------------------ | ------------------------------------ | ------------------------------------------------------------------------------- |
-| [Node.js](https://nodejs.org/) v26.x                               | Playwright, Bruno, MCP test tooling  | [nodejs.org](https://nodejs.org/)                                               |
-| [Bruno](https://www.usebruno.com/)                                 | Manual API request collection        | Standalone app or VSCode extension                                              |
-| [Docker Desktop](https://www.docker.com/products/docker-desktop/)  | Running GitHub Actions locally       | [docker.com](https://www.docker.com/products/docker-desktop/)                   |
-| [act](https://github.com/nektos/act)                               | Running GitHub Actions locally       | macOS: `brew install act`; Linux/Windows: use upstream releases                 |
+| Tool                                                               | Required for                                    | Install                                                                         |
+| ------------------------------------------------------------------ | ----------------------------------------------- | ------------------------------------------------------------------------------- |
+| [Node.js](https://nodejs.org/) v26.3.1                             | Playwright, Bruno, MCP test tooling             | [nodejs.org](https://nodejs.org/)                                               |
+| [Bruno](https://www.usebruno.com/)                                 | Manual API request collection                   | Standalone app or VSCode extension                                              |
+| [Docker Desktop](https://www.docker.com/products/docker-desktop/)  | Running GitHub Actions locally                  | [docker.com](https://www.docker.com/products/docker-desktop/)                   |
+| [act](https://github.com/nektos/act)                               | Running GitHub Actions locally                  | macOS: `brew install act`; Linux/Windows: use upstream releases                 |
 | [actionlint](https://github.com/rhysd/actionlint) and `shellcheck` | `/deep-review-pro` orchestrator static pre-pass | macOS: `brew install actionlint shellcheck`; other platforms: upstream releases |
 
-Node.js includes `npm`. CI uses `actions/setup-node@v6` with `node-version-file: .node-version` and `check-latest: true`, so workflow runs track the latest available Node 26.x release.
+Node.js includes `npm`. CI uses `actions/setup-node@v6` with `node-version-file: .node-version` and `check-latest: true`; `.node-version` pins the exact Node version used by local tooling and workflow runs.
 
 Docker, `act`, Bruno, and `actionlint` are optional unless you are running their matching local workflows.
 
