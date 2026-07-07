@@ -4,17 +4,14 @@ export type TitleNavigationResponse = {
 };
 
 export type TitleNavigationPage = {
-  goto(
-    url: string,
-    options: { waitUntil: 'domcontentloaded' }
-  ): Promise<TitleNavigationResponse | null>;
+  goto(url: string, options: { waitUntil: 'commit' }): Promise<TitleNavigationResponse | null>;
 };
 
 export async function expectTitleNavigationReady(
   page: TitleNavigationPage,
   url: string
 ): Promise<void> {
-  const response = await page.goto(url, { waitUntil: 'domcontentloaded' });
+  const response = await page.goto(url, { waitUntil: 'commit' });
 
   if (response === null) {
     throw new Error(`${url} returned no navigation response`);

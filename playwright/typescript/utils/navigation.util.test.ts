@@ -11,10 +11,10 @@ function response(ok: boolean, status: number): TitleNavigationResponse {
 }
 
 function pageReturning(nextResponse: TitleNavigationResponse | null): {
-  calls: { url: string; options: { waitUntil: 'domcontentloaded' } }[];
+  calls: { url: string; options: { waitUntil: 'commit' } }[];
   page: TitleNavigationPage;
 } {
-  const calls: { url: string; options: { waitUntil: 'domcontentloaded' } }[] = [];
+  const calls: { url: string; options: { waitUntil: 'commit' } }[] = [];
 
   return {
     calls,
@@ -28,12 +28,12 @@ function pageReturning(nextResponse: TitleNavigationResponse | null): {
 }
 
 describe('expectTitleNavigationReady', () => {
-  test('waits only for DOMContentLoaded before title assertions run', async () => {
+  test('waits only for navigation commit before title assertions run', async () => {
     const { calls, page } = pageReturning(response(true, 200));
 
     await expectTitleNavigationReady(page, '/zone/hits/');
 
-    assert.deepEqual(calls, [{ url: '/zone/hits/', options: { waitUntil: 'domcontentloaded' } }]);
+    assert.deepEqual(calls, [{ url: '/zone/hits/', options: { waitUntil: 'commit' } }]);
   });
 
   test('fails clearly when navigation has no response', async () => {
