@@ -3,7 +3,7 @@
     "@anthropic-ai/sdk": "^0.105.0",
     "@axe-core/playwright": "^4.11.3",
     "@google/generative-ai": "^0.24.1",
-    "@playwright/test": "^1.61.0",
+    "@playwright/test": "1.59.1",
     "@prettier/plugin-xml": "^3.4.2",
     "@types/node": "^26.0.0",
     "@types/pngjs": "^6.0.5",
@@ -12,6 +12,7 @@
     "husky": "^9.1.7",
     "lint-staged": "^17.0.7",
     "pixelmatch": "^7.2.0",
+    "playwright-core": "1.59.1",
     "pngjs": "^7.0.0",
     "prettier": "^3.8.4",
     "typescript": "^6.0.3"
