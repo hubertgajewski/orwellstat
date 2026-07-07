@@ -89,7 +89,7 @@ Reusable test job:
 
 Caching:
 
-- Node uses `actions/setup-node@v6` with `node-version-file: .node-version` and `check-latest: true`; `.node-version` pins the exact runtime used by CI.
+- Node uses `actions/setup-node@v6` with `node-version-file: .node-version` and `check-latest: true`.
 - npm dependencies are cached by `package-lock.json`.
 - `.github/actions/setup-playwright-browser` restores an isolated Playwright browser cache under `RUNNER_TEMP`.
 - `.github/actions/collect-failure-evidence` centralizes failure-evidence collection and upload behavior used by auth setup and shard jobs.
