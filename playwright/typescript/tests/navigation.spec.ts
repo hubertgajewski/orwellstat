@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@fixtures/base.fixture';
+import { test, expect } from '@fixtures/base.fixture';
 import { expectHeadings } from '@utils/string.util';
 import {
   AboutSystemPage,
@@ -9,31 +9,17 @@ import {
 } from '@pages/public/index';
 import { AUTHENTICATED_PAGE_CLASSES } from '@pages/authenticated/index';
 
-type TitlePageClass = {
-  url: string;
-  title: string;
-};
-
-async function expectTitleNavigation(page: Page, PageClass: TitlePageClass): Promise<void> {
-  const response = await page.goto(PageClass.url, { waitUntil: 'domcontentloaded' });
-
-  if (response === null) {
-    throw new Error(`${PageClass.url} returned no navigation response`);
-  }
-
-  expect(response.ok(), `${PageClass.url} HTTP status ${response.status()}`).toBe(true);
-  await expect(page).toHaveTitle(PageClass.title);
-}
-
 for (const PageClass of PUBLIC_PAGE_CLASSES) {
   test(`${PageClass.url} has correct title`, { tag: '@smoke' }, async ({ page }) => {
-    await expectTitleNavigation(page, PageClass);
+    await page.goto(PageClass.url);
+    await expect(page).toHaveTitle(PageClass.title);
   });
 }
 
 for (const PageClass of AUTHENTICATED_PAGE_CLASSES) {
   test(`${PageClass.url} has correct title`, { tag: '@smoke' }, async ({ page }) => {
-    await expectTitleNavigation(page, PageClass);
+    await page.goto(PageClass.url);
+    await expect(page).toHaveTitle(PageClass.title);
   });
 }
 
