@@ -1,19 +1,19 @@
 {
   "devDependencies": {
-    "@anthropic-ai/sdk": "^0.110.0",
-    "@axe-core/playwright": "^4.12.1",
+    "@anthropic-ai/sdk": "^0.105.0",
+    "@axe-core/playwright": "^4.11.3",
     "@google/generative-ai": "^0.24.1",
-    "@playwright/test": "^1.61.1",
+    "@playwright/test": "1.62.0-alpha-2026-07-07",
     "@prettier/plugin-xml": "^3.4.2",
-    "@types/node": "^26.1.0",
+    "@types/node": "^26.0.0",
     "@types/pngjs": "^6.0.5",
     "csstree-validator": "^4.0.1",
     "dotenv": "^17.4.2",
     "husky": "^9.1.7",
-    "lint-staged": "^17.0.8",
+    "lint-staged": "^17.0.7",
     "pixelmatch": "^7.2.0",
     "pngjs": "^7.0.0",
-    "prettier": "^3.9.4",
+    "prettier": "^3.8.4",
     "typescript": "^6.0.3"
   },
   "scripts": {
@@ -26,6 +26,9 @@
   },
   "lint-staged": {
     "*.{ts,tsx,js,json,md,yml,yaml,html,xhtml}": "prettier --write"
+  },
+  "overrides": {
+    "playwright-core": "1.62.0-alpha-2026-07-07"
   },
   "type": "module"
 }
