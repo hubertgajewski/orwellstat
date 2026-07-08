@@ -55,7 +55,7 @@ const TEXT_FIELDS = [
 // because of strict-nodeName checks) lives in one place — every other call site
 // just sees a typed string.
 async function readInputValue(locator: Locator): Promise<string> {
-  return locator.evaluate<string, HTMLInputElement>((el) => el.value);
+  return locator.evaluate((el: HTMLInputElement) => el.value);
 }
 
 async function expectEditableSettingsForm(admin: AdminPage): Promise<void> {
@@ -381,7 +381,7 @@ test.describe(
       // row. The block_ip field is maxlength=15 (IPv4 only); skip with a clear
       // reason if the server recorded an IPv6 source so the test does not silently
       // store a truncated value that would never match.
-      const sourceIp = await seededRow.evaluate<string>((row) => {
+      const sourceIp = await seededRow.evaluate((row: HTMLTableRowElement) => {
         const span = Array.from(row.querySelectorAll<HTMLSpanElement>('span[title]')).find((s) =>
           s.title.startsWith('Nazwa hosta/IP')
         );
