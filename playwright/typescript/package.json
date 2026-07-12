@@ -1,11 +1,11 @@
 {
   "devDependencies": {
-    "@anthropic-ai/sdk": "^0.110.0",
+    "@anthropic-ai/sdk": "^0.111.0",
     "@axe-core/playwright": "^4.12.1",
     "@google/generative-ai": "^0.24.1",
-    "@playwright/test": "1.62.0-alpha-2026-07-07",
+    "@playwright/test": "1.62.0-alpha-1783623505000",
     "@prettier/plugin-xml": "^3.4.2",
-    "@types/node": "^26.1.0",
+    "@types/node": "^26.1.1",
     "@types/pngjs": "^6.0.5",
     "csstree-validator": "^4.0.1",
     "dotenv": "^17.4.2",
@@ -13,8 +13,8 @@
     "lint-staged": "^17.0.8",
     "pixelmatch": "^7.2.0",
     "pngjs": "^7.0.0",
-    "prettier": "^3.9.4",
-    "typescript": "^6.0.3"
+    "prettier": "^3.9.5",
+    "typescript": "^7.0.2"
   },
   "scripts": {
     "format": "prettier --write .",
