@@ -27,6 +27,6 @@
     "vitest": "^4.1.1"
   },
   "overrides": {
-    "ip-address": ">=10.1.1"
+    "ip-address": ">=10.4.0"
   }
 }
