@@ -1,6 +1,5 @@
 import { type Locator, type Page, expect } from '@fixtures/base.fixture';
 import type { SvgAnalysis } from '@types-local/svg-analysis';
-import { statisticsParametersMustHaveDistinctLabels } from '@utils/svg-chart-distinctness.util.ts';
 import {
   CHART_TABLE_TOLERANCE_HUNDREDTHS,
   chartTablePercentGapHundredths,
@@ -105,8 +104,8 @@ export async function dataTableTopRowsFromXhtml(
 // Walk every `Pokaż statystyki` Parametr option on the current page. For each option:
 // switch the combobox, submit, wait for the chart to reload, assert the round-trip held,
 // and assert the chart's label/percent pairs match the data table's top-N rows. Then
-// assert each dimension renders a distinct chart so switching the Parametr is not a
-// server-side no-op.
+// assert each parameter pair renders distinct data, except for the legitimate IP/host
+// fallback pair, so switching the Parametr is not a server-side no-op.
 //
 // Percent comparison uses a tolerance because the data table rounds to 2 decimals
 // (e.g. "0.00%") while the SVG keeps the underlying precision (e.g. "[0.004%]").
@@ -217,7 +216,9 @@ export async function expectEveryParametrChartMatchesTableAndIsDistinct(
     for (let j = i + 1; j < labelEntries.length; j++) {
       const [valueI, labelsI] = labelEntries[i];
       const [valueJ, labelsJ] = labelEntries[j];
-      if (!statisticsParametersMustHaveDistinctLabels(valueI, valueJ)) continue;
+      // Host statistics fall back to the source IP when reverse DNS does not resolve.
+      // USER_PARAMETER_OPTIONS orders IP before host, so this is the sole exempt pair.
+      if (valueI === 'ip' && valueJ === 'host') continue;
 
       expect
         .soft(labelsI.join('|'), `Parametr "${valueI}" must render different data than "${valueJ}"`)
