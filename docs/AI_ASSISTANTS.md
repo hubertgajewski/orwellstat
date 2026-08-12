@@ -111,9 +111,11 @@ Assistant pre-shell hooks in `.claude/settings.json` and `.codex/hooks.json` blo
 
 ### playwright-report-mcp
 
-Runs through `npx playwright-report-mcp@3.2.2`. The version is pinned in `.mcp.json`.
+Runs through `npx playwright-report-mcp@3.3.0`. The version is pinned in `.mcp.json`.
 
-`playwright-report-mcp@3.2.2` declares `node >=22`; use the repository baseline Node.js 26.x for local Playwright, Bruno, and MCP workflows.
+`playwright-report-mcp@3.3.0` declares `node >=22`; use the repository baseline Node.js 26.x for local Playwright, Bruno, and MCP workflows.
+
+Version 3.3.0 supports both the modern MCP `2026-07-28` protocol revision through version negotiation and supported 2025-era revisions through the traditional `initialize` handshake. The opening exchange pins the selected protocol era for the connection lifetime; clients that pin an unsupported revision receive an explicit negotiation error instead of silently switching eras.
 
 Every tool call should pass `workingDirectory: "playwright/typescript"` in the main checkout, or a sibling worktree path such as `"../orwellstat-330/playwright/typescript"`. The default `.` points at the repo root, which has no Playwright config and will fail.
 
