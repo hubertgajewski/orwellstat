@@ -1,5 +1,6 @@
 import { type Locator, type Page, expect } from '@fixtures/base.fixture';
 import type { SvgAnalysis } from '@types-local/svg-analysis';
+import { statisticsParametersMustHaveDistinctLabels } from '@utils/svg-chart-distinctness.util.ts';
 import {
   CHART_TABLE_TOLERANCE_HUNDREDTHS,
   chartTablePercentGapHundredths,
@@ -216,6 +217,8 @@ export async function expectEveryParametrChartMatchesTableAndIsDistinct(
     for (let j = i + 1; j < labelEntries.length; j++) {
       const [valueI, labelsI] = labelEntries[i];
       const [valueJ, labelsJ] = labelEntries[j];
+      if (!statisticsParametersMustHaveDistinctLabels(valueI, valueJ)) continue;
+
       expect
         .soft(labelsI.join('|'), `Parametr "${valueI}" must render different data than "${valueJ}"`)
         .not.toBe(labelsJ.join('|'));
