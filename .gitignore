@@ -7,6 +7,7 @@
 .DS_Store
 .claude/settings.local.json
 .playwright-mcp/
+.deep-review-cache/
 bruno/.env
 bruno/environments/.env
 bruno/test-results/
