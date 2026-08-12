@@ -1,5 +1,6 @@
 import { type Locator, type Page, expect } from '@fixtures/base.fixture';
 import type { SvgAnalysis } from '@types-local/svg-analysis';
+import { unexpectedStatisticsParameterLabelCollisions } from '@utils/svg-chart-distinctness.util.ts';
 import {
   CHART_TABLE_TOLERANCE_HUNDREDTHS,
   chartTablePercentGapHundredths,
@@ -211,18 +212,15 @@ export async function expectEveryParametrChartMatchesTableAndIsDistinct(
 
   // Distinctness uses table labels (always real data) so dimensions that render rank
   // numbers in the chart aren't falsely flagged as identical to each other.
-  const labelEntries = Array.from(tableLabelsByOption.entries());
-  for (let i = 0; i < labelEntries.length; i++) {
-    for (let j = i + 1; j < labelEntries.length; j++) {
-      const [valueI, labelsI] = labelEntries[i];
-      const [valueJ, labelsJ] = labelEntries[j];
-      // Host statistics fall back to the source IP when reverse DNS does not resolve.
-      // USER_PARAMETER_OPTIONS orders IP before host, so this is the sole exempt pair.
-      if (valueI === 'ip' && valueJ === 'host') continue;
-
-      expect
-        .soft(labelsI.join('|'), `Parametr "${valueI}" must render different data than "${valueJ}"`)
-        .not.toBe(labelsJ.join('|'));
-    }
+  const labelCollisions = unexpectedStatisticsParameterLabelCollisions(
+    Array.from(tableLabelsByOption, ([value, labels]) => ({ value, labels }))
+  );
+  for (const collision of labelCollisions) {
+    expect
+      .soft(
+        collision.labelsA,
+        `Parametr "${collision.valueA}" must render different data than "${collision.valueB}"`
+      )
+      .not.toBe(collision.labelsB);
   }
 }
