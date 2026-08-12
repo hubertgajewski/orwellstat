@@ -2,7 +2,7 @@
  * Authenticated /zone/stats/ page.
  * SVG chart structural analysis, user-statistics table, and a parameterised every-Parametr loop
  * that verifies chart label/percent pairs match the data table for all 12 dimensions and that
- * each dimension renders a distinct chart (switching Parametr is not a server-side no-op).
+ * parameter pairs render distinct data except for the legitimate IP/host fallback pair.
  */
 import { test, expect } from '@fixtures/base.fixture';
 import { EMPTY_STORAGE_STATE } from '@fixtures/storage-state';
@@ -171,11 +171,12 @@ test('user statistics', { tag: '@regression' }, async ({ page }) => {
 });
 
 // Walk every "Pokaż statystyki" Parametr option once: assert chart=table top-N rows for
-// each dimension AND that every dimension renders a distinct chart. /zone/stats/ has 12
-// Parametr options (6 shared with /statistics/ + 6 user-only — see USER_PARAMETER_OPTIONS),
-// so this covers the full per-user surface, not just the public-page subset.
+// each dimension AND that parameter pairs render distinct data except for the legitimate
+// IP/host fallback pair. /zone/stats/ has 12 Parametr options (6 shared with /statistics/
+// + 6 user-only — see USER_PARAMETER_OPTIONS), so this covers the full per-user surface,
+// not just the public-page subset.
 test(
-  'every Parametr chart matches the data table and is distinct on /zone/stats/',
+  'every Parametr chart matches the data table and distinctness policy on /zone/stats/',
   { tag: '@regression' },
   async ({ page }) => {
     test.setTimeout(300_000);
