@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { McpServer } from '@modelcontextprotocol/server';
+import { serveStdio } from '@modelcontextprotocol/server/stdio';
 import { readFileSync, writeFileSync, renameSync, rmSync, realpathSync } from 'fs';
 import { join } from 'path';
 import { fileURLToPath } from 'url';
@@ -196,50 +196,56 @@ async function markCovered(args: { pageUrl: string; category: string }) {
   }
 }
 
-const server = new McpServer({ name: 'coverage-matrix', version: '1.0.0' });
+// One server instance per connection: `serveStdio` calls this factory for each
+// opening exchange, which is what lets a connection pin either the 2026-07-28 era
+// or the 2025-era handshake.
+export function createServer(): McpServer {
+  const server = new McpServer({ name: 'coverage-matrix', version: '1.0.0' });
 
-server.registerTool(
-  'get_coverage_gaps',
-  {
-    description:
-      'Return uncovered entries from coverage-matrix.json: pages grouped by URL with their missing categories (excluding `title` and `api` since those are handled by shared spec files, and also excluding inactive or page-inapplicable categories), plus the list of uncovered form names.',
-    inputSchema: {},
-  },
-  getCoverageGaps
-);
-
-server.registerTool(
-  'get_coverage_summary',
-  {
-    description:
-      'Return coverage counts and percentages per category (title, content, accessibility, visualRegression, api, securityHeaders, negativePath, tracking), plus forms and an overall percentage. Values match those produced by the test-coverage.yml workflow; inactive categories report 0/0 until activated in coverage-matrix.json.',
-    inputSchema: {},
-  },
-  getCoverageSummary
-);
-
-server.registerTool(
-  'mark_covered',
-  {
-    description:
-      'Flip a single page-category entry in coverage-matrix.json to true and persist the file. Validates that pageUrl exists, the category is one of: title, content, accessibility, visualRegression, api, securityHeaders, negativePath, tracking, and that the category is applicable for the page. Returns a descriptive error (not an exception) on unknown URL, invalid category, or page/category mismatch.',
-    inputSchema: {
-      pageUrl: z
-        .string()
-        .describe('Page URL key in coverage-matrix.json (e.g. "/register/", "/zone/hits/")'),
-      category: z
-        .enum([...PAGE_CATEGORIES])
-        .describe(
-          'One of: title, content, accessibility, visualRegression, api, securityHeaders, negativePath, tracking'
-        ),
+  server.registerTool(
+    'get_coverage_gaps',
+    {
+      description:
+        'Return uncovered entries from coverage-matrix.json: pages grouped by URL with their missing categories (excluding `title` and `api` since those are handled by shared spec files, and also excluding inactive or page-inapplicable categories), plus the list of uncovered form names.',
+      inputSchema: z.object({}),
     },
-  },
-  markCovered
-);
+    getCoverageGaps
+  );
 
-export { server, getCoverageGaps, getCoverageSummary, markCovered };
+  server.registerTool(
+    'get_coverage_summary',
+    {
+      description:
+        'Return coverage counts and percentages per category (title, content, accessibility, visualRegression, api, securityHeaders, negativePath, tracking), plus forms and an overall percentage. Values match those produced by the test-coverage.yml workflow; inactive categories report 0/0 until activated in coverage-matrix.json.',
+      inputSchema: z.object({}),
+    },
+    getCoverageSummary
+  );
+
+  server.registerTool(
+    'mark_covered',
+    {
+      description:
+        'Flip a single page-category entry in coverage-matrix.json to true and persist the file. Validates that pageUrl exists, the category is one of: title, content, accessibility, visualRegression, api, securityHeaders, negativePath, tracking, and that the category is applicable for the page. Returns a descriptive error (not an exception) on unknown URL, invalid category, or page/category mismatch.',
+      inputSchema: z.object({
+        pageUrl: z
+          .string()
+          .describe('Page URL key in coverage-matrix.json (e.g. "/register/", "/zone/hits/")'),
+        category: z
+          .enum([...PAGE_CATEGORIES])
+          .describe(
+            'One of: title, content, accessibility, visualRegression, api, securityHeaders, negativePath, tracking'
+          ),
+      }),
+    },
+    markCovered
+  );
+
+  return server;
+}
+
+export { getCoverageGaps, getCoverageSummary, markCovered };
 
 if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
+  serveStdio(() => createServer());
 }
