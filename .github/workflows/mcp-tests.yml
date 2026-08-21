@@ -48,6 +48,12 @@ jobs:
         working-directory: mcp/${{ matrix.package }}
         run: npm audit --audit-level=high
 
+      # The protocol-negotiation tests boot dist/index.js as a real subprocess and
+      # skip themselves when it is absent, so the build must run before the tests.
+      - name: Build ${{ matrix.package }}
+        working-directory: mcp/${{ matrix.package }}
+        run: npm run build
+
       - name: Test ${{ matrix.package }}
         working-directory: mcp/${{ matrix.package }}
         run: npm test
