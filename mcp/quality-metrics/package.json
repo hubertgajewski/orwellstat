@@ -28,6 +28,7 @@
     "vitest": "^4.1.1"
   },
   "overrides": {
-    "ip-address": ">=10.4.0"
+    "ip-address": ">=10.4.0",
+    "nanoid": "^3.3.18"
   }
 }
