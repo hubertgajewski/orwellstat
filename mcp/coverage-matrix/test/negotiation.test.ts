@@ -4,7 +4,8 @@
  * in-memory, because InMemoryTransport.createLinkedPair() connects 2025-era
  * instances only (SDK docs/migration/support-2026-07-28.md).
  *
- * Skipped automatically when dist/ has not been built yet.
+ * Skipped automatically when dist/ has not been built yet, except in CI, where a
+ * missing build is a hard failure.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -24,10 +25,15 @@ const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const DIST_INDEX = resolve(__dirname, '../dist/index.js');
 const DIST_BUILT = existsSync(DIST_INDEX);
 
+// CI builds each package before running its tests (mcp-tests.yml), so a missing
+// dist/index.js there is a build defect rather than a valid skip condition: fail
+// loudly instead of letting every protocol test skip under a green job.
 if (!DIST_BUILT) {
-  console.warn(
-    `[negotiation] Skipping protocol-era tests: ${DIST_INDEX} is missing. Run \`npm run build\` first.`
-  );
+  const reason = `${DIST_INDEX} is missing. Run \`npm run build\` first.`;
+  if (process.env.CI) {
+    throw new Error(`[negotiation] Refusing to skip protocol-era tests in CI: ${reason}`);
+  }
+  console.warn(`[negotiation] Skipping protocol-era tests: ${reason}`);
 }
 
 const TOOL_NAMES = ['get_coverage_gaps', 'get_coverage_summary', 'mark_covered'];
