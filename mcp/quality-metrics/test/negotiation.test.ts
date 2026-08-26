@@ -4,8 +4,8 @@
  * in-memory, because InMemoryTransport.createLinkedPair() connects 2025-era
  * instances only (SDK docs/migration/support-2026-07-28.md).
  *
- * Skipped automatically when dist/ has not been built yet, except in CI, where a
- * missing build is a hard failure.
+ * Skipped automatically when dist/ has not been built yet, except in CI, where
+ * requireDistBuilt() turns a missing build into a hard failure.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -17,24 +17,13 @@ import {
 } from '@modelcontextprotocol/client';
 import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
 import { createServer } from '../index.js';
-import { existsSync } from 'fs';
+import { requireDistBuilt } from '@orwellstat/mcp-shared';
 import { resolve } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const DIST_INDEX = resolve(__dirname, '../dist/index.js');
-const DIST_BUILT = existsSync(DIST_INDEX);
-
-// CI builds each package before running its tests (mcp-tests.yml), so a missing
-// dist/index.js there is a build defect rather than a valid skip condition: fail
-// loudly instead of letting every protocol test skip under a green job.
-if (!DIST_BUILT) {
-  const reason = `${DIST_INDEX} is missing. Run \`npm run build\` first.`;
-  if (process.env.CI) {
-    throw new Error(`[negotiation] Refusing to skip protocol-era tests in CI: ${reason}`);
-  }
-  console.warn(`[negotiation] Skipping protocol-era tests: ${reason}`);
-}
+const DIST_BUILT = requireDistBuilt(DIST_INDEX, 'negotiation');
 
 const TOOL_NAMES = ['get_defect_escape_rate', 'get_metrics_history', 'get_mttr'];
 

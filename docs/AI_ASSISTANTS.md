@@ -191,7 +191,7 @@ Both servers start through `serveStdio(() => createServer())`, which builds one 
 
 The `2026-07-28` revision is stateless: there is no `initialize` handshake, and each request carries its protocol version and client identity in `_meta`. Because of that, `LATEST_PROTOCOL_VERSION` and `SUPPORTED_PROTOCOL_VERSIONS` in `@modelcontextprotocol/core` list only 2025-era revisions — that is expected and is not evidence of missing 2026 support.
 
-Each server's `test/negotiation.test.ts` covers all three paths (modern, legacy, unsupported pin) by booting `dist/index.js` as a real subprocess, so `npm run build` must run before `npm test` or those tests skip themselves with a warning.
+Each server's `test/negotiation.test.ts` covers all three paths (modern, legacy, unsupported pin) by booting `dist/index.js` as a real subprocess, so `npm run build` must run before `npm test`. The shared `requireDistBuilt()` gate decides what a missing build means: locally the tests warn and skip themselves, while in CI — where `mcp-tests.yml` builds each package before testing — it throws, so a missing build fails the job instead of silently skipping every protocol test. Set `CI=false` to opt back into the local warn-and-skip behavior.
 
 ### quality-metrics
 
