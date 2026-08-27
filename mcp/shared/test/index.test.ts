@@ -1,6 +1,7 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { resolve } from 'path';
-import { repoRoot, ok, err } from '../index.js';
+import { fileURLToPath } from 'url';
+import { repoRoot, ok, err, requireDistBuilt } from '../index.js';
 
 describe('mcp/shared', () => {
   describe('repoRoot', () => {
@@ -51,6 +52,55 @@ describe('mcp/shared', () => {
         content: [{ type: 'text', text: 'ERROR: boom' }],
         isError: true,
       });
+    });
+  });
+
+  describe('requireDistBuilt', () => {
+    const savedEnv = { ...process.env };
+    const PRESENT = fileURLToPath(import.meta.url);
+    const MISSING = resolve(PRESENT, '../does-not-exist-dist-index.js');
+
+    beforeEach(() => {
+      delete process.env.CI;
+      vi.spyOn(console, 'warn').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      process.env = { ...savedEnv };
+      vi.restoreAllMocks();
+    });
+
+    it('returns true and stays silent when the build exists', () => {
+      process.env.CI = 'true';
+      expect(requireDistBuilt(PRESENT, 'negotiation')).toBe(true);
+      expect(console.warn).not.toHaveBeenCalled();
+    });
+
+    it('warns and returns false when the build is missing outside CI', () => {
+      expect(requireDistBuilt(MISSING, 'negotiation')).toBe(false);
+      expect(console.warn).toHaveBeenCalledWith(
+        expect.stringContaining('[negotiation] Skipping tests:')
+      );
+    });
+
+    it('throws when the build is missing under CI', () => {
+      process.env.CI = 'true';
+      expect(() => requireDistBuilt(MISSING, 'negotiation')).toThrow(
+        /\[negotiation\] Refusing to skip tests in CI/
+      );
+    });
+
+    // `CI=false` is the conventional opt-out, and 'false' is a truthy string:
+    // a truthiness check here would throw instead of skipping.
+    it.each(['false', ''])('treats CI=%o as not CI and skips instead', (value) => {
+      process.env.CI = value;
+      expect(requireDistBuilt(MISSING, 'negotiation')).toBe(false);
+    });
+
+    it('names the missing path and the build command in its message', () => {
+      process.env.CI = '1';
+      expect(() => requireDistBuilt(MISSING, 'negotiation')).toThrow(MISSING);
+      expect(() => requireDistBuilt(MISSING, 'negotiation')).toThrow('npm run build');
     });
   });
 });

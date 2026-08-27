@@ -219,6 +219,7 @@ The single `test` job builds `mcp/shared`, then fans out across `coverage-matrix
 ```text
 npm ci
 npm audit --audit-level=high
+npm run build
 npm test
 ```
 

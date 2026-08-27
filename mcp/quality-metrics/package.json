@@ -16,17 +16,19 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@modelcontextprotocol/server": "^2.0.0",
     "@orwellstat/mcp-shared": "file:../shared",
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@modelcontextprotocol/client": "^2.0.0",
     "@types/node": "^25.6.2",
     "@vitest/coverage-v8": "^4.1.10",
     "typescript": "^7.0.2",
     "vitest": "^4.1.1"
   },
   "overrides": {
-    "ip-address": ">=10.4.0"
+    "ip-address": ">=10.4.0",
+    "nanoid": "^3.3.18"
   }
 }

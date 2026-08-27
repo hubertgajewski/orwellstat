@@ -178,6 +178,21 @@ Docker MCP gateway for interacting with Docker containers started by `act`.
 | `mcp-exec` | Execute a command inside a running container |
 | `mcp-find` | Find containers by name or label             |
 
+### Protocol revisions
+
+`quality-metrics` and `coverage-matrix` are built on the MCP TypeScript SDK v2 packages (`@modelcontextprotocol/server`) and serve **two protocol eras from the same binary**:
+
+| Era      | Revision                | How a connection selects it                                                        |
+| -------- | ----------------------- | ---------------------------------------------------------------------------------- |
+| modern   | `2026-07-28`            | Client opts in with `versionNegotiation: { mode: 'auto' }` or `{ pin: '2026-07-28' }` |
+| legacy   | 2025-era (`2025-11-25`) | Default — the `initialize` handshake, unchanged                                    |
+
+Both servers start through `serveStdio(() => createServer())`, which builds one server instance per connection; the opening exchange pins that connection's era. A client pinning a revision neither era supports is rejected with `UnsupportedProtocolVersionError` rather than silently downgraded.
+
+The `2026-07-28` revision is stateless: there is no `initialize` handshake, and each request carries its protocol version and client identity in `_meta`. Because of that, `LATEST_PROTOCOL_VERSION` and `SUPPORTED_PROTOCOL_VERSIONS` in `@modelcontextprotocol/core` list only 2025-era revisions — that is expected and is not evidence of missing 2026 support.
+
+Each server's `test/negotiation.test.ts` covers all three paths (modern, legacy, unsupported pin) by booting `dist/index.js` as a real subprocess, so `npm run build` must run before `npm test`. The shared `requireDistBuilt()` gate decides what a missing build means: locally the tests warn and skip themselves, while in CI — where `mcp-tests.yml` builds each package before testing — it throws, so a missing build fails the job instead of silently skipping every protocol test. Set `CI=false` to opt back into the local warn-and-skip behavior.
+
 ### quality-metrics
 
 Local MCP server in `mcp/quality-metrics/`. It exposes the same defect escape rate, MTTR, and metric history as [QUALITY_METRICS.md](../QUALITY_METRICS.md).
