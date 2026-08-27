@@ -1,11 +1,12 @@
 #!/usr/bin/env node
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { McpServer } from '@modelcontextprotocol/server';
+import { serveStdio } from '@modelcontextprotocol/server/stdio';
 import { spawnSync } from 'child_process';
 import { readFileSync, realpathSync } from 'fs';
 import { join } from 'path';
 import { fileURLToPath } from 'url';
 import { repoRoot, ok, err } from '@orwellstat/mcp-shared';
+import { z } from 'zod';
 
 function scriptPath(): string {
   return join(repoRoot(), 'scripts', 'generate-quality-metrics.py');
@@ -100,41 +101,47 @@ async function getMetricsHistory() {
   }
 }
 
-const server = new McpServer({ name: 'quality-metrics', version: '1.0.0' });
+// One server instance per connection: `serveStdio` calls this factory for each
+// opening exchange, which is what lets a connection pin either the 2026-07-28 era
+// or the 2025-era handshake.
+export function createServer(): McpServer {
+  const server = new McpServer({ name: 'quality-metrics', version: '1.0.0' });
 
-server.registerTool(
-  'get_defect_escape_rate',
-  {
-    description:
-      'Return defect escape rate percentage and bug issue counts per discovery label (found-by-test, found-by-manual-testing, found-in-production). Matches QUALITY_METRICS.md.',
-    inputSchema: {},
-  },
-  getDefectEscapeRate
-);
+  server.registerTool(
+    'get_defect_escape_rate',
+    {
+      description:
+        'Return defect escape rate percentage and bug issue counts per discovery label (found-by-test, found-by-manual-testing, found-in-production). Matches QUALITY_METRICS.md.',
+      inputSchema: z.object({}),
+    },
+    getDefectEscapeRate
+  );
 
-server.registerTool(
-  'get_mttr',
-  {
-    description:
-      'Return mean time to resolve (days/hours) for all closed bug issues and broken down per discovery label. Matches QUALITY_METRICS.md.',
-    inputSchema: {},
-  },
-  getMttr
-);
+  server.registerTool(
+    'get_mttr',
+    {
+      description:
+        'Return mean time to resolve (days/hours) for all closed bug issues and broken down per discovery label. Matches QUALITY_METRICS.md.',
+      inputSchema: z.object({}),
+    },
+    getMttr
+  );
 
-server.registerTool(
-  'get_metrics_history',
-  {
-    description:
-      'Return all historical data points from quality-metrics-history.json (date, escape_rate, mttr, coverage) as structured JSON.',
-    inputSchema: {},
-  },
-  getMetricsHistory
-);
+  server.registerTool(
+    'get_metrics_history',
+    {
+      description:
+        'Return all historical data points from quality-metrics-history.json (date, escape_rate, mttr, coverage) as structured JSON.',
+      inputSchema: z.object({}),
+    },
+    getMetricsHistory
+  );
 
-export { server, runScript, getDefectEscapeRate, getMttr, getMetricsHistory };
+  return server;
+}
+
+export { runScript, getDefectEscapeRate, getMttr, getMetricsHistory };
 
 if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
+  serveStdio(() => createServer());
 }
