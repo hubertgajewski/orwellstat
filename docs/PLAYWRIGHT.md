@@ -12,6 +12,8 @@ npx playwright install --with-deps
 
 `npm ci` triggers the `prepare` script, which wires the local Husky pre-commit hook.
 
+Keep `@playwright/test`, `playwright`, and `playwright-core` on the same resolved version. Let the pinned `@playwright/test` dependency select its matching runtime packages instead of overriding `playwright-core` independently. After upgrading, regenerate the lockfile and rerun `npx playwright install --with-deps` to install the matching browser binaries.
+
 ## Pre-Commit Hook
 
 [`playwright/typescript/.husky/pre-commit`](../playwright/typescript/.husky/pre-commit) runs on local commits:

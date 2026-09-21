@@ -27,8 +27,5 @@
   "lint-staged": {
     "*.{ts,tsx,js,json,md,yml,yaml,html,xhtml}": "prettier --write"
   },
-  "overrides": {
-    "playwright-core": "1.62.0-alpha-2026-07-07"
-  },
   "type": "module"
 }
