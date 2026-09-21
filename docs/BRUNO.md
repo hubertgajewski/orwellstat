@@ -14,6 +14,8 @@ cd bruno
 npm ci
 ```
 
+`bruno/package.json` overrides `@faker-js/faker` to `>=10.5.0 <11` because Bruno's transitive dependency still selects a version affected by [GHSA-qxc2-j82w-r537](https://github.com/advisories/GHSA-qxc2-j82w-r537). Keep this override until Bruno selects a patched version itself; `npm audit --audit-level=high` enforces the CI security threshold.
+
 `bruno/.env` must live at the collection root. Bruno CLI reads secrets from that file, not from environment directories.
 
 Required keys:

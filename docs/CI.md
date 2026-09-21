@@ -223,6 +223,8 @@ npm run build
 npm test
 ```
 
+When updating MCP test dependencies, keep `vitest` and `@vitest/coverage-v8` on the same resolved version and regenerate the package lockfile together. The coverage provider requires an exact Vitest peer version; mismatches fail during `npm ci` before tests run.
+
 It uses the standard per-ref concurrency group with `cancel-in-progress: true`.
 
 ## Quality Metrics Dashboard
