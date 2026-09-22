@@ -143,6 +143,6 @@ Each Playwright minor bump ships new browser engine builds. Expect small visual-
 
 ## AI Assistant Notes
 
-Claude Code, Codex, Gemini, and other AGENTS.md readers load [AGENTS.md](AGENTS.md) for behavioral rules, then use [docs/AI_ASSISTANTS.md](docs/AI_ASSISTANTS.md) for project skills, MCP server setup, and worktree details. Gemini CLI loads `AGENTS.md` because `.gemini/settings.json` sets `context.fileName`.
+Claude Code, Codex, Gemini, and other AGENTS.md readers use [AGENTS.md](AGENTS.md) for behavioral rules, then [docs/AI_ASSISTANTS.md](docs/AI_ASSISTANTS.md) for project skills, MCP server setup, and worktree details. Claude Code v2.1.277+ loads `AGENTS.md` directly when the session can fetch Anthropic feature flags and no `CLAUDE.md`, `.claude/CLAUDE.md`, or `CLAUDE.local.md` is on the project path; that doc records the untracked `@AGENTS.md` import for sessions that cannot load it directly. Gemini CLI loads `AGENTS.md` because `.gemini/settings.json` sets `context.fileName`.
 
 When updating the project, keep this README concise. Put operational detail in the focused file under `docs/` that owns the topic.

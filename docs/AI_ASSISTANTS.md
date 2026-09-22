@@ -1,8 +1,19 @@
 # AI Assistants
 
-This file owns project-specific AI assistant workflows, MCP server reference, and worktree guidance. Behavioral rules live in [AGENTS.md](../AGENTS.md).
+This file owns project-specific AI assistant workflows, MCP server reference, and worktree guidance. Behavioral rules live in [AGENTS.md](../AGENTS.md), the only committed assistant instruction file.
 
-Claude Code v2.1.277+ loads `AGENTS.md` when no `CLAUDE.md`, `.claude/CLAUDE.md`, or `CLAUDE.local.md` exists in the working directory or any directory above it. A `CLAUDE.md` or `CLAUDE.local.md` on that path makes Claude Code load that file and skip `AGENTS.md`.
+Claude Code loads `AGENTS.md` directly when both of these hold:
+
+- Claude Code is v2.1.277 or later, the session fetches Anthropic feature flags, and a previous session has already run since installing or upgrading to a version with `AGENTS.md` support. The built-in `agents-md` plugin is enabled, and `disableAllHooks` and `allowManagedHooksOnly` are off. Feature-flag fetching stays off on Amazon Bedrock, on another third-party provider, and when telemetry is disabled. The full list is in the [Claude Code memory docs](https://code.claude.com/docs/en/memory#when-agentsmd-support-is-unavailable).
+- No `CLAUDE.md`, `.claude/CLAUDE.md`, or `CLAUDE.local.md` exists in the working directory or any directory above it. `~/.claude/CLAUDE.md` and an organization-managed `CLAUDE.md` do not count. With the default project-instructions setting, a counting file makes Claude Code load that file and skip reading `AGENTS.md` directly.
+
+A session that cannot load `AGENTS.md` directly may keep an untracked `CLAUDE.md` at the repository root whose only line is:
+
+```text
+@AGENTS.md
+```
+
+Claude Code expands that import, so the session still follows [AGENTS.md](../AGENTS.md). Leave the file untracked. A committed `CLAUDE.md` makes every v2.1.277+ session take the import path. Put no other instructions in the file. Leave `.claude/CLAUDE.md` and `CLAUDE.local.md` absent; either file also suppresses direct `AGENTS.md` loading. While the local import is present, a session that could have loaded `AGENTS.md` directly loads `CLAUDE.md` instead and receives `AGENTS.md` through the import once.
 
 ## Project Skills
 
