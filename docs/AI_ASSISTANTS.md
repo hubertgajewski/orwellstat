@@ -1,10 +1,8 @@
 # AI Assistants
 
-This file owns project-specific AI assistant workflows, MCP server reference, and worktree guidance. Behavioral rules remain in the assistant entrypoint files:
+This file owns project-specific AI assistant workflows, MCP server reference, and worktree guidance. Behavioral rules live in [AGENTS.md](../AGENTS.md).
 
-- [CLAUDE.md](../CLAUDE.md)
-- [AGENTS.md](../AGENTS.md)
-- [GEMINI.md](../GEMINI.md)
+Claude Code v2.1.277+ loads `AGENTS.md` when no `CLAUDE.md`, `.claude/CLAUDE.md`, or `CLAUDE.local.md` exists in the working directory or any directory above it. A `CLAUDE.md` or `CLAUDE.local.md` on that path makes Claude Code load that file and skip `AGENTS.md`.
 
 ## Project Skills
 
@@ -43,19 +41,9 @@ During re-review convergence, `/deep-review-pro` can reuse a non-blocking unchan
 
 Token benchmark fixtures and the before/after reporting workflow live in [deep-review-pro-benchmark](deep-review-pro-benchmark/README.md). Use them before and after `/deep-review-pro` token-cost changes so prompt framing, dispatch, rerun/cache, and aggregate-output effects are measured against stable scopes.
 
-## Codex And Claude Substitutions
+## Runtime Substitutions
 
-When Claude-specific mechanics appear in project docs, use the closest Codex-equivalent workflow:
-
-| Claude mechanic                         | Codex equivalent                                                                                           |
-| --------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `Skill` tool                            | Load the project skill through Codex skill discovery                                                       |
-| `Task` tool                             | Use `spawn_agent`/`wait_agent` only when the user explicitly authorized sub-agents; otherwise work locally |
-| `Read`, `Grep`, `Glob`                  | Use file inspection and `rg`-based search                                                                  |
-| Claude hooks in `.claude/settings.json` | Use `.codex/hooks.json` for supported hooks and run unsupported checks explicitly                          |
-| Claude agent hook runners               | Follow the same review workflow manually, or via Codex sub-agents only when authorized                     |
-
-When a Claude-only instruction cannot be followed literally, state the substitution and any remaining limitation.
+The canonical substitution list lives in [AGENTS.md](../AGENTS.md) under "Runtime substitutions". Use it when a runtime cannot follow a Claude-named tool or hook literally, and state what was substituted.
 
 ## Git Worktrees
 
@@ -90,7 +78,7 @@ Five MCP servers are declared in [`.mcp.json`](../.mcp.json). Open the repositor
 | Claude Code | `.mcp.json`          | `enableAllProjectMcpServers: true` in `.claude/settings.json`         |
 | Cursor      | `.cursor/mcp.json`   | Symlinked to `.mcp.json`; Cursor does not read the root file directly |
 | Codex       | `.mcp.json`          | Per [AGENTS.md](../AGENTS.md); shares `.codex/hooks.json` Playwright CLI block |
-| Gemini      | `.mcp.json`          | Per [GEMINI.md](../GEMINI.md); runtime loading may differ             |
+| Gemini      | `.mcp.json`          | [`.gemini/settings.json`](../.gemini/settings.json) sets `context.fileName` to `AGENTS.md` |
 
 Assistant pre-shell hooks in `.claude/settings.json` and `.codex/hooks.json` block direct `playwright test` shell commands (including `@playwright/test/cli.js` bypasses) and direct agents to `playwright-report-mcp` instead. Cursor has the same block when using Claude/Codex hook wiring; with `.cursor/mcp.json` present, use MCP tools rather than shell.
 
