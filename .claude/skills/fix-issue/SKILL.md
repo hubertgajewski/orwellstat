@@ -32,7 +32,7 @@ If non-empty, print a banner: **"Parent epic: #$PARENT — do not close it. Clos
 Run `gh issue view $ISSUE` and read every section: User Story, Context, Acceptance Criteria, Implementation Hint, and Definition of Done. State what the issue requires before touching any code.
 
 **Step 2 — Create the branch**
-Use the normalized `$ISSUE` value in every branch-name reference below; the `#$ISSUE` form is reserved for commit messages and PR body prose per `CLAUDE.md`.
+Use the normalized `$ISSUE` value in every branch-name reference below; the `#$ISSUE` form is reserved for commit messages and PR body prose per `AGENTS.md`.
 
 Then fetch the latest remote state so the branch is created from up-to-date main:
 
@@ -49,7 +49,7 @@ git ls-remote --heads origin feature/$ISSUE   # or bugfix/$ISSUE
 If it exists, inspect its recent commits (`git log origin/<branch> --oneline -5`) to decide whether those changes relate to this issue or to something different. If they appear unrelated, pick an alternative name by appending a suffix (e.g. `feature/$ISSUE-2`, `feature/$ISSUE-3`) and repeat the check until a free name is found. Then create the branch from remote `main` using the chosen name (e.g. `git checkout -b feature/$ISSUE origin/main`).
 
 **Step 3 — Make the code change**
-Implement the fix described in the issue. Follow behavioral conventions in `CLAUDE.md`, and Playwright conventions such as POM, fixtures, and path aliases in `docs/PLAYWRIGHT.md`. When writing assertions against the product's DOM, sanity-check each literal string for upstream bugs before pinning it — see the **External-app text correctness** item in `.claude/skills/deep-review-lite/SKILL.md`.
+Implement the fix described in the issue. Follow behavioral conventions in `AGENTS.md`, and Playwright conventions such as POM, fixtures, and path aliases in `docs/PLAYWRIGHT.md`. When writing assertions against the product's DOM, sanity-check each literal string for upstream bugs before pinning it — see the **External-app text correctness** item in `.claude/skills/deep-review-lite/SKILL.md`.
 
 **Step 4 — Security review (mandatory, do this first)**
 Run `/security-review` (built-in Claude Code command). This must be done before the code review checklist — do not skip or defer it. If the command is unavailable, manually check: injection via untrusted input, path traversal in file I/O, unhandled parse errors, hardcoded secrets, overly broad permissions. Fix any findings before continuing.
@@ -95,7 +95,7 @@ Scripts calling external APIs (e.g. `gh issue list`, REST calls):
 Read every Given/When/Then scenario and every DoD checkbox in the issue. For each item, explicitly confirm it is satisfied or identify what is missing. For every DoD checkbox, keep an evidence map from the checkbox text to the concrete proof that satisfies it: file path, diff hunk, command output, PR check, Project field, or GitHub issue/PR state. Do not proceed to commit until all pre-merge criteria pass. Do not mark unverifiable or incomplete DoD items as complete; report the exact missing evidence instead.
 
 **Step 8 — Commit**
-Stage changed files by name (never `git add -A`). Follow the **Commit message convention** in `CLAUDE.md`: prefix with `#$ISSUE`, single line, no body, no `Co-Authored-By` trailer.
+Stage changed files by name (never `git add -A`). Follow the **Commit message convention** in `AGENTS.md`: prefix with `#$ISSUE`, single line, no body, no `Co-Authored-By` trailer.
 
 **Step 9 — Push and create a PR**
 Push the branch and run `gh pr create`. The PR body must include:

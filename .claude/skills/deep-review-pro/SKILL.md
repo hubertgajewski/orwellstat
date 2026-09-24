@@ -21,7 +21,7 @@ Adding a new agent is a single new row in this table plus a new file under `.cla
 | `deep-review-simplification` | DRY / Fowler smells and efficiency review (duplication, dead code, complexity) — paraphrases public sources | always | `full` | pass/fail/N/A | `Failures: none.` | fail | `Read, Grep, Glob` |
 | `deep-review-code` | Google Code Review Developer Guide — functionality / tests / naming / comments / dead code | always | `full` | H/M/L | `findings: none` | HIGH + MEDIUM | `Read, Grep, Glob` |
 | `deep-review-architecture` | SOLID / "Clean Architecture" (Martin) / GoF / DDD (Evans) — dependency direction / coupling / cohesion / abstraction boundaries; sole owner of `[SOLID-*]` vocabulary tokens | always | `full` | H/M/L | `findings: none` | HIGH + MEDIUM | `Read, Grep, Glob` |
-| `deep-review-docs` | README / docs / CLAUDE.md / skill-file consistency against the project's documented split rules | docs trigger | `docs` | pass/fail/N/A | `Failures: none.` | fail | `Read, Grep, Glob` |
+| `deep-review-docs` | README / docs / AGENTS.md / skill-file consistency against the project's documented split rules | docs trigger | `docs` | pass/fail/N/A | `Failures: none.` | fail | `Read, Grep, Glob` |
 | `deep-review-typescript` | TS Handbook + typescript-eslint idiom (`as any`, missing `satisfies`, narrowing, `as const`, `!` non-null) | scope contains `*.ts` or `*.tsx` | `typescript` | H/M/L | `findings: none` | HIGH + MEDIUM | `Read, Grep, Glob` |
 | `deep-review-python` | PEP 8 / 20 / 257 + ruff-equivalent issues (style / idiom / docstring / bug-risk) | scope contains `*.py` | `python` | H/M/L | `findings: none` | HIGH + MEDIUM | `Read, Grep, Glob` |
 | `deep-review-ci` | GitHub Actions semantic review for non-trivial workflow trust, permissions, secrets, and ref-handling concerns | scope contains `.github/workflows/**.yml`, `.github/workflows/**.yaml`, `action.yml`, or `action.yaml` | `ci` | H/M/L | `findings: none` | HIGH + MEDIUM | `Read, Grep, Glob` |
@@ -331,7 +331,7 @@ Otherwise skip it. Example skip line: `SKIPPED: project-checklist trigger not sa
 Dispatch `deep-review-docs` when any deterministic docs-consistency trigger is present:
 
 - any `NEW_PATHS` entry
-- docs or assistant workflow paths: `README.md`, `docs/**`, `CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, `.claude/skills/**`, `.claude/agents/**`, `.codex/agents/**`, `.codex/hooks.json`
+- docs or assistant workflow paths: `README.md`, `docs/**`, `AGENTS.md`, `.gemini/settings.json`, `.claude/skills/**`, `.claude/agents/**`, `.codex/agents/**`, `.codex/hooks.json`
 - workflow paths: `.github/workflows/*.yml`, `.github/workflows/*.yaml`, `action.yml`, `action.yaml`
 - MCP paths: `.mcp.json`, `mcp/**`
 - coverage matrix path: `playwright/typescript/coverage-matrix.json`
@@ -356,7 +356,7 @@ Dispatch `deep-review-security` when any deterministic risk trigger is present:
 
 Skip `deep-review-security` only when every changed path is clearly low-risk docs/generated/test-only scope and none of the checks above fired. Low-risk scopes are:
 
-- docs: `README.md`, `docs/**`, `CLAUDE.md`, `AGENTS.md`, `GEMINI.md`
+- docs: `README.md`, `docs/**`, `AGENTS.md`
 - generated snapshots and benchmark fixtures: `**/*.snap`, `**/*-snapshots/**`, `**/__screenshots__/**`, `docs/deep-review-pro-benchmark/fixtures/**`
 - test-only files and test data: `**/*.spec.ts`, `**/*.test.ts`, `**/tests/**`, `**/test-data/**`, `bruno/**`
 

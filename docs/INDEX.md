@@ -25,6 +25,7 @@ This directory contains the long-form reference material for the orwellstat test
 - `docs/CI.md` owns workflow behavior, triggers, gates, artifacts, and root automation-script summaries.
 - `docs/CI_LOCAL.md` owns self-hosted runner setup, local `act` usage, local CI compatibility, and related credential hygiene.
 - `docs/BRUNO.md` owns Bruno setup, request behavior, and Bruno CI notes.
+- `AGENTS.md` owns assistant behavioral rules: account selection, commit and push conventions, pull-request body files, MCP server selection, and runtime substitutions.
 - `docs/AI_ASSISTANTS.md` owns project skills, MCP server setup, worktree guidance, and `/deep-review-pro` benchmark references.
 - `docs/PROJECT_MANAGEMENT.md` owns Project #1 conventions, estimate scales, epic/story rules, dates, and actual hours.
 

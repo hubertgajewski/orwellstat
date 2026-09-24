@@ -65,9 +65,8 @@ DOCS_ENV_MARKERS_V1 = (
 )
 DOCS_EXACT_PATHS_V1 = {
     "README.md",
-    "CLAUDE.md",
     "AGENTS.md",
-    "GEMINI.md",
+    ".gemini/settings.json",
     ".mcp.json",
     ".codex/hooks.json",
     "playwright/typescript/coverage-matrix.json",
@@ -131,9 +130,7 @@ SECURITY_RUNTIME_CONFIG_PATTERNS_V1 = (
 SECURITY_LOW_RISK_PATTERNS_V1 = (
     "README.md",
     "docs/**",
-    "CLAUDE.md",
     "AGENTS.md",
-    "GEMINI.md",
     "**/*.snap",
     "**/*-snapshots/**",
     "**/__screenshots__/**",
