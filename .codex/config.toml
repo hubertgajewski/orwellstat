@@ -28,12 +28,13 @@ command = "npx"
 [mcp_servers.playwright-report-mcp]
 args = [
     "--min-release-age=0",
-    "playwright-report-mcp@3.3.0",
+    "playwright-report-mcp@3.4.0",
 ]
 command = "npx"
 
 [mcp_servers.playwright-report-mcp.env]
 PW_ALLOWED_DIRS = ".."
+PW_ALLOWED_ENV = "ENV"
 
 [mcp_servers.playwright-report-mcp.tools.run_tests]
 approval_mode = "approve"

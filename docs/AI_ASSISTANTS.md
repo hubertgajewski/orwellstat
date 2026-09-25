@@ -110,11 +110,11 @@ Assistant pre-shell hooks in `.claude/settings.json` and `.codex/hooks.json` blo
 
 ### playwright-report-mcp
 
-Runs through `npx playwright-report-mcp@3.3.0`. The version is pinned in `.mcp.json`.
+Runs through `npx playwright-report-mcp@3.4.0`. The version is pinned in `.mcp.json` and `.codex/config.toml`.
 
-`playwright-report-mcp@3.3.0` declares `node >=22`; use the repository baseline Node.js 26.x for local Playwright, Bruno, and MCP workflows.
+`playwright-report-mcp@3.4.0` declares `node >=22`; use the repository baseline Node.js 26.x for local Playwright, Bruno, and MCP workflows.
 
-Version 3.3.0 supports both the modern MCP `2026-07-28` protocol revision through version negotiation and supported 2025-era revisions through the traditional `initialize` handshake. The opening exchange pins the selected protocol era for the connection lifetime; clients that pin an unsupported revision receive an explicit negotiation error instead of silently switching eras.
+Version 3.4.0 supports both the modern MCP `2026-07-28` protocol revision through version negotiation and supported 2025-era revisions through the traditional `initialize` handshake. The opening exchange pins the selected protocol era for the connection lifetime; clients that pin an unsupported revision receive an explicit negotiation error instead of silently switching eras.
 
 Every tool call should pass `workingDirectory: "playwright/typescript"` in the main checkout, or a sibling worktree path such as `"../orwellstat-330/playwright/typescript"`. The default `.` points at the repo root, which has no Playwright config and will fail.
 
@@ -123,7 +123,18 @@ Every tool call should pass `workingDirectory: "playwright/typescript"` in the m
 | Variable          | Value in this repo | Description                                                                 |
 | ----------------- | ------------------ | --------------------------------------------------------------------------- |
 | `PW_ALLOWED_DIRS` | `".."`             | Authorizes sibling worktrees under the repo parent                          |
+| `PW_ALLOWED_ENV`  | `"ENV"`            | Variable names the `env` tool argument may override; only `ENV` is allowed |
 | `PW_RESULTS_FILE` | _(unset)_          | Optional absolute path override for `test-results/results.json` per call    |
+
+#### Target environment
+
+`run_tests` and `list_tests` choose the target from `ENV`. The tool's `env` argument wins, then `ENV` in the root `.env`, then the `production` default in `playwright.config.ts`. The tool value wins because dotenv does not override variables that are already set. Pass `ENV` explicitly whenever the target matters, because a local `.env` may set it:
+
+```json
+{ "workingDirectory": "playwright/typescript", "env": { "ENV": "staging" } }
+```
+
+Use `"production"` to force production. `playwright.config.ts` throws `Unknown ENV` for any other value. The server rejects any `env` key missing from `PW_ALLOWED_ENV` (for example `BASE_URL`) before it starts Playwright. Credentials stay in the root `.env`. They are never tool arguments.
 
 #### Tools
 
@@ -135,7 +146,7 @@ Every tool call should pass `workingDirectory: "playwright/typescript"` in the m
 | `get_test_attachment` | Read a named text attachment for a failed test                              |
 | `list_tests`          | List tests with spec file and tags without running them                     |
 
-**`run_tests`** inputs: `workingDirectory`, `spec`, `browser` (`Chromium`, `Firefox`, `Webkit`, `Mobile Chrome`, `Mobile Safari`), `tag`, `timeout` (ms, default `300000`), `wait` (default `true`; set `false` for background runs), `updateSnapshots` (`all`, `changed`, `missing`, `none`), `headed`, `workers`, `retries`, `maxFailures`, `trace`.
+**`run_tests`** inputs: `workingDirectory`, `spec`, `browser` (`Chromium`, `Firefox`, `Webkit`, `Mobile Chrome`, `Mobile Safari`), `tag`, `timeout` (ms, default `300000`), `wait` (default `true`; set `false` for background runs), `updateSnapshots` (`all`, `changed`, `missing`, `none`), `headed`, `workers`, `retries`, `maxFailures`, `trace`, `env` (allowlisted overrides; see [Target environment](#target-environment)).
 
 When `wait` is `false`, the tool returns a `runId`. Poll **`get_run_status`** with that `runId` until `state` is terminal, then call **`get_failed_tests`** or **`get_test_attachment`** as needed.
 
@@ -145,7 +156,7 @@ When `wait` is `false`, the tool returns a `runId`. Poll **`get_run_status`** wi
 
 **`get_test_attachment`** inputs: `workingDirectory`, `testTitle` (exact title from the report), `attachmentName` (e.g. `error-context`).
 
-**`list_tests`** inputs: `workingDirectory`, `tag` (optional).
+**`list_tests`** inputs: `workingDirectory`, `tag` (optional), `env` (optional).
 
 #### Excluding visual regression tests
 
