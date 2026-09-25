@@ -15,14 +15,14 @@ export class AboutSystemPage extends AbstractPage {
   static readonly recommended = 'Zalecane';
 
   static readonly orwellStatIntro = 'Orwell Stat to system statystyk internetowych';
-  static readonly wsbNlu = { name: 'WSB-NLU', href: 'http://wsb-nlu.edu.pl/' };
+  static readonly wsbNlu = { name: 'WSB-NLU', href: 'https://wsb-nlu.edu.pl/' };
   static readonly hubertGajewski = {
     name: 'Hubert Gajewski',
-    href: 'http://hubertgajewski.com/',
+    href: 'https://hubertgajewski.com/',
   };
   static readonly tomaszGorazd = {
     name: 'dr Tomasz Gorazd',
-    href: 'http://tcs.uj.edu.pl/Gorazd',
+    href: 'https://web.archive.org/web/20131031014831/http://tcs.uj.edu.pl/Gorazd',
   };
 
   static readonly browserCount = 'ponad 90';
@@ -51,7 +51,7 @@ export class AboutSystemPage extends AbstractPage {
 
   static readonly adobeSvgViewer = {
     name: 'Adobe SVG Viewer',
-    href: 'http://www.adobe.com/svg/',
+    href: 'https://web.archive.org/web/20041001052847/http://www.adobe.com/svg/',
   };
   static readonly vgaRequirementText = 'rozdzielczość VGA (640x480 pikseli)';
   static readonly hdRequirementText = 'rozdzielczość 1024x768 pikseli';
