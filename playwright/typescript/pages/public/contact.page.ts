@@ -9,7 +9,7 @@ export class ContactPage extends AbstractPage {
   static readonly contact = 'Kontakt';
 
   static readonly emailIntro = 'E-mail znajdziesz na stronie';
-  static readonly contactLinkUrl = 'http://hubertgajewski.com/kontakt/';
+  static readonly contactLinkUrl = 'https://hubertgajewski.com/kontakt/';
   static readonly contactLinkTitle = 'Kontakt z Orwell Stat';
 
   constructor(page: Page) {
