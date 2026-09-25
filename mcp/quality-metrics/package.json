@@ -18,12 +18,12 @@
   "dependencies": {
     "@modelcontextprotocol/server": "^2.0.0",
     "@orwellstat/mcp-shared": "file:../shared",
-    "zod": "^4.5.4"
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@modelcontextprotocol/client": "^2.0.0",
     "@types/node": "^25.6.2",
-    "@vitest/coverage-v8": "^5.0.0",
+    "@vitest/coverage-v8": "^5.0.1",
     "typescript": "^7.0.2",
     "vitest": "^5.0.0"
   },
