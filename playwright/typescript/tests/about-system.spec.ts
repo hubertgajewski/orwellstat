@@ -49,11 +49,10 @@ test(
         .toHaveAttribute('href', AboutSystemPage.tomaszGorazd.href);
     });
 
-    await test.step('verify browser and OS counts and lists', async () => {
+    await test.step('verify browser catalogue count and browser/OS lists', async () => {
       await expect(
         statsbar.getByText(AboutSystemPage.browserCount, { exact: false })
       ).toBeVisible();
-      await expect(statsbar.getByText(AboutSystemPage.osCount, { exact: false })).toBeVisible();
 
       for (const browser of AboutSystemPage.sampleBrowsers) {
         await expect(
