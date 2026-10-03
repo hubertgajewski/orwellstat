@@ -14,9 +14,9 @@ This file describes what each Playwright spec covers. For commands, tags, fixtur
 | Spec                           | Scope                               | Coverage                                                                                   |
 | ------------------------------ | ----------------------------------- | ------------------------------------------------------------------------------------------ |
 | `tests/home.spec.ts`           | Home page and previously-added page | Content, navigation, and shared public-page expectations, including `PreviouslyAddedPage`. |
-| `tests/about-system.spec.ts`   | About System page                   | Headings and statsbar content.                                                             |
+| `tests/about-system.spec.ts`   | About System page                   | Headings, statsbar content, and the live browser distinguished-name catalogue count.       |
 | `tests/contact.spec.ts`        | Contact page                        | Headings and statsbar content.                                                             |
-| `tests/statistics.spec.ts`     | Public statistics page              | SVG chart rendering, statistics table checks, and chart/table structural analysis.         |
+| `tests/statistics.spec.ts`     | Public statistics page              | SVG chart rendering, statistics table checks, chart/table structural analysis, and the eight shared versioned Parametr dimensions. |
 | `tests/register.spec.ts`       | `/register/`                        | Heading, registration field editability, enabled submit button, and unique login nav link. |
 | `tests/password-reset.spec.ts` | `/password_reset/`                  | Heading, scoped recovery-form username input, enabled reset button, and home-link target.  |
 
