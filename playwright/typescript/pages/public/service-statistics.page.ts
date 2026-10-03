@@ -13,8 +13,10 @@ export interface ParameterOption {
 // "Pokaż statystyki" combobox options as rendered by /statistics/ and /zone/stats/.
 // Both pages drive the same underlying server query, so the option set is shared.
 export const PARAMETER_OPTIONS = [
-  { value: 'przegladarka', label: 'Przeglądarki i inne aplikacje WWW' },
-  { value: 'system', label: 'Systemy operacyjne' },
+  { value: 'przegladarka', label: 'Przeglądarki i inne aplikacje WWW — z wersjami' },
+  { value: 'przegladarka_nazwa', label: 'Przeglądarki i inne aplikacje WWW — bez wersji' },
+  { value: 'system', label: 'Systemy operacyjne — z wersjami' },
+  { value: 'system_nazwa', label: 'Systemy operacyjne — bez wersji' },
   { value: 'jezyk', label: 'Język przeglądarek' },
   { value: 'kraj', label: 'Kraj' },
   { value: 'rozdzielczosc', label: 'Rozdzielczość ekranu' },
@@ -31,7 +33,7 @@ export class ServiceStatisticsPage extends AbstractPage {
   static readonly periodLabel = 'Okres';
   static readonly showStatisticsSubmitLabel = 'Pokaż statystyki';
   static readonly colLp = 'Lp.';
-  static readonly colBrowsers = 'Przeglądarki i inne aplikacje WWW';
+  static readonly colBrowsers = 'Przeglądarki i inne aplikacje WWW — z wersjami';
   static readonly colCount = '#';
   static readonly colPercent = '%';
 

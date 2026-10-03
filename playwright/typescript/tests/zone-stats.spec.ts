@@ -1,7 +1,7 @@
 /**
  * Authenticated /zone/stats/ page.
  * SVG chart structural analysis, user-statistics table, and a parameterised every-Parametr loop
- * that verifies chart label/percent pairs match the data table for all 12 dimensions and that
+ * that verifies chart label/percent pairs match the data table for all 14 dimensions and that
  * parameter pairs render distinct data except for the legitimate IP/host fallback pair.
  */
 import { test, expect } from '@fixtures/base.fixture';
@@ -67,7 +67,7 @@ test('SVG chart is rendered on /zone/stats/', { tag: '@regression' }, async ({ p
 // per-user page renders the same form and table structure as the public page, so most
 // pinned strings are kept in sync via the StatsPage / ServiceStatisticsPage constants —
 // only the main heading and the Parametr option set differ (per-user adds 6 user-only
-// dimensions; see USER_PARAMETER_OPTIONS).
+// dimensions on top of the 8 shared ones; see USER_PARAMETER_OPTIONS).
 test('user statistics', { tag: '@regression' }, async ({ page }) => {
   const statsPage = new StatsPage(page);
 
@@ -172,14 +172,14 @@ test('user statistics', { tag: '@regression' }, async ({ page }) => {
 
 // Walk every "Pokaż statystyki" Parametr option once: assert chart=table top-N rows for
 // each dimension AND that parameter pairs render distinct data except for the legitimate
-// IP/host fallback pair. /zone/stats/ has 12 Parametr options (6 shared with /statistics/
+// IP/host fallback pair. /zone/stats/ has 14 Parametr options (8 shared with /statistics/
 // + 6 user-only — see USER_PARAMETER_OPTIONS), so this covers the full per-user surface,
 // not just the public-page subset.
 test(
   'every Parametr chart matches the data table and distinctness policy on /zone/stats/',
   { tag: '@regression' },
   async ({ page }) => {
-    test.setTimeout(300_000);
+    test.setTimeout(360_000);
     await page.goto(StatsPage.url);
     const statsPage = new StatsPage(page);
     await expectEveryParametrChartMatchesTableAndIsDistinct(

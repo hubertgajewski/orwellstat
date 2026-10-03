@@ -25,8 +25,11 @@ export class AboutSystemPage extends AbstractPage {
     href: 'https://web.archive.org/web/20131031014831/http://tcs.uj.edu.pl/Gorazd',
   };
 
-  static readonly browserCount = 'ponad 90';
-  static readonly osCount = 'ponad 400';
+  // Live About copy states a distinguished-name count for browsers/apps. The OS
+  // section is a name list with no "ponad N" / count sentence (confirmed staging
+  // 2026-10-03), so there is no osCount constant to pin.
+  static readonly browserCount =
+    'Liczba rozróżnianych nazw: 152 (w tym 62 nazwy przeglądarek internetowych i 3 przeglądarki w aplikacjach)';
   static readonly sampleBrowsers = ['Chrome', 'Firefox', 'Edge', 'Safari', 'Opera'] as const;
   static readonly sampleOSes = ['Linux', 'Windows', 'macOS', 'Android', 'iOS'] as const;
 
