@@ -16,6 +16,8 @@ npm ci
 
 `bruno/package.json` overrides `@faker-js/faker` to `>=10.5.0 <11` because Bruno's transitive dependency still selects a version affected by [GHSA-qxc2-j82w-r537](https://github.com/advisories/GHSA-qxc2-j82w-r537). Keep this override until Bruno selects a patched version itself; `npm audit --audit-level=high` enforces the CI security threshold.
 
+Bruno 4.2.0 also requires overrides for `axios` (`>=1.20.0 <2`) and `js-yaml` (`>=4.3.2 <5`) to clear the high-severity audit gate. These select patched releases for [Axios advisories](https://github.com/advisories/GHSA-c29m-xwm3-cm6r) and [GHSA-2883-xcg3-v3hh](https://github.com/advisories/GHSA-2883-xcg3-v3hh) while staying within the existing major versions. Keep these overrides until Bruno selects patched versions itself, and regenerate `bruno/package-lock.json` whenever changing them. Moderate-severity findings may remain; the CI threshold is unchanged.
+
 `bruno/.env` must live at the collection root. Bruno CLI reads secrets from that file, not from environment directories.
 
 Required keys:
