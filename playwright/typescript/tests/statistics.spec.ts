@@ -184,12 +184,12 @@ test('system statistics', { tag: '@regression' }, async ({ page }) => {
 
 // Walk every "Pokaż statystyki" Parametr option once: assert chart=table top-N rows for
 // each dimension AND that every dimension renders a distinct chart. One test instead of
-// six-plus-one to avoid duplicating the navigation/submit dance per option.
+// eight-plus-one to avoid duplicating the navigation/submit dance per option.
 test(
   'every Parametr chart matches the data table and is distinct',
   { tag: '@regression' },
   async ({ page }) => {
-    test.setTimeout(90_000);
+    test.setTimeout(120_000);
     await page.goto(ServiceStatisticsPage.url);
     const statisticsPage = new ServiceStatisticsPage(page);
     await expectEveryParametrChartMatchesTableAndIsDistinct(

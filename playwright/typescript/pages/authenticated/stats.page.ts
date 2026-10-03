@@ -15,7 +15,7 @@ export const USER_ONLY_PARAMETER_OPTIONS = [
   { value: 'http_user_agent', label: 'User-Agent', chartLabelIsRank: true },
 ] as const satisfies readonly ParameterOption[];
 
-// Full Parametr option set rendered on `/zone/stats/`: the six shared dimensions (also on
+// Full Parametr option set rendered on `/zone/stats/`: the eight shared dimensions (also on
 // `/statistics/`) followed by the six user-only additions.
 export const USER_PARAMETER_OPTIONS = [
   ...PARAMETER_OPTIONS,
@@ -33,7 +33,7 @@ export class StatsPage extends AbstractPage {
   static readonly showStatisticsSubmitLabel = 'Pokaż statystyki';
   static readonly emptyStateMessage = NO_HITS_LAST_30_DAYS;
   static readonly colLp = 'Lp.';
-  static readonly colBrowsers = 'Przeglądarki i inne aplikacje WWW';
+  static readonly colBrowsers = 'Przeglądarki i inne aplikacje WWW — z wersjami';
   static readonly colCount = '#';
   static readonly colPercent = '%';
 

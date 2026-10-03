@@ -75,6 +75,9 @@ export class HitsPage extends AbstractPage {
     return this.filterForm.getByRole('textbox', { name: 'Host', exact: true });
   }
 
+  // Hits filter labels stay unversioned. The z wersjami / bez wersji split exists on
+  // Parametr statistics pages only. Confirmed on staging 2026-10-03: one browser
+  // textbox and one OS textbox; row tooltip prefixes match these accessible names.
   get browserField(): Locator {
     return this.filterForm.getByRole('textbox', { name: 'Przeglądarka', exact: true });
   }
