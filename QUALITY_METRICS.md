@@ -1,15 +1,15 @@
 # Quality Metrics
 
-> Last updated: 2026-10-01
+> Last updated: 2026-11-01
 
 ## Defect Escape Rate
 
 | Discovery method | Count |
 |-----------------|-------|
-| Found by automated tests | 34 |
+| Found by automated tests | 35 |
 | Found by manual testing (staging) | 17 |
 | Found in production | 2 |
-| **Total bugs** | **53** |
+| **Total bugs** | **54** |
 | **Escape rate** | **4%** |
 
 ## Mean Time To Resolve
@@ -17,7 +17,7 @@
 | Scope | MTTR |
 |-------|------|
 | All closed bugs | 1.0 days |
-| Found by automated tests | 1.0 days |
+| Found by automated tests | 23.8 hours |
 | Found by manual testing (staging) | 1.3 days |
 | Found in production | 0.3 hours |
 
@@ -63,3 +63,4 @@
 | 2026-08-01 | 4% | 1.0 days | 96% |
 | 2026-09-01 | 4% | 1.1 days | 96% |
 | 2026-10-01 | 4% | 1.0 days | 96% |
+| 2026-11-01 | 4% | 1.0 days | 96% |
