@@ -28,14 +28,21 @@ runs:
         version=$(node -p "require('./node_modules/@playwright/test/package.json').version")
         echo "version=$version" >> "$GITHUB_OUTPUT"
 
+    - name: Read runner OS version
+      id: runner-os
+      shell: bash
+      run: |
+        . /etc/os-release
+        echo "version=${ID}-${VERSION_ID}" >> "$GITHUB_OUTPUT"
+
     - name: Cache Playwright browsers
       id: cache-playwright
       uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
       with:
         path: ${{ runner.temp }}/ms-playwright
-        key: ms-playwright-${{ runner.os }}-${{ runner.arch }}-${{ inputs.browser }}-${{ steps.playwright-version.outputs.version }}
+        key: ms-playwright-${{ steps.runner-os.outputs.version }}-${{ runner.arch }}-${{ inputs.browser }}-${{ steps.playwright-version.outputs.version }}
         restore-keys: |
-          ms-playwright-${{ runner.os }}-${{ runner.arch }}-${{ inputs.browser }}-
+          ms-playwright-${{ steps.runner-os.outputs.version }}-${{ runner.arch }}-${{ inputs.browser }}-
 
     - name: Install Playwright OS dependencies
       shell: bash
