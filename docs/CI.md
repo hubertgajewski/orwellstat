@@ -93,7 +93,7 @@ Caching:
 - npm dependencies are cached by `package-lock.json`.
 - `.github/actions/setup-playwright-browser` restores an isolated Playwright browser cache under `RUNNER_TEMP`.
 - `.github/actions/collect-failure-evidence` centralizes failure-evidence collection and upload behavior used by auth setup and shard jobs.
-- Browser cache keys include the Linux distribution and version from `/etc/os-release` (`ID-VERSION_ID`, e.g. `ubuntu-26.04`), runner architecture, browser, and `@playwright/test` version. The shared browser setup action requires a Linux runner with `/etc/os-release`.
+- Browser cache keys include the runner OS version, runner architecture, browser, and `@playwright/test` version. Linux uses the distribution and version from `/etc/os-release` (`ID-VERSION_ID`, e.g. `ubuntu-26.04`); macOS uses `macos-` plus `sw_vers -productVersion` (e.g. `macos-15.7.1`).
 - Restore prefixes retain the distribution, OS version, architecture, and browser, allowing reuse across Playwright versions only within that compatible runner identity. OS upgrades invalidate both exact lookups and fallback restores; older OS-family-only keys (e.g. `ms-playwright-Linux-X64-webkit-1.64.1`) are not restored.
 - The browser setup always runs `install-deps`, then lets `playwright install` reuse restored browsers or download missing binaries.
 - Artifact upload is skipped under `act`.

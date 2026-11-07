@@ -32,8 +32,12 @@ runs:
       id: runner-os
       shell: bash
       run: |
-        . /etc/os-release
-        echo "version=${ID}-${VERSION_ID}" >> "$GITHUB_OUTPUT"
+        if [ "$RUNNER_OS" = "macOS" ]; then
+          echo "version=macos-$(sw_vers -productVersion)" >> "$GITHUB_OUTPUT"
+        else
+          . /etc/os-release
+          echo "version=${ID}-${VERSION_ID}" >> "$GITHUB_OUTPUT"
+        fi
 
     - name: Cache Playwright browsers
       id: cache-playwright
